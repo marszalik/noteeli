@@ -1,7 +1,9 @@
 import json
+import mimetypes
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.core.config import get_settings
 from app.core.templates import render_template
@@ -19,6 +21,7 @@ from app.domains.workspace.schemas import (
     MoveItemRequest,
     SaveFileRequest,
     TreeNode,
+    UploadItemsResponse,
 )
 from app.domains.workspace.service import (
     DocumentNotFoundError,
@@ -51,7 +54,11 @@ async def workspace_page(request: Request):
             "orderUrl": str(request.url_for("workspace_reorder_api")),
             "createUrl": str(request.url_for("workspace_create_item_api")),
             "moveUrl": str(request.url_for("workspace_move_item_api")),
+            "uploadUrl": str(request.url_for("workspace_upload_items_api")),
+            "downloadUrl": str(request.url_for("workspace_download_item_api")),
             "directoriesUrl": str(request.url_for("workspace_directories_api")),
+            "previewUrl": str(request.url_for("workspace_file_preview_api")),
+            "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
         }
     )
     return render_template(
@@ -80,6 +87,40 @@ async def workspace_file_api(request: Request, path: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/api/file/preview", name="workspace_file_preview_api")
+async def workspace_file_preview_api(request: Request, path: str):
+    auth_service.require_api_access(request)
+    try:
+        file_path = workspace_service.get_document_path(path)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    preview_kind = workspace_service.get_preview_kind(file_path)
+    if preview_kind is None:
+        raise HTTPException(status_code=422, detail="This file type is not available in preview mode.")
+
+    media_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(path=file_path, media_type=media_type or "application/octet-stream")
+
+
+@router.get("/api/embedded-asset", name="workspace_embedded_asset_preview_api")
+async def workspace_embedded_asset_preview_api(request: Request, source_path: str, target: str):
+    auth_service.require_api_access(request)
+    try:
+        file_path, _preview_kind = workspace_service.resolve_embedded_asset(source_path, target)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UnsupportedFileTypeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    media_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(path=file_path, media_type=media_type or "application/octet-stream")
 
 
 @router.put("/api/file", response_model=FileDocument, name="workspace_save_api")
@@ -119,6 +160,49 @@ async def workspace_move_item_api(request: Request, payload: MoveItemRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ItemAlreadyExistsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/api/items/upload", response_model=UploadItemsResponse, name="workspace_upload_items_api")
+async def workspace_upload_items_api(
+    request: Request,
+    parent_path: str = Form(""),
+    files: list[UploadFile] = File(...),
+):
+    auth_service.require_api_access(request)
+    if not files:
+        raise HTTPException(status_code=400, detail="At least one file is required.")
+
+    uploads: list[tuple[str, bytes]] = []
+    for upload in files:
+        uploads.append((upload.filename or "", await upload.read()))
+
+    try:
+        return workspace_service.upload_files(parent_path, uploads)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/api/download", name="workspace_download_item_api")
+async def workspace_download_item_api(request: Request, background_tasks: BackgroundTasks, path: str):
+    auth_service.require_api_access(request)
+    try:
+        download_path, filename, is_temporary = workspace_service.prepare_download(path)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if is_temporary:
+        background_tasks.add_task(Path.unlink, download_path, missing_ok=True)
+
+    media_type, _ = mimetypes.guess_type(str(download_path))
+    return FileResponse(
+        path=download_path,
+        media_type=media_type or "application/octet-stream",
+        filename=filename,
+    )
 
 
 @router.get("/api/directories", response_model=DirectoryBrowserResponse, name="workspace_directories_api")

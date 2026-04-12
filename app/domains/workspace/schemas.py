@@ -17,6 +17,8 @@ class FileDocument(BaseModel):
     path: str
     editable: bool
     content: str
+    previewable: bool = False
+    preview_kind: Literal["image", "pdf"] | None = None
     message: str | None = None
 
 
@@ -36,6 +38,11 @@ class MoveItemRequest(BaseModel):
     target_parent_path: str = ""
 
 
+class UploadedItemError(BaseModel):
+    name: str
+    message: str
+
+
 class DirectoryOption(BaseModel):
     name: str
     path: str
@@ -52,6 +59,12 @@ class CreatedItem(BaseModel):
     path: str
     kind: Literal["directory", "file"]
     editable: bool = False
+
+
+class UploadItemsResponse(BaseModel):
+    parent_path: str = ""
+    created_items: list[CreatedItem] = Field(default_factory=list)
+    skipped_items: list[UploadedItemError] = Field(default_factory=list)
 
 
 TreeNode.model_rebuild()

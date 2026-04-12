@@ -6,6 +6,8 @@ if (shell) {
   const newFileButton = document.getElementById("new-file");
   const newDirectoryButton = document.getElementById("new-directory");
   const refreshButton = document.getElementById("refresh-tree");
+  const resetTreeRootButton = document.getElementById("reset-tree-root");
+  const toggleHiddenFilesButton = document.getElementById("toggle-hidden-files");
   const decreaseFontSizeButton = document.getElementById("decrease-font-size");
   const increaseFontSizeButton = document.getElementById("increase-font-size");
   const fontSizeLabel = document.getElementById("font-size-label");
@@ -39,6 +41,19 @@ if (shell) {
   const currentFileLabel = document.getElementById("current-file-label");
   const currentFilePath = document.getElementById("current-file-path");
   const statusMessage = document.getElementById("status-message");
+  const editorContainer = document.getElementById("editor");
+  const previewStage = document.getElementById("preview-stage");
+  const imagePreview = document.getElementById("image-preview");
+  const pdfPreview = document.getElementById("pdf-preview");
+  const uploadStage = document.getElementById("upload-stage");
+  const uploadTargetLabel = document.getElementById("upload-target-label");
+  const uploadDropzone = document.getElementById("upload-dropzone");
+  const uploadSelectButton = document.getElementById("upload-select-button");
+  const uploadSubmitButton = document.getElementById("upload-submit-button");
+  const uploadCancelButton = document.getElementById("upload-cancel-button");
+  const uploadFileInput = document.getElementById("upload-file-input");
+  const uploadFileList = document.getElementById("upload-file-list");
+  const treeContextMenu = document.getElementById("tree-context-menu");
   const emptyState = document.getElementById("empty-state");
   const unsupportedState = document.getElementById("unsupported-state");
 
@@ -51,10 +66,16 @@ if (shell) {
   let selectedTreeKind = "directory";
   let dragState = null;
   let createKind = "file";
+  let createParentPathOverride = null;
   let directoryBrowserState = null;
+  let contextMenuState = null;
+  let showHiddenFiles = false;
+  let scopedRootPath = "";
+  let uploadTargetPath = "";
+  let pendingUploadFiles = [];
 
   const editor = new toastui.Editor({
-    el: document.getElementById("editor"),
+    el: editorContainer,
     height: "100%",
     initialEditType: "wysiwyg",
     previewStyle: "vertical",
@@ -62,6 +83,9 @@ if (shell) {
     usageStatistics: false,
     hideModeSwitch: false,
     autofocus: false,
+    previewBeforeHook(markdown) {
+      return decorateMarkdownForPreview(markdown, selectedPath);
+    },
   });
 
   function clampFontSize(value) {
@@ -109,9 +133,10 @@ if (shell) {
     return selectedTreeKind === "directory" ? selectedTreePath : getParentPath(selectedTreePath);
   }
 
-  function openCreateModal(kind) {
+  function openCreateModal(kind, parentPathOverride = null) {
     createKind = kind;
-    const parentPath = getCurrentParentPath();
+    createParentPathOverride = parentPathOverride;
+    const parentPath = parentPathOverride ?? getCurrentParentPath();
     createTitle.textContent = kind === "directory" ? "Nowy katalog" : "Nowy plik";
     createHint.textContent =
       kind === "directory"
@@ -127,6 +152,7 @@ if (shell) {
   function closeCreateModal() {
     createModal.classList.add("hidden");
     createModal.setAttribute("aria-hidden", "true");
+    createParentPathOverride = null;
   }
 
   function setStatus(message, isError = false) {
@@ -142,6 +168,186 @@ if (shell) {
   function updateHeader(name, path) {
     currentFileLabel.textContent = name || "Wybierz notatke Markdown";
     currentFilePath.textContent = path || "Brak zaznaczonego pliku.";
+  }
+
+  function applyHiddenFilesToggleState() {
+    toggleHiddenFilesButton.classList.toggle("is-active", showHiddenFiles);
+    toggleHiddenFilesButton.setAttribute("aria-pressed", String(showHiddenFiles));
+    toggleHiddenFilesButton.setAttribute(
+      "aria-label",
+      showHiddenFiles ? "Ukryj ukryte pliki" : "Pokaz ukryte pliki",
+    );
+    toggleHiddenFilesButton.title = showHiddenFiles ? "Ukryj ukryte pliki" : "Pokaz ukryte pliki";
+  }
+
+  function applyTreeScopeState() {
+    resetTreeRootButton.classList.toggle("hidden", !scopedRootPath);
+    resetTreeRootButton.setAttribute("aria-hidden", String(!scopedRootPath));
+  }
+
+  function getPreviewUrl(path) {
+    return `${config.previewUrl}?path=${encodeURIComponent(path)}`;
+  }
+
+  function getEmbeddedAssetUrl(sourcePath, target) {
+    return `${config.embeddedAssetUrl}?source_path=${encodeURIComponent(sourcePath)}&target=${encodeURIComponent(target)}`;
+  }
+
+  function normalizeEmbedTarget(target) {
+    let normalized = target.trim();
+    if (normalized.startsWith("<") && normalized.endsWith(">")) {
+      normalized = normalized.slice(1, -1);
+    }
+    if (normalized.includes("|")) {
+      normalized = normalized.split("|", 1)[0];
+    }
+    if (normalized.includes("#")) {
+      normalized = normalized.split("#", 1)[0];
+    }
+    return normalized.trim();
+  }
+
+  function isExternalAssetTarget(target) {
+    return /^(https?:|data:|blob:|\/api\/)/i.test(target);
+  }
+
+  function isEmbeddableAssetTarget(target) {
+    const normalized = normalizeEmbedTarget(target).toLowerCase();
+    return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif", ".excalidraw"].some((suffix) =>
+      normalized.endsWith(suffix),
+    );
+  }
+
+  function toEmbeddedImageMarkdown(sourcePath, target, alt = "") {
+    const normalizedTarget = normalizeEmbedTarget(target);
+    if (!normalizedTarget || isExternalAssetTarget(normalizedTarget) || !isEmbeddableAssetTarget(normalizedTarget)) {
+      return null;
+    }
+    const assetUrl = getEmbeddedAssetUrl(sourcePath, normalizedTarget);
+    return `![${alt}](${assetUrl})`;
+  }
+
+  function decorateMarkdownForPreview(markdown, sourcePath) {
+    if (!markdown || !sourcePath) {
+      return markdown;
+    }
+
+    let transformed = markdown;
+    transformed = transformed.replace(/!\[\[([^\]]+)\]\]/g, (match, target) => {
+      return toEmbeddedImageMarkdown(sourcePath, target) || match;
+    });
+    transformed = transformed.replace(/(^|[^\!])\[\[([^\]]+)\]\]/gm, (match, prefix, target) => {
+      const embedded = toEmbeddedImageMarkdown(sourcePath, target);
+      return embedded ? `${prefix}${embedded}` : match;
+    });
+    transformed = transformed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, target) => {
+      return toEmbeddedImageMarkdown(sourcePath, target, alt) || match;
+    });
+    transformed = transformed.replace(/(^|[^\!])\[([^\]]*)\]\(([^)]+)\)/gm, (match, prefix, label, target) => {
+      const embedded = toEmbeddedImageMarkdown(sourcePath, target, label);
+      return embedded ? `${prefix}${embedded}` : match;
+    });
+    return transformed;
+  }
+
+  function hidePreview() {
+    previewStage.classList.add("hidden");
+    imagePreview.classList.add("hidden");
+    imagePreview.removeAttribute("src");
+    imagePreview.alt = "";
+    pdfPreview.classList.add("hidden");
+    pdfPreview.removeAttribute("src");
+  }
+
+  function hideUploadStage() {
+    uploadStage.classList.add("hidden");
+  }
+
+  function showEditorMode() {
+    editorContainer.classList.remove("hidden");
+    hidePreview();
+    hideUploadStage();
+  }
+
+  function showPreviewMode(file) {
+    editorContainer.classList.add("hidden");
+    previewStage.classList.remove("hidden");
+    hideUploadStage();
+    imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
+    pdfPreview.classList.toggle("hidden", file.preview_kind !== "pdf");
+
+    const previewUrl = getPreviewUrl(file.path);
+    if (file.preview_kind === "image") {
+      imagePreview.src = previewUrl;
+      imagePreview.alt = file.name;
+      pdfPreview.removeAttribute("src");
+    } else if (file.preview_kind === "pdf") {
+      pdfPreview.src = previewUrl;
+      imagePreview.removeAttribute("src");
+      imagePreview.alt = "";
+    }
+  }
+
+  function showUnsupportedMode() {
+    editorContainer.classList.add("hidden");
+    hidePreview();
+    hideUploadStage();
+  }
+
+  function getUploadTargetLabel(path) {
+    return path || "katalog glowny";
+  }
+
+  function renderUploadFileList() {
+    uploadFileList.innerHTML = "";
+    if (!pendingUploadFiles.length) {
+      const empty = document.createElement("div");
+      empty.className = "upload-file-empty muted";
+      empty.textContent = "Nie wybrano jeszcze zadnych plikow.";
+      uploadFileList.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement("ul");
+    list.className = "upload-file-items";
+    pendingUploadFiles.forEach((file) => {
+      const item = document.createElement("li");
+      item.className = "upload-file-item";
+      item.innerHTML = `
+        <span class="upload-file-name">${file.name}</span>
+        <span class="upload-file-size">${formatFileSize(file.size)}</span>
+      `;
+      list.appendChild(item);
+    });
+    uploadFileList.appendChild(list);
+  }
+
+  function resetUploadState() {
+    pendingUploadFiles = [];
+    uploadFileInput.value = "";
+    renderUploadFileList();
+  }
+
+  function showUploadMode(targetPath) {
+    uploadTargetPath = targetPath || "";
+    editorContainer.classList.add("hidden");
+    hidePreview();
+    uploadStage.classList.remove("hidden");
+    saveButton.disabled = true;
+    selectedEditable = false;
+    selectedPath = null;
+    updateHeader("Upload plikow", getUploadTargetLabel(uploadTargetPath));
+    uploadTargetLabel.textContent = `Docelowy katalog: ${getUploadTargetLabel(uploadTargetPath)}`;
+    resetUploadState();
+    toggleOverlay({ empty: false, unsupported: false });
+  }
+
+  function closeUploadMode() {
+    uploadTargetPath = "";
+    resetUploadState();
+    showEditorMode();
+    toggleOverlay({ empty: true, unsupported: false });
+    updateHeader("", "");
   }
 
   function openParentDirectories(path) {
@@ -180,6 +386,42 @@ if (shell) {
     }
 
     return response.json();
+  }
+
+  async function requestMultipart(url, formData) {
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+
+    if (!response.ok) {
+      let detail = "Wystapil blad.";
+      try {
+        const payload = await response.json();
+        detail = payload.detail || detail;
+      } catch (error) {
+        detail = response.statusText || detail;
+      }
+      throw new Error(detail);
+    }
+
+    return response.json();
+  }
+
+  function formatFileSize(size) {
+    if (size < 1024) {
+      return `${size} B`;
+    }
+    if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(1)} KB`;
+    }
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   function findFirstEditable(node) {
@@ -231,6 +473,135 @@ if (shell) {
   function getParentPath(path) {
     const parts = path.split("/");
     return parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+  }
+
+  function getParentPathForNode(node) {
+    return node.kind === "directory" ? node.path : getParentPath(node.path);
+  }
+
+  function closeTreeContextMenu() {
+    treeContextMenu.classList.add("hidden");
+    treeContextMenu.setAttribute("aria-hidden", "true");
+    treeContextMenu.innerHTML = "";
+    contextMenuState = null;
+  }
+
+  function positionTreeContextMenu(x, y) {
+    treeContextMenu.style.left = `${x}px`;
+    treeContextMenu.style.top = `${y}px`;
+
+    requestAnimationFrame(() => {
+      const rect = treeContextMenu.getBoundingClientRect();
+      const nextLeft = Math.min(x, window.innerWidth - rect.width - 12);
+      const nextTop = Math.min(y, window.innerHeight - rect.height - 12);
+      treeContextMenu.style.left = `${Math.max(12, nextLeft)}px`;
+      treeContextMenu.style.top = `${Math.max(12, nextTop)}px`;
+    });
+  }
+
+  function createContextMenuButton(label, onClick, tone = "default") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `context-menu-item context-menu-item-${tone}`;
+    button.textContent = label;
+    button.addEventListener("click", async () => {
+      closeTreeContextMenu();
+      await onClick();
+    });
+    return button;
+  }
+
+  function renderTreeContextMenu() {
+    if (!contextMenuState) {
+      return;
+    }
+
+    const { node } = contextMenuState;
+    const parentPath = getParentPathForNode(node);
+    const uploadPath = node.kind === "directory" ? node.path : parentPath;
+    treeContextMenu.innerHTML = "";
+
+    const header = document.createElement("div");
+    header.className = "context-menu-header";
+    header.innerHTML = `
+      <strong class="context-menu-title">${node.name}</strong>
+      <span class="context-menu-path">${node.path || "/"}</span>
+    `;
+    treeContextMenu.appendChild(header);
+
+    if (node.kind === "directory") {
+      treeContextMenu.appendChild(
+        createContextMenuButton(expandedDirectories.has(node.path) ? "Zwin katalog" : "Rozwin katalog", async () => {
+          selectedTreePath = node.path;
+          selectedTreeKind = "directory";
+          if (expandedDirectories.has(node.path)) {
+            expandedDirectories.delete(node.path);
+          } else {
+            expandedDirectories.add(node.path);
+          }
+          renderTree(treeData);
+        }),
+      );
+      treeContextMenu.appendChild(
+        createContextMenuButton("Ustaw jako root tymczasowy", async () => {
+          setScopedRoot(node.path);
+          setStatus(`Pokazuje tylko ${node.path}.`);
+        }),
+      );
+    } else {
+      treeContextMenu.appendChild(
+        createContextMenuButton("Otworz", async () => {
+          await loadFile(node.path);
+        }),
+      );
+    }
+
+    treeContextMenu.appendChild(
+      createContextMenuButton("Upload tutaj", async () => {
+        showUploadMode(uploadPath);
+        setStatus(`Przygotowano upload do ${getUploadTargetLabel(uploadPath)}.`);
+      }),
+    );
+    treeContextMenu.appendChild(
+      createContextMenuButton("Nowy plik tutaj", async () => {
+        openCreateModal("file", parentPath);
+      }),
+    );
+    treeContextMenu.appendChild(
+      createContextMenuButton("Nowy katalog tutaj", async () => {
+        openCreateModal("directory", parentPath);
+      }),
+    );
+    treeContextMenu.appendChild(
+      createContextMenuButton(node.kind === "directory" ? "Pobierz jako ZIP" : "Pobierz", async () => {
+        window.location.href = `${config.downloadUrl}?path=${encodeURIComponent(node.path)}`;
+        setStatus(node.kind === "directory" ? "Przygotowuje archiwum ZIP..." : "Rozpoczynam pobieranie pliku.");
+      }),
+    );
+    treeContextMenu.appendChild(
+      createContextMenuButton("Kopiuj sciezke", async () => {
+        try {
+          await navigator.clipboard.writeText(node.path);
+          setStatus("Sciezka skopiowana.");
+        } catch (error) {
+          setStatus("Nie udalo sie skopiowac sciezki.", true);
+        }
+      }),
+    );
+    treeContextMenu.appendChild(
+      createContextMenuButton("Odswiez drzewo", async () => {
+        await loadTree();
+      }, "muted"),
+    );
+  }
+
+  function openTreeContextMenu(event, node) {
+    event.preventDefault();
+    contextMenuState = { node };
+    renderTreeContextMenu();
+    treeContextMenu.classList.remove("hidden");
+    treeContextMenu.setAttribute("aria-hidden", "false");
+    positionTreeContextMenu(event.clientX, event.clientY);
   }
 
   function renderDirectoryBrowser(payload) {
@@ -312,6 +683,36 @@ if (shell) {
     }
 
     return null;
+  }
+
+  function getScopedRootNode(node) {
+    if (!scopedRootPath) {
+      return node;
+    }
+    return findDirectoryNode(node, scopedRootPath) || node;
+  }
+
+  function setScopedRoot(path) {
+    scopedRootPath = path || "";
+    applyTreeScopeState();
+    renderTree(treeData);
+  }
+
+  function isHiddenNode(node) {
+    return node.name.startsWith(".");
+  }
+
+  function filterVisibleTree(node) {
+    if (showHiddenFiles || !node.children?.length) {
+      return node;
+    }
+
+    return {
+      ...node,
+      children: node.children
+        .filter((child) => !isHiddenNode(child))
+        .map((child) => (child.kind === "directory" ? filterVisibleTree(child) : child)),
+    };
   }
 
   function enableDragAndDrop(row, node) {
@@ -430,6 +831,7 @@ if (shell) {
         renderTree(treeData);
       });
       row.appendChild(label);
+      row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
       enableDragAndDrop(row, node);
       listItem.appendChild(row);
 
@@ -464,6 +866,7 @@ if (shell) {
       loadFile(node.path);
     });
     row.appendChild(fileButton);
+    row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
     enableDragAndDrop(row, node);
     listItem.appendChild(row);
 
@@ -476,15 +879,47 @@ if (shell) {
       return;
     }
 
+    const scopedNode = getScopedRootNode(node);
+    const visibleNode = filterVisibleTree(scopedNode);
+
+    if (scopedRootPath && visibleNode.path) {
+      const scopeBar = document.createElement("div");
+      scopeBar.className = "tree-scope-bar";
+
+      const upButton = document.createElement("button");
+      upButton.type = "button";
+      upButton.className = "tree-scope-up";
+      upButton.textContent = "..";
+      upButton.title = "Poziom wyzej";
+      upButton.addEventListener("click", () => {
+        const parentPath = getParentPath(visibleNode.path);
+        setScopedRoot(parentPath);
+        setStatus(parentPath ? "Pokazuje katalog nadrzedny." : "Wrocono do pelnego drzewa.");
+      });
+      scopeBar.appendChild(upButton);
+
+      const label = document.createElement("div");
+      label.className = "tree-scope-label";
+      label.textContent = visibleNode.path;
+      scopeBar.appendChild(label);
+
+      treeRoot.appendChild(scopeBar);
+    }
+
     const list = document.createElement("ul");
     list.className = "tree-list tree-list-root";
-    node.children.forEach((child) => list.appendChild(renderNode(child)));
+    visibleNode.children.forEach((child) => list.appendChild(renderNode(child)));
     treeRoot.appendChild(list);
   }
 
   async function loadTree({ autoSelect = false } = {}) {
+    closeTreeContextMenu();
     setStatus("Odswiezam drzewo plikow...");
     treeData = await requestJson(config.treeUrl, { method: "GET" });
+    if (scopedRootPath && !findDirectoryNode(treeData, scopedRootPath)) {
+      scopedRootPath = "";
+      applyTreeScopeState();
+    }
     renderTree(treeData);
     setStatus("Drzewo plikow gotowe.");
 
@@ -512,10 +947,17 @@ if (shell) {
       saveButton.disabled = !file.editable;
 
       if (file.editable) {
+        showEditorMode();
         editor.setMarkdown(file.content || "", false);
         toggleOverlay({ empty: false, unsupported: false });
         setStatus("Plik gotowy do edycji.");
+      } else if (file.previewable) {
+        showPreviewMode(file);
+        editor.setMarkdown("", false);
+        toggleOverlay({ empty: false, unsupported: false });
+        setStatus(file.preview_kind === "pdf" ? "Podglad PDF gotowy." : "Podglad obrazu gotowy.");
       } else {
+        showUnsupportedMode();
         editor.setMarkdown("", false);
         toggleOverlay({ empty: false, unsupported: true });
         setStatus(file.message || "Tego pliku nie mozna edytowac.");
@@ -557,6 +999,7 @@ if (shell) {
       selectedEditable = false;
       saveButton.disabled = true;
       updateHeader("", "");
+      showEditorMode();
       editor.setMarkdown("", false);
       toggleOverlay({ empty: true, unsupported: false });
       closeSettingsModal();
@@ -579,7 +1022,7 @@ if (shell) {
   }
 
   async function createItem() {
-    const parentPath = getCurrentParentPath();
+    const parentPath = createParentPathOverride ?? getCurrentParentPath();
     const name = createNameInput.value.trim();
     if (!name) {
       setStatus("Podaj nazwe nowego elementu.", true);
@@ -610,6 +1053,59 @@ if (shell) {
         expandedDirectories.add(created.path);
         renderTree(treeData);
         setStatus("Katalog utworzony.");
+      }
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  function addPendingUploadFiles(fileList) {
+    const nextFiles = Array.from(fileList || []);
+    if (!nextFiles.length) {
+      return;
+    }
+
+    const knownKeys = new Set(pendingUploadFiles.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+    nextFiles.forEach((file) => {
+      const key = `${file.name}:${file.size}:${file.lastModified}`;
+      if (!knownKeys.has(key)) {
+        pendingUploadFiles.push(file);
+        knownKeys.add(key);
+      }
+    });
+    renderUploadFileList();
+  }
+
+  async function submitUpload() {
+    if (!pendingUploadFiles.length) {
+      setStatus("Najpierw wybierz pliki do uploadu.", true);
+      return;
+    }
+
+    try {
+      setStatus("Wysylam pliki...");
+      const formData = new FormData();
+      formData.append("parent_path", uploadTargetPath);
+      pendingUploadFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const result = await requestMultipart(config.uploadUrl, formData);
+      if (uploadTargetPath) {
+        expandedDirectories.add(uploadTargetPath);
+      }
+      await loadTree();
+      renderTree(treeData);
+
+      const createdCount = result.created_items.length;
+      const skippedCount = result.skipped_items.length;
+      resetUploadState();
+
+      if (skippedCount) {
+        const firstMessage = result.skipped_items[0]?.message || "Czesc plikow nie zostala dodana.";
+        setStatus(`Dodano ${createdCount} plikow, pominieto ${skippedCount}. ${firstMessage}`, true);
+      } else {
+        setStatus(`Dodano ${createdCount} plikow.`);
       }
     } catch (error) {
       setStatus(error.message, true);
@@ -683,6 +1179,16 @@ if (shell) {
   refreshButton.addEventListener("click", () => {
     loadTree();
   });
+  resetTreeRootButton.addEventListener("click", () => {
+    setScopedRoot("");
+    setStatus("Wrocono do pelnego drzewa.");
+  });
+  toggleHiddenFilesButton.addEventListener("click", () => {
+    showHiddenFiles = !showHiddenFiles;
+    applyHiddenFilesToggleState();
+    renderTree(treeData);
+    setStatus(showHiddenFiles ? "Ukryte pliki sa widoczne." : "Ukryte pliki sa ukryte.");
+  });
 
   treeRoot.addEventListener("dragover", (event) => {
     if (!dragState || !dragState.parentPath) {
@@ -718,6 +1224,39 @@ if (shell) {
   increaseFontSizeButton.addEventListener("click", () => adjustEditorFontSize(1));
   newFileButton.addEventListener("click", () => openCreateModal("file"));
   newDirectoryButton.addEventListener("click", () => openCreateModal("directory"));
+  uploadSelectButton.addEventListener("click", () => uploadFileInput.click());
+  uploadSubmitButton.addEventListener("click", submitUpload);
+  uploadCancelButton.addEventListener("click", closeUploadMode);
+  uploadFileInput.addEventListener("change", (event) => {
+    addPendingUploadFiles(event.target.files);
+    uploadFileInput.value = "";
+  });
+  uploadDropzone.addEventListener("click", (event) => {
+    if (event.target.closest("button")) {
+      return;
+    }
+    uploadFileInput.click();
+  });
+  uploadDropzone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      uploadFileInput.click();
+    }
+  });
+  uploadDropzone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    uploadDropzone.classList.add("is-dragover");
+  });
+  uploadDropzone.addEventListener("dragleave", (event) => {
+    if (!uploadDropzone.contains(event.relatedTarget)) {
+      uploadDropzone.classList.remove("is-dragover");
+    }
+  });
+  uploadDropzone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    uploadDropzone.classList.remove("is-dragover");
+    addPendingUploadFiles(event.dataTransfer.files);
+  });
   openSettingsButton.addEventListener("click", openSettingsModal);
   closeSettingsButton.addEventListener("click", closeSettingsModal);
   cancelSettingsButton.addEventListener("click", closeSettingsModal);
@@ -740,12 +1279,28 @@ if (shell) {
       closeSettingsModal();
     }
   });
+  document.addEventListener("click", (event) => {
+    if (!treeContextMenu.classList.contains("hidden") && !treeContextMenu.contains(event.target)) {
+      closeTreeContextMenu();
+    }
+  });
+  document.addEventListener("contextmenu", (event) => {
+    if (!event.target.closest(".tree-row")) {
+      closeTreeContextMenu();
+    }
+  });
+  window.addEventListener("resize", closeTreeContextMenu);
+  treeRoot.addEventListener("scroll", closeTreeContextMenu);
   directoryBrowserModal.addEventListener("click", (event) => {
     if (event.target === directoryBrowserModal) {
       closeDirectoryBrowserModal();
     }
   });
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !treeContextMenu.classList.contains("hidden")) {
+      closeTreeContextMenu();
+      return;
+    }
     if (event.key === "Escape" && !directoryBrowserModal.classList.contains("hidden")) {
       closeDirectoryBrowserModal();
       return;
@@ -755,6 +1310,9 @@ if (shell) {
     }
     if (event.key === "Escape" && !createModal.classList.contains("hidden")) {
       closeCreateModal();
+    }
+    if (event.key === "Escape" && !uploadStage.classList.contains("hidden")) {
+      closeUploadMode();
     }
     if (event.key === "Enter" && document.activeElement === createNameInput && !createModal.classList.contains("hidden")) {
       createItem();
@@ -773,6 +1331,10 @@ if (shell) {
 
   applyTheme(shell.dataset.themeMode || "light");
   applyEditorFontSize(shell.dataset.editorFontSize || "16");
+  applyHiddenFilesToggleState();
+  applyTreeScopeState();
+  renderUploadFileList();
+  showEditorMode();
   toggleOverlay({ empty: true, unsupported: false });
   loadPreferences()
     .then(() => loadTree({ autoSelect: true }))

@@ -26,6 +26,32 @@
           <button id="new-directory" class="button button-secondary" type="button">Nowy katalog</button>
           <button id="refresh-tree" class="button button-secondary" type="button">Odswiez drzewo</button>
         </div>
+
+        <div class="sidebar-tree-controls">
+          <button
+            id="reset-tree-root"
+            class="icon-button icon-button-small sidebar-tree-icon hidden"
+            type="button"
+            aria-label="Wroc do pelnego drzewa"
+            title="Wroc do pelnego drzewa"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 6V3L5 8l5 5V9c3.31 0 6 2.69 6 6 0 .7-.12 1.36-.34 1.98l1.53 1.53A7.92 7.92 0 0 0 18 15c0-4.42-3.58-8-8-8zm-6 9c0 4.42 3.58 8 8 8 1.85 0 3.55-.63 4.9-1.69l-1.46-1.46A5.96 5.96 0 0 1 12 21c-3.31 0-6-2.69-6-6 0-.7.12-1.36.34-1.98L4.81 11.5A7.92 7.92 0 0 0 4 15z" />
+            </svg>
+          </button>
+          <button
+            id="toggle-hidden-files"
+            class="icon-button icon-button-small sidebar-tree-icon"
+            type="button"
+            aria-label="Pokaz ukryte pliki"
+            aria-pressed="false"
+            title="Pokaz ukryte pliki"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l1.4 1.5H17.5A2.5 2.5 0 0 1 20 8v1h-2V8a.5.5 0 0 0-.5-.5h-6.9L9.2 6H6.5A.5.5 0 0 0 6 6.5V8H4zm-.5 3H20l-1.6 8.1A2.5 2.5 0 0 1 15.95 20H7.05a2.5 2.5 0 0 1-2.45-2.4z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div id="tree-root" class="tree-root" aria-live="polite"></div>
@@ -73,6 +99,32 @@
       <section class="editor-stage">
         <div id="editor"></div>
 
+        <div id="preview-stage" class="file-preview hidden">
+          <img id="image-preview" class="file-preview-image hidden" alt="" />
+          <iframe id="pdf-preview" class="file-preview-pdf hidden" title="Podglad PDF"></iframe>
+        </div>
+
+        <section id="upload-stage" class="upload-stage hidden" aria-labelledby="upload-stage-title">
+          <div class="upload-card">
+            <div class="label">Transfer plikow</div>
+            <h3 id="upload-stage-title">Upload do katalogu</h3>
+            <p id="upload-target-label" class="muted">Docelowy katalog: glowny</p>
+
+            <div id="upload-dropzone" class="upload-dropzone" tabindex="0" role="button" aria-label="Upusc pliki tutaj lub wybierz z dysku">
+              <strong>Upusc tutaj pliki albo serie plikow</strong>
+              <p>Mozesz tez wybrac je z dysku. Upload nie nadpisuje istniejacych nazw.</p>
+              <div class="upload-actions">
+                <button id="upload-select-button" class="button button-secondary" type="button">Wybierz z dysku</button>
+                <button id="upload-submit-button" class="button button-primary" type="button">Upload</button>
+                <button id="upload-cancel-button" class="button button-secondary" type="button">Zamknij</button>
+              </div>
+              <input id="upload-file-input" type="file" multiple class="hidden" />
+            </div>
+
+            <div id="upload-file-list" class="upload-file-list" aria-live="polite"></div>
+          </div>
+        </section>
+
         <div id="empty-state" class="overlay-card">
           <strong>Wybierz plik z drzewa po lewej stronie.</strong>
           <p>Edytor obsluguje Markdown w trybie WYSIWYG.</p>
@@ -80,7 +132,7 @@
 
         <div id="unsupported-state" class="overlay-card hidden">
           <strong>Ten plik nie jest obslugiwany.</strong>
-          <p>Podglad i zapis dzialaja tylko dla plikow `.md` i `.markdown`.</p>
+          <p>Edycja dziala dla Markdown, a podglad dla obrazow i PDF. Ten typ pliku nie ma jeszcze obslugi.</p>
         </div>
       </section>
 
@@ -89,6 +141,8 @@
       </footer>
     </main>
   </div>
+
+  <div id="tree-context-menu" class="context-menu hidden" aria-hidden="true"></div>
 
   <div id="settings-modal" class="modal-backdrop hidden" aria-hidden="true">
     <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">

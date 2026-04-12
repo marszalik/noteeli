@@ -1,3 +1,5 @@
+import tempfile
+import zipfile
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
@@ -10,6 +12,8 @@ from app.domains.workspace.schemas import (
     DirectoryOption,
     FileDocument,
     TreeNode,
+    UploadItemsResponse,
+    UploadedItemError,
 )
 
 
@@ -34,6 +38,9 @@ class ItemAlreadyExistsError(WorkspaceError):
 
 
 class WorkspaceService:
+    IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"}
+    PDF_EXTENSIONS = {".pdf"}
+
     def __init__(
         self,
         settings: Settings | None = None,
@@ -76,7 +83,7 @@ class WorkspaceService:
         )
 
     def read_document(self, relative_path: str) -> FileDocument:
-        path = self._resolve_file_path(relative_path)
+        path = self.get_document_path(relative_path)
         if self.is_editable(path):
             return FileDocument(
                 name=path.name,
@@ -85,16 +92,30 @@ class WorkspaceService:
                 content=path.read_text(encoding="utf-8"),
             )
 
+        preview_kind = self.get_preview_kind(path)
+        if preview_kind is not None:
+            return FileDocument(
+                name=path.name,
+                path=relative_path,
+                editable=False,
+                content="",
+                previewable=True,
+                preview_kind=preview_kind,
+                message="Ten plik jest dostepny w trybie podgladu.",
+            )
+
         return FileDocument(
             name=path.name,
             path=relative_path,
             editable=False,
             content="",
+            previewable=False,
+            preview_kind=None,
             message="Ten typ pliku nie jest obslugiwany. Edytor zapisuje tylko Markdown.",
         )
 
     def save_document(self, relative_path: str, content: str) -> FileDocument:
-        path = self._resolve_file_path(relative_path)
+        path = self.get_document_path(relative_path)
         if not self.is_editable(path):
             raise UnsupportedFileTypeError("Only Markdown files can be saved.")
 
@@ -151,6 +172,54 @@ class WorkspaceService:
 
         return self._build_item_response(destination)
 
+    def upload_files(self, parent_path: str, uploads: list[tuple[str, bytes]]) -> UploadItemsResponse:
+        parent = self.root_path if not parent_path else self._resolve_path(parent_path)
+        if not parent.is_dir():
+            raise InvalidPathError("The selected parent path is not a directory.")
+
+        created_items: list[CreatedItem] = []
+        skipped_items: list[UploadedItemError] = []
+        seen_names: set[str] = set()
+
+        for original_name, content in uploads:
+            try:
+                normalized_name = self._normalize_uploaded_name(original_name)
+            except InvalidPathError as exc:
+                skipped_items.append(UploadedItemError(name=original_name or "(brak nazwy)", message=str(exc)))
+                continue
+
+            if normalized_name in seen_names:
+                skipped_items.append(
+                    UploadedItemError(
+                        name=normalized_name,
+                        message="This upload batch already contains a file with the same name.",
+                    )
+                )
+                continue
+            seen_names.add(normalized_name)
+
+            target = parent / normalized_name
+            if target.exists():
+                skipped_items.append(
+                    UploadedItemError(
+                        name=normalized_name,
+                        message="An item with this name already exists in the target directory.",
+                    )
+                )
+                continue
+
+            target.write_bytes(content)
+            created_items.append(self._build_item_response(target))
+
+        if self.get_preferences().sort_mode == "manual" and created_items:
+            self._refresh_manual_order(parent)
+
+        return UploadItemsResponse(
+            parent_path=parent_path,
+            created_items=created_items,
+            skipped_items=skipped_items,
+        )
+
     def reorder_items(self, parent_path: str, ordered_paths: list[str]) -> AppPreferences:
         preferences = self.get_preferences()
         if preferences.sort_mode != "manual":
@@ -205,8 +274,70 @@ class WorkspaceService:
             directories=directories,
         )
 
+    def prepare_download(self, relative_path: str) -> tuple[Path, str, bool]:
+        source = self._resolve_path(relative_path)
+        if source.is_file():
+            return source, source.name, False
+
+        temp_file = tempfile.NamedTemporaryFile(prefix="noteeli-download-", suffix=".zip", delete=False)
+        temp_path = Path(temp_file.name)
+        temp_file.close()
+
+        with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for child in source.rglob("*"):
+                archive.write(child, arcname=child.relative_to(source.parent))
+
+        return temp_path, f"{source.name}.zip", True
+
     def is_editable(self, path: Path) -> bool:
         return path.suffix.lower() in self.settings.allowed_markdown_extensions
+
+    def get_preview_kind(self, path: Path) -> str | None:
+        suffix = path.suffix.lower()
+        if suffix in self.IMAGE_EXTENSIONS:
+            return "image"
+        if suffix in self.PDF_EXTENSIONS:
+            return "pdf"
+        return None
+
+    def resolve_embedded_asset(self, source_document_path: str, asset_reference: str) -> tuple[Path, str]:
+        source_document = self.get_document_path(source_document_path)
+        normalized_reference = self._normalize_asset_reference(asset_reference)
+        if not normalized_reference:
+            raise InvalidPathError("Embedded asset reference is empty.")
+
+        if normalized_reference.startswith("/"):
+            base_candidate = (self.root_path / normalized_reference.lstrip("/")).resolve()
+        else:
+            base_candidate = (source_document.parent / normalized_reference).resolve()
+
+        candidate_paths = [base_candidate]
+        if base_candidate.suffix.lower() == ".excalidraw":
+            stem_candidate = base_candidate.with_suffix("")
+            candidate_paths.extend(
+                [
+                    Path(f"{base_candidate}.png"),
+                    Path(f"{base_candidate}.svg"),
+                    stem_candidate.with_suffix(".png"),
+                    stem_candidate.with_suffix(".svg"),
+                    stem_candidate.with_suffix(".jpg"),
+                    stem_candidate.with_suffix(".jpeg"),
+                    stem_candidate.with_suffix(".webp"),
+                ]
+            )
+
+        for candidate in candidate_paths:
+            self._ensure_embedded_asset_in_allowed_roots(candidate)
+            if not candidate.exists() or not candidate.is_file():
+                continue
+
+            preview_kind = self.get_preview_kind(candidate)
+            if preview_kind is not None:
+                return candidate, preview_kind
+
+        if base_candidate.exists():
+            raise UnsupportedFileTypeError("This embedded asset type is not available in preview mode.")
+        raise DocumentNotFoundError("Embedded asset does not exist.")
 
     def _build_directory_node(
         self,
@@ -256,6 +387,9 @@ class WorkspaceService:
             raise DocumentNotFoundError("Document does not exist.")
         return candidate
 
+    def get_document_path(self, relative_path: str) -> Path:
+        return self._resolve_file_path(relative_path)
+
     def _resolve_path(self, relative_path: str) -> Path:
         if not relative_path:
             raise InvalidPathError("A file path is required.")
@@ -288,6 +422,14 @@ class WorkspaceService:
 
         return candidate
 
+    def _normalize_uploaded_name(self, name: str) -> str:
+        candidate = Path(name.strip()).name
+        if not candidate or candidate in {".", ".."}:
+            raise InvalidPathError("The uploaded file name is invalid.")
+        if "/" in candidate or "\\" in candidate:
+            raise InvalidPathError("The uploaded file name contains unsupported path separators.")
+        return candidate
+
     def _build_item_response(self, path: Path) -> CreatedItem:
         return CreatedItem(
             name=path.name,
@@ -295,6 +437,26 @@ class WorkspaceService:
             kind="directory" if path.is_dir() else "file",
             editable=path.is_file() and self.is_editable(path),
         )
+
+    def _normalize_asset_reference(self, asset_reference: str) -> str:
+        candidate = asset_reference.strip()
+        if candidate.startswith("<") and candidate.endswith(">"):
+            candidate = candidate[1:-1]
+        if "|" in candidate:
+            candidate = candidate.split("|", 1)[0]
+        if "#" in candidate:
+            candidate = candidate.split("#", 1)[0]
+        return candidate.strip()
+
+    def _ensure_embedded_asset_in_allowed_roots(self, candidate: Path) -> None:
+        content_root = self.root_path.resolve()
+        allowed_roots = [content_root]
+        if content_root.parent != content_root:
+            allowed_roots.append(content_root.parent.resolve())
+
+        if any(self._is_relative_to(candidate, allowed_root) for allowed_root in allowed_roots):
+            return
+        raise InvalidPathError("Embedded asset path escapes the allowed note roots.")
 
     def _refresh_manual_order(self, parent: Path) -> None:
         if not parent.exists() or not parent.is_dir():

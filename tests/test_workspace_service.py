@@ -1,4 +1,5 @@
 from pathlib import Path
+import zipfile
 
 import pytest
 
@@ -176,3 +177,117 @@ def test_browse_directories_rejects_file_path(tmp_path: Path):
 
     with pytest.raises(InvalidPathError):
         service.browse_directories(str(file_path))
+
+
+def test_read_document_returns_image_preview_metadata(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    image = notes / "cover.png"
+    image.write_bytes(b"png")
+
+    service = build_service(notes)
+    document = service.read_document("cover.png")
+
+    assert document.editable is False
+    assert document.previewable is True
+    assert document.preview_kind == "image"
+
+
+def test_read_document_returns_pdf_preview_metadata(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    pdf = notes / "guide.pdf"
+    pdf.write_bytes(b"%PDF-1.7")
+
+    service = build_service(notes)
+    document = service.read_document("guide.pdf")
+
+    assert document.editable is False
+    assert document.previewable is True
+    assert document.preview_kind == "pdf"
+
+
+def test_resolve_embedded_asset_for_relative_image(tmp_path: Path):
+    notes = tmp_path / "vault" / "notes"
+    notes.mkdir(parents=True)
+    source = notes / "entry.md"
+    source.write_text("![img](../assets/photo.png)", encoding="utf-8")
+    asset = notes.parent / "assets" / "photo.png"
+    asset.parent.mkdir()
+    asset.write_bytes(b"png")
+
+    service = build_service(notes)
+    resolved_path, preview_kind = service.resolve_embedded_asset("entry.md", "../assets/photo.png")
+
+    assert resolved_path == asset.resolve()
+    assert preview_kind == "image"
+
+
+def test_resolve_embedded_asset_uses_excalidraw_export_when_available(tmp_path: Path):
+    notes = tmp_path / "vault" / "notes"
+    notes.mkdir(parents=True)
+    source = notes / "journal.md"
+    source.write_text("![[../Excalidraw/Drawing.excalidraw]]", encoding="utf-8")
+    excalidraw = notes.parent / "Excalidraw" / "Drawing.excalidraw"
+    excalidraw.parent.mkdir()
+    excalidraw.write_text("{}", encoding="utf-8")
+    exported_image = excalidraw.with_suffix(".png")
+    exported_image.write_bytes(b"png")
+
+    service = build_service(notes)
+    resolved_path, preview_kind = service.resolve_embedded_asset("journal.md", "../Excalidraw/Drawing.excalidraw")
+
+    assert resolved_path == exported_image.resolve()
+    assert preview_kind == "image"
+
+
+def test_upload_files_creates_multiple_items_and_skips_duplicates(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "existing.png").write_bytes(b"old")
+
+    service = build_service(notes)
+    result = service.upload_files(
+        "",
+        [
+            ("photo.png", b"png"),
+            ("existing.png", b"new"),
+            ("photo.png", b"dup"),
+        ],
+    )
+
+    assert [item.path for item in result.created_items] == ["photo.png"]
+    assert len(result.skipped_items) == 2
+    assert (notes / "photo.png").read_bytes() == b"png"
+    assert (notes / "existing.png").read_bytes() == b"old"
+
+
+def test_prepare_download_returns_zip_for_directory(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target_dir = notes / "assets"
+    target_dir.mkdir()
+    (target_dir / "cover.png").write_bytes(b"png")
+
+    service = build_service(notes)
+    archive_path, filename, is_temporary = service.prepare_download("assets")
+
+    assert is_temporary is True
+    assert filename == "assets.zip"
+    assert archive_path.exists()
+    with zipfile.ZipFile(archive_path) as archive:
+        assert "assets/cover.png" in archive.namelist()
+
+
+def test_prepare_download_returns_original_file_for_regular_file(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target_file = notes / "note.md"
+    target_file.write_text("hello", encoding="utf-8")
+
+    service = build_service(notes)
+    download_path, filename, is_temporary = service.prepare_download("note.md")
+
+    assert is_temporary is False
+    assert filename == "note.md"
+    assert download_path == target_file
