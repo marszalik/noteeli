@@ -53,6 +53,20 @@
         </div>
 
         <div class="topbar-actions">
+          <div class="profiles-menu">
+            <button id="toggle-preference-profiles" class="icon-button" type="button" aria-label="Pokaz zapisane zestawy ustawien" aria-expanded="false" aria-controls="preference-profiles-dropdown" title="Zapisane zestawy ustawien">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 2H8a3 3 0 0 0-3 3v14a2 2 0 0 0 2 2h11a3 3 0 0 1 3 3V5a3 3 0 0 0-3-3zm0 17.08A4.97 4.97 0 0 0 17 19H7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1zM8.5 7H16v2H8.5zm0 4H16v2H8.5zm0 4H13v2H8.5z" />
+              </svg>
+            </button>
+            <div id="preference-profiles-dropdown" class="profiles-dropdown hidden" aria-hidden="true">
+              <div class="profiles-dropdown-header">
+                <div class="label">Szybki start</div>
+                <strong>Zapisane zestawy</strong>
+              </div>
+              <div id="preference-profiles-list" class="profiles-dropdown-list"></div>
+            </div>
+          </div>
           <div class="editor-zoom">
             <button id="decrease-font-size" class="icon-button icon-button-small" type="button" aria-label="Pomniejsz tekst edytora">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -149,6 +163,22 @@
       </header>
 
       <div class="modal-content">
+        <div class="settings-profile-panel">
+          <div class="settings-profile-panel-header">
+            <div>
+            <div class="label">Profile</div>
+              <strong id="profile-editor-title">Nowy profil</strong>
+            </div>
+            <button id="cancel-profile-edit" class="button button-secondary hidden" type="button">Anuluj edycje</button>
+          </div>
+          <div class="settings-path-row">
+            <input id="profile-name-input" class="settings-input" type="text" placeholder="np. SFTP firmowy albo Projekty lokalne" />
+            <button id="save-profile" class="button button-secondary settings-browse-button" type="button">Zapamietaj</button>
+          </div>
+          <p class="muted small-note">Zapisuje aktualne pola formularza jako profil do szybkiego przelaczania z gornego menu.</p>
+          <div id="settings-profile-list" class="settings-profile-list"></div>
+        </div>
+
         <label class="settings-label" for="source-type-select">Zrodlo notatek</label>
         <select id="source-type-select" class="settings-input">
           <option value="local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
@@ -256,12 +286,21 @@
       <div class="modal-content">
         <div class="directory-browser-current">
           <div class="settings-label">Biezaca lokalizacja</div>
-          <div id="directory-browser-current-path" class="directory-browser-path muted"></div>
+          <div id="directory-browser-current-path" class="directory-browser-path"></div>
         </div>
 
         <div class="directory-browser-actions">
           <button id="directory-browser-up" class="button button-secondary" type="button">Poziom wyzej</button>
+          <button id="directory-browser-new" class="button button-secondary" type="button">Nowy folder</button>
           <button id="directory-browser-select" class="button button-primary" type="button">Wybierz ten katalog</button>
+        </div>
+
+        <div id="directory-browser-create" class="directory-browser-create hidden">
+          <input id="directory-browser-create-input" class="settings-input" type="text" placeholder="Nazwa nowego folderu" />
+          <div class="directory-browser-create-actions">
+            <button id="directory-browser-create-confirm" class="button button-primary" type="button">Utworz i wejdz</button>
+            <button id="directory-browser-create-cancel" class="button button-secondary" type="button">Anuluj</button>
+          </div>
         </div>
 
         <div id="directory-browser-list" class="directory-browser-list" aria-live="polite"></div>

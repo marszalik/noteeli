@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.core.config import Settings, get_settings
 from app.domains.preferences.repository import PreferencesRepository
-from app.domains.preferences.schemas import AppPreferences, SortMode, SourceType
+from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, SourceType
 from app.domains.preferences.service import PreferencesService
 from app.domains.workspace.schemas import (
     CreatedItem,
@@ -74,6 +74,7 @@ class WorkspaceService:
         sftp_password: str = "",
         sftp_path: str = "/",
         gdrive_folder_id: str = "root",
+        gdrive_credentials: str | None = None,
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
     ) -> AppPreferences:
@@ -90,9 +91,96 @@ class WorkspaceService:
             sftp_password=sftp_password,
             sftp_path=sftp_path,
             gdrive_folder_id=gdrive_folder_id,
+            gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
         )
+
+    def list_preference_profiles(self) -> list[SavedPreferencesProfile]:
+        return self.preferences_service.list_profiles()
+
+    def save_preference_profile(
+        self,
+        *,
+        name: str,
+        content_root: str,
+        sort_mode: SortMode,
+        theme_mode: str,
+        editor_font_size: int,
+        source_type: SourceType = "local",
+        sftp_host: str = "",
+        sftp_port: int = 22,
+        sftp_username: str = "",
+        sftp_password: str = "",
+        sftp_path: str = "/",
+        gdrive_folder_id: str = "root",
+        gdrive_credentials: str = "",
+        image_upload_mode: str = "same_dir",
+        image_upload_subdir: str = "assets",
+    ) -> SavedPreferencesProfile:
+        return self.preferences_service.create_profile(
+            name=name,
+            content_root=content_root,
+            sort_mode=sort_mode,
+            theme_mode=theme_mode,
+            editor_font_size=editor_font_size,
+            source_type=source_type,
+            sftp_host=sftp_host,
+            sftp_port=sftp_port,
+            sftp_username=sftp_username,
+            sftp_password=sftp_password,
+            sftp_path=sftp_path,
+            gdrive_folder_id=gdrive_folder_id,
+            gdrive_credentials=gdrive_credentials,
+            image_upload_mode=image_upload_mode,
+            image_upload_subdir=image_upload_subdir,
+        )
+
+    def update_preference_profile(
+        self,
+        profile_id: int,
+        *,
+        name: str,
+        content_root: str,
+        sort_mode: SortMode,
+        theme_mode: str,
+        editor_font_size: int,
+        source_type: SourceType = "local",
+        sftp_host: str = "",
+        sftp_port: int = 22,
+        sftp_username: str = "",
+        sftp_password: str = "",
+        sftp_path: str = "/",
+        gdrive_folder_id: str = "root",
+        gdrive_credentials: str = "",
+        image_upload_mode: str = "same_dir",
+        image_upload_subdir: str = "assets",
+    ) -> SavedPreferencesProfile:
+        return self.preferences_service.update_profile(
+            profile_id,
+            name=name,
+            content_root=content_root,
+            sort_mode=sort_mode,
+            theme_mode=theme_mode,
+            editor_font_size=editor_font_size,
+            source_type=source_type,
+            sftp_host=sftp_host,
+            sftp_port=sftp_port,
+            sftp_username=sftp_username,
+            sftp_password=sftp_password,
+            sftp_path=sftp_path,
+            gdrive_folder_id=gdrive_folder_id,
+            gdrive_credentials=gdrive_credentials,
+            image_upload_mode=image_upload_mode,
+            image_upload_subdir=image_upload_subdir,
+        )
+
+    def delete_preference_profile(self, profile_id: int) -> None:
+        self.preferences_service.delete_profile(profile_id)
+
+    def apply_preference_profile(self, profile_id: int) -> AppPreferences:
+        invalidate_sftp_cache()
+        return self.preferences_service.apply_profile(profile_id)
 
     def build_tree(self) -> TreeNode:
         prefs = self.get_preferences()
@@ -279,6 +367,30 @@ class WorkspaceService:
             parent_path=result.parent_path,
             directories=[DirectoryOption(name=name, path=path) for name, path in result.directories],
         )
+
+    def create_browsed_directory(self, parent_path: str, name: str) -> DirectoryBrowserResponse:
+        normalized_name = name.strip()
+        if not normalized_name:
+            raise InvalidPathError("Directory name cannot be empty.")
+        if Path(normalized_name).name != normalized_name or normalized_name in {".", ".."}:
+            raise InvalidPathError("Directory name is invalid.")
+
+        target_parent = Path(parent_path).expanduser().resolve()
+        if not target_parent.exists() or not target_parent.is_dir():
+            raise InvalidPathError("Selected parent directory does not exist.")
+
+        target = target_parent / normalized_name
+        if target.exists():
+            raise ItemAlreadyExistsError("A directory with this name already exists.")
+
+        try:
+            target.mkdir()
+        except PermissionError as exc:
+            raise InvalidPathError("Cannot create a directory in this location.") from exc
+        except OSError as exc:
+            raise InvalidPathError(f"Cannot create directory: {exc.strerror or 'unknown error'}") from exc
+
+        return self.browse_directories(str(target))
 
     def prepare_download(self, relative_path: str) -> tuple[Path, str, bool]:
         backend = self._get_backend()

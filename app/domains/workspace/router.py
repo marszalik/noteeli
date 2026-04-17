@@ -10,10 +10,15 @@ from app.core.templates import render_template
 from app.domains.preferences.schemas import (
     AppPreferences,
     ReorderItemsRequest,
+    SavePreferencesProfileRequest,
+    SavedPreferencesProfilesResponse,
+    SavedPreferencesProfile,
     UpdatePreferencesRequest,
 )
 from app.domains.auth.service import AuthService
+from app.domains.preferences.service import PreferenceProfileConflictError, PreferenceProfileNotFoundError
 from app.domains.workspace.schemas import (
+    CreateDirectoryBrowserRequest,
     CreateItemRequest,
     CreatedItem,
     DirectoryBrowserResponse,
@@ -52,6 +57,7 @@ async def workspace_page(request: Request):
             "fileUrl": str(request.url_for("workspace_file_api")),
             "saveUrl": str(request.url_for("workspace_save_api")),
             "preferencesUrl": str(request.url_for("workspace_preferences_api")),
+            "preferenceProfilesUrl": str(request.url_for("workspace_preference_profiles_api")),
             "orderUrl": str(request.url_for("workspace_reorder_api")),
             "createUrl": str(request.url_for("workspace_create_item_api")),
             "moveUrl": str(request.url_for("workspace_move_item_api")),
@@ -60,6 +66,7 @@ async def workspace_page(request: Request):
             "deleteUrl": str(request.url_for("workspace_delete_item_api")),
             "renameUrl": str(request.url_for("workspace_rename_item_api")),
             "directoriesUrl": str(request.url_for("workspace_directories_api")),
+            "createDirectoryUrl": str(request.url_for("workspace_create_directory_api")),
             "previewUrl": str(request.url_for("workspace_file_preview_api")),
             "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
         }
@@ -257,6 +264,17 @@ async def workspace_directories_api(request: Request, path: str | None = None):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.post("/api/directories", response_model=DirectoryBrowserResponse, name="workspace_create_directory_api")
+async def workspace_create_directory_api(request: Request, payload: CreateDirectoryBrowserRequest):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.create_browsed_directory(payload.parent_path, payload.name)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ItemAlreadyExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.get("/api/preferences", response_model=AppPreferences, name="workspace_preferences_api")
 async def workspace_preferences_api(request: Request):
     auth_service.require_api_access(request)
@@ -281,6 +299,107 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
         image_upload_mode=payload.image_upload_mode,
         image_upload_subdir=payload.image_upload_subdir,
     )
+
+
+@router.get(
+    "/api/preferences/profiles",
+    response_model=SavedPreferencesProfilesResponse,
+    name="workspace_preference_profiles_api",
+)
+async def workspace_preference_profiles_api(request: Request):
+    auth_service.require_api_access(request)
+    return SavedPreferencesProfilesResponse(profiles=workspace_service.list_preference_profiles())
+
+
+@router.post(
+    "/api/preferences/profiles",
+    response_model=SavedPreferencesProfile,
+    name="workspace_save_preference_profile_api",
+)
+async def workspace_save_preference_profile_api(request: Request, payload: SavePreferencesProfileRequest):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.save_preference_profile(
+            name=payload.name,
+            content_root=payload.content_root,
+            sort_mode=payload.sort_mode,
+            theme_mode=payload.theme_mode,
+            editor_font_size=payload.editor_font_size,
+            source_type=payload.source_type,
+            sftp_host=payload.sftp_host,
+            sftp_port=payload.sftp_port,
+            sftp_username=payload.sftp_username,
+            sftp_password=payload.sftp_password,
+            sftp_path=payload.sftp_path,
+            gdrive_folder_id=payload.gdrive_folder_id,
+            gdrive_credentials=payload.gdrive_credentials,
+            image_upload_mode=payload.image_upload_mode,
+            image_upload_subdir=payload.image_upload_subdir,
+        )
+    except PreferenceProfileConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.put(
+    "/api/preferences/profiles/{profile_id}",
+    response_model=SavedPreferencesProfile,
+    name="workspace_update_preference_profile_api",
+)
+async def workspace_update_preference_profile_api(
+    request: Request,
+    profile_id: int,
+    payload: SavePreferencesProfileRequest,
+):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.update_preference_profile(
+            profile_id,
+            name=payload.name,
+            content_root=payload.content_root,
+            sort_mode=payload.sort_mode,
+            theme_mode=payload.theme_mode,
+            editor_font_size=payload.editor_font_size,
+            source_type=payload.source_type,
+            sftp_host=payload.sftp_host,
+            sftp_port=payload.sftp_port,
+            sftp_username=payload.sftp_username,
+            sftp_password=payload.sftp_password,
+            sftp_path=payload.sftp_path,
+            gdrive_folder_id=payload.gdrive_folder_id,
+            gdrive_credentials=payload.gdrive_credentials,
+            image_upload_mode=payload.image_upload_mode,
+            image_upload_subdir=payload.image_upload_subdir,
+        )
+    except PreferenceProfileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PreferenceProfileConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/api/preferences/profiles/{profile_id}",
+    name="workspace_delete_preference_profile_api",
+)
+async def workspace_delete_preference_profile_api(request: Request, profile_id: int):
+    auth_service.require_api_access(request)
+    try:
+        workspace_service.delete_preference_profile(profile_id)
+    except PreferenceProfileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
+
+
+@router.post(
+    "/api/preferences/profiles/{profile_id}/apply",
+    response_model=AppPreferences,
+    name="workspace_apply_preference_profile_api",
+)
+async def workspace_apply_preference_profile_api(request: Request, profile_id: int):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.apply_preference_profile(profile_id)
+    except PreferenceProfileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.put("/api/order", response_model=AppPreferences, name="workspace_reorder_api")

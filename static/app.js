@@ -13,10 +13,15 @@ if (shell) {
   const fontSizeLabel = document.getElementById("font-size-label");
   const saveButton = document.getElementById("save-button");
   const editorModeToggle = document.getElementById("editor-mode-toggle");
+  const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
+  const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
+  const preferenceProfilesList = document.getElementById("preference-profiles-list");
   const openSettingsButton = document.getElementById("open-settings");
   const closeSettingsButton = document.getElementById("close-settings");
   const cancelSettingsButton = document.getElementById("cancel-settings");
   const saveSettingsButton = document.getElementById("save-settings");
+  const saveProfileButton = document.getElementById("save-profile");
+  const cancelProfileEditButton = document.getElementById("cancel-profile-edit");
   const settingsModal = document.getElementById("settings-modal");
   const browseContentRootButton = document.getElementById("browse-content-root");
   const directoryBrowserModal = document.getElementById("directory-browser-modal");
@@ -25,7 +30,12 @@ if (shell) {
   const directoryBrowserCurrentPath = document.getElementById("directory-browser-current-path");
   const directoryBrowserList = document.getElementById("directory-browser-list");
   const directoryBrowserUpButton = document.getElementById("directory-browser-up");
+  const directoryBrowserNewButton = document.getElementById("directory-browser-new");
   const directoryBrowserSelectButton = document.getElementById("directory-browser-select");
+  const directoryBrowserCreate = document.getElementById("directory-browser-create");
+  const directoryBrowserCreateInput = document.getElementById("directory-browser-create-input");
+  const directoryBrowserCreateConfirmButton = document.getElementById("directory-browser-create-confirm");
+  const directoryBrowserCreateCancelButton = document.getElementById("directory-browser-create-cancel");
   const createModal = document.getElementById("create-modal");
   const closeCreateButton = document.getElementById("close-create");
   const cancelCreateButton = document.getElementById("cancel-create");
@@ -48,6 +58,9 @@ if (shell) {
   const sortModeSelect = document.getElementById("sort-mode-select");
   const themeModeSelect = document.getElementById("theme-mode-select");
   const editorFontSizeInput = document.getElementById("editor-font-size-input");
+  const profileNameInput = document.getElementById("profile-name-input");
+  const profileEditorTitle = document.getElementById("profile-editor-title");
+  const settingsProfileList = document.getElementById("settings-profile-list");
   const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
   const imageUploadSubdirInput = document.getElementById("image-upload-subdir-input");
   const imageUploadSubdirSection = document.getElementById("image-upload-subdir-section");
@@ -74,6 +87,9 @@ if (shell) {
   const expandedDirectories = new Set([""]);
   let treeData = null;
   let preferences = null;
+  let preferenceProfiles = [];
+  let editingPreferenceProfileId = null;
+  let profileFormGdriveCredentials = "";
   let selectedPath = null;
   let selectedEditable = false;
   let selectedTreePath = "";
@@ -84,11 +100,14 @@ if (shell) {
   let modalAction = "create"; // "create" | "rename"
   let renameTargetNode = null;
   let directoryBrowserState = null;
+  let directoryBrowserCreateOpen = false;
   let contextMenuState = null;
   let showHiddenFiles = false;
   let scopedRootPath = "";
   let uploadTargetPath = "";
   let pendingUploadFiles = [];
+  let diagramToolbarMenu = null;
+  let lastEditorSelection = null;
 
   function computeInsertRef(sourceMdPath, uploadedPath) {
     const sourceParts = getParentPath(sourceMdPath).split("/").filter(Boolean);
@@ -107,6 +126,87 @@ if (shell) {
       .map(b => b.toString(16).padStart(2, "0"))
       .join("");
     return `https://www.plantuml.com/plantuml/svg/~h${hex}`;
+  }
+
+  function insertEditorSnippet(snippet) {
+    const snippetText = snippet.trimEnd();
+    const originalMode = currentEditorMode;
+    const selection = getStoredEditorSelection();
+    let mdStart = selection[0];
+    let mdEnd = selection[1];
+
+    if (editor.isWysiwygMode()) {
+      [mdStart, mdEnd] = editor.convertPosToMatchEditorMode(selection[0], selection[1], "markdown");
+    }
+
+    const current = editor.getMarkdown();
+    const startOffset = markdownPositionToOffset(current, mdStart);
+    const endOffset = markdownPositionToOffset(current, mdEnd);
+    const next = `${current.slice(0, startOffset)}${snippetText}${current.slice(endOffset)}`;
+    const caretOffset = startOffset + snippetText.length;
+    const caretPos = offsetToMarkdownPosition(next, caretOffset);
+
+    editor.setMarkdown(next, false);
+
+    if (originalMode === "wysiwyg") {
+      const [wwStart, wwEnd] = editor.convertPosToMatchEditorMode(caretPos, caretPos, "wysiwyg");
+      editor.setSelection(wwStart, wwEnd);
+      scheduleWysiwygDiagramRender();
+    } else {
+      editor.setSelection(caretPos, caretPos);
+      scheduleMermaidPreviewRender();
+    }
+
+    editor.focus();
+  }
+
+  function getStoredEditorSelection() {
+    if (lastEditorSelection && lastEditorSelection.mode === currentEditorMode) {
+      return lastEditorSelection.selection;
+    }
+    return editor.getSelection();
+  }
+
+  function rememberEditorSelection() {
+    lastEditorSelection = {
+      mode: currentEditorMode,
+      selection: editor.getSelection(),
+    };
+  }
+
+  function markdownPositionToOffset(markdown, pos) {
+    if (!Array.isArray(pos)) {
+      return 0;
+    }
+    const [targetLine, targetColumn] = pos;
+    const lines = markdown.split("\n");
+    let offset = 0;
+    for (let index = 0; index < targetLine; index += 1) {
+      offset += (lines[index] || "").length + 1;
+    }
+    return offset + targetColumn;
+  }
+
+  function offsetToMarkdownPosition(markdown, offset) {
+    const safeOffset = Math.max(0, Math.min(offset, markdown.length));
+    const head = markdown.slice(0, safeOffset);
+    const lines = head.split("\n");
+    return [lines.length - 1, lines[lines.length - 1].length];
+  }
+
+  function buildDiagramSnippet(type) {
+    switch (type) {
+      case "mermaid-flowchart":
+        return "```mermaid\nflowchart TD\n  A[Start] --> B[Step]\n  B --> C[Finish]\n```\n";
+      case "mermaid-sequence":
+        return "```mermaid\nsequenceDiagram\n  participant U as User\n  participant A as App\n  U->>A: Request\n  A-->>U: Response\n```\n";
+      case "mermaid-class":
+        return "```mermaid\nclassDiagram\n  class Note\n  class Folder\n  Folder --> Note\n```\n";
+      case "plantuml-sequence":
+        return "```plantuml\n@startuml\nAlice -> Bob: Hello\nBob --> Alice: Hi\n@enduml\n```\n";
+      default:
+        return "```mermaid\nflowchart TD\n  A[Start] --> B[Step]\n```\n";
+    }
   }
 
   const editor = new toastui.Editor({
@@ -213,6 +313,90 @@ if (shell) {
   }
   editor.off("addImageBlobHook");
   editor.on("addImageBlobHook", handleImageBlob);
+  editor.on("change", () => {
+    rememberEditorSelection();
+    scheduleMermaidPreviewRender();
+    scheduleWysiwygDiagramRender();
+  });
+  editor.on("focus", rememberEditorSelection);
+  editor.on("caretChange", rememberEditorSelection);
+
+  function closeDiagramToolbarMenu() {
+    if (!diagramToolbarMenu) return;
+    diagramToolbarMenu.classList.add("hidden");
+    diagramToolbarMenu.setAttribute("aria-hidden", "true");
+    diagramToolbarMenu.previousElementSibling?.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleDiagramToolbarMenu() {
+    if (!diagramToolbarMenu) return;
+    const isHidden = diagramToolbarMenu.classList.contains("hidden");
+    if (!isHidden) {
+      closeDiagramToolbarMenu();
+      return;
+    }
+    diagramToolbarMenu.classList.remove("hidden");
+    diagramToolbarMenu.setAttribute("aria-hidden", "false");
+    diagramToolbarMenu.previousElementSibling?.setAttribute("aria-expanded", "true");
+  }
+
+  function attachDiagramToolbarButtons() {
+    const toolbar = editorContainer.querySelector(".toastui-editor-defaultUI-toolbar");
+    if (!toolbar || toolbar.querySelector(".noteeli-diagram-toolbar-group")) {
+      return;
+    }
+
+    const group = document.createElement("div");
+    group.className = "toastui-editor-toolbar-group noteeli-diagram-toolbar-group";
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "noteeli-toolbar-button noteeli-toolbar-button-dropdown";
+    trigger.setAttribute("aria-label", "Wstaw diagram");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.title = "Wstaw diagram";
+    trigger.textContent = "Diagram";
+    trigger.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleDiagramToolbarMenu();
+    });
+
+    const menu = document.createElement("div");
+    menu.className = "noteeli-toolbar-menu hidden";
+    menu.setAttribute("aria-hidden", "true");
+
+    const options = [
+      { type: "mermaid-flowchart", label: "Mermaid Flowchart", message: "Dodano blok Mermaid Flowchart." },
+      { type: "mermaid-sequence", label: "Mermaid Sequence", message: "Dodano blok Mermaid Sequence." },
+      { type: "mermaid-class", label: "Mermaid Class", message: "Dodano blok Mermaid Class." },
+      { type: "plantuml-sequence", label: "PlantUML Sequence", message: "Dodano blok PlantUML." },
+    ];
+
+    options.forEach(({ type, label, message }) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "noteeli-toolbar-menu-item";
+      item.textContent = label;
+      item.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
+      item.addEventListener("click", () => {
+        insertEditorSnippet(buildDiagramSnippet(type));
+        setStatus(message);
+        scheduleWysiwygDiagramRender();
+        scheduleMermaidPreviewRender();
+        closeDiagramToolbarMenu();
+      });
+      menu.appendChild(item);
+    });
+
+    group.append(trigger, menu);
+    toolbar.appendChild(group);
+    diagramToolbarMenu = menu;
+  }
 
   // ── Mermaid setup ─────────────────────────────────────────
   let currentEditorMode = "wysiwyg";
@@ -224,52 +408,95 @@ if (shell) {
 
   mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
 
-  // ── Preview-pane (markdown mode) mermaid rendering ────────
   let mermaidPreviewTimer = null;
-  new MutationObserver(() => {
-    // Only render in markdown-mode preview pane; in WYSIWYG mode ProseMirror would conflict.
+  let wysiwygDiagramTimer = null;
+
+  function normalizeDiagramLanguage(value) {
+    const lang = (value || "").toLowerCase().trim();
+    if (lang === "plantuml" || lang === "puml") return "plantuml";
+    if (lang === "mermaid") return "mermaid";
+    return "";
+  }
+
+  function scheduleMermaidPreviewRender() {
     if (currentEditorMode !== "markdown") return;
     clearTimeout(mermaidPreviewTimer);
     mermaidPreviewTimer = setTimeout(() => {
       const els = editorContainer.querySelectorAll(".mermaid-diagram:not([data-processed])");
       if (els.length) mermaid.run({ nodes: Array.from(els) }).catch(() => {});
     }, 80);
-  }).observe(editorContainer, { childList: true, subtree: true });
+  }
 
-  // ── WYSIWYG mode diagram rendering ───────────────────────
-  // ToastUI code blocks: div.toastui-editor-ww-code-block
-  //   ├── div.toastui-editor-ww-code-block-language  (contenteditable=false)
-  //   └── pre  ← contentDOM (ProseMirror manages only this)
-  // Siblings appended to the outer div are outside contentDOM and are preserved.
-  let wysiwygDiagramTimer = null;
+  function scheduleWysiwygDiagramRender() {
+    if (currentEditorMode !== "wysiwyg") return;
+    clearTimeout(wysiwygDiagramTimer);
+    wysiwygDiagramTimer = setTimeout(() => {
+      renderWysiwygDiagrams().catch(() => {});
+    }, 120);
+  }
+
+  new MutationObserver(() => {
+    scheduleMermaidPreviewRender();
+    scheduleWysiwygDiagramRender();
+  }).observe(editorContainer, { childList: true, subtree: true, characterData: true });
 
   async function renderWysiwygDiagrams() {
     if (currentEditorMode !== "wysiwyg") return;
     const blocks = editorContainer.querySelectorAll(".toastui-editor-ww-code-block");
     for (const block of blocks) {
-      const langEl = block.querySelector(".toastui-editor-ww-code-block-language");
-      const lang = (langEl?.textContent || "").toLowerCase().trim();
-      if (lang !== "mermaid" && lang !== "plantuml" && lang !== "puml") continue;
-
-      const code = (block.querySelector("pre")?.textContent || "").trim();
-      if (!code) continue;
-
-      let out = block.querySelector(".ww-diagram-out");
-      if (!out) {
-        out = document.createElement("div");
-        out.className = "ww-diagram-out";
-        block.appendChild(out);
+      const lang = normalizeDiagramLanguage(
+        block.getAttribute("data-language") ||
+        block.querySelector("code")?.getAttribute("data-language") ||
+        "",
+      );
+      const out = block.querySelector(".ww-diagram-out");
+      if (!lang) {
+        out?.remove();
+        block.classList.remove("is-diagram-rendered", "is-source-visible");
+        continue;
       }
 
-      if (out.dataset.code === code) continue; // nothing changed
-      out.dataset.code = code;
+      const code = (block.querySelector("pre code")?.textContent || block.querySelector("pre")?.textContent || "").trim();
+      if (!code) {
+        out?.remove();
+        block.classList.remove("is-diagram-rendered", "is-source-visible");
+        continue;
+      }
+
+      let nextOut = out;
+      if (!nextOut) {
+        nextOut = document.createElement("div");
+        nextOut.className = "ww-diagram-out";
+        nextOut.tabIndex = 0;
+        nextOut.setAttribute("role", "button");
+        nextOut.setAttribute("aria-label", "Kliknij, aby pokazac albo ukryc kod diagramu");
+        nextOut.addEventListener("click", () => {
+          block.classList.toggle("is-source-visible");
+        });
+        nextOut.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            block.classList.toggle("is-source-visible");
+          }
+        });
+        block.appendChild(nextOut);
+      }
+
+      if (nextOut.dataset.code === code && nextOut.dataset.lang === lang) continue;
+      nextOut.dataset.code = code;
+      nextOut.dataset.lang = lang;
 
       if (lang === "mermaid") {
-        out.removeAttribute("data-processed");
-        out.textContent = code;
-        await mermaid.run({ nodes: [out] }).catch(() => {});
+        nextOut.removeAttribute("data-processed");
+        nextOut.textContent = code;
+        const rendered = await mermaid.run({ nodes: [nextOut] }).then(() => true).catch(() => false);
+        block.classList.toggle("is-diagram-rendered", rendered);
+        if (!rendered) {
+          block.classList.add("is-source-visible");
+        }
       } else {
-        out.innerHTML = `<img src="${plantUmlSvgUrl(code)}" class="diagram-plantuml" alt="PlantUML diagram" />`;
+        nextOut.innerHTML = `<img src="${plantUmlSvgUrl(code)}" class="diagram-plantuml" alt="PlantUML diagram" />`;
+        block.classList.add("is-diagram-rendered");
       }
     }
   }
@@ -280,7 +507,8 @@ if (shell) {
     editor.changeMode(currentEditorMode);
     editorModeToggle.textContent = currentEditorMode === "wysiwyg" ? "WYSIWYG" : "Markdown";
     editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
-    if (currentEditorMode === "wysiwyg") setTimeout(renderWysiwygDiagrams, 200);
+    if (currentEditorMode === "wysiwyg") scheduleWysiwygDiagramRender();
+    else scheduleMermaidPreviewRender();
   });
 
   function clampFontSize(value) {
@@ -291,6 +519,17 @@ if (shell) {
     document.body.dataset.theme = themeMode;
     shell.dataset.themeMode = themeMode;
     mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
+    if (currentEditorMode === "wysiwyg") {
+      editorContainer.querySelectorAll(".ww-diagram-out").forEach((node) => {
+        node.removeAttribute("data-code");
+      });
+      scheduleWysiwygDiagramRender();
+    } else {
+      editorContainer.querySelectorAll(".mermaid-diagram[data-processed]").forEach((node) => {
+        node.removeAttribute("data-processed");
+      });
+      scheduleMermaidPreviewRender();
+    }
   }
 
   function applyEditorFontSize(fontSize) {
@@ -302,6 +541,7 @@ if (shell) {
   }
 
   function openSettingsModal() {
+    closePreferenceProfilesDropdown();
     settingsModal.classList.remove("hidden");
     settingsModal.setAttribute("aria-hidden", "false");
   }
@@ -320,6 +560,38 @@ if (shell) {
   function closeDirectoryBrowserModal() {
     directoryBrowserModal.classList.add("hidden");
     directoryBrowserModal.setAttribute("aria-hidden", "true");
+    toggleDirectoryCreate(false);
+  }
+
+  function toggleDirectoryCreate(forceOpen) {
+    directoryBrowserCreateOpen = typeof forceOpen === "boolean" ? forceOpen : !directoryBrowserCreateOpen;
+    directoryBrowserCreate?.classList.toggle("hidden", !directoryBrowserCreateOpen);
+    if (!directoryBrowserCreateOpen && directoryBrowserCreateInput) {
+      directoryBrowserCreateInput.value = "";
+    }
+    if (directoryBrowserCreateOpen) {
+      window.setTimeout(() => directoryBrowserCreateInput?.focus(), 0);
+    }
+  }
+
+  function openPreferenceProfilesDropdown() {
+    preferenceProfilesDropdown?.classList.remove("hidden");
+    preferenceProfilesDropdown?.setAttribute("aria-hidden", "false");
+    togglePreferenceProfilesButton?.setAttribute("aria-expanded", "true");
+  }
+
+  function closePreferenceProfilesDropdown() {
+    preferenceProfilesDropdown?.classList.add("hidden");
+    preferenceProfilesDropdown?.setAttribute("aria-hidden", "true");
+    togglePreferenceProfilesButton?.setAttribute("aria-expanded", "false");
+  }
+
+  function togglePreferenceProfilesDropdown() {
+    if (!preferenceProfilesDropdown || preferenceProfilesDropdown.classList.contains("hidden")) {
+      openPreferenceProfilesDropdown();
+      return;
+    }
+    closePreferenceProfilesDropdown();
   }
 
   function getCurrentParentPath() {
@@ -677,30 +949,8 @@ if (shell) {
     });
   }
 
-  async function loadPreferences() {
-    preferences = await requestJson(config.preferencesUrl, { method: "GET" });
-    if (sourceTypeSelect) sourceTypeSelect.value = preferences.source_type || "local";
-    if (contentRootInput) contentRootInput.value = preferences.content_root;
-    if (sftpHostInput) sftpHostInput.value = preferences.sftp_host || "";
-    if (sftpPortInput) sftpPortInput.value = preferences.sftp_port || 22;
-    if (sftpUsernameInput) sftpUsernameInput.value = preferences.sftp_username || "";
-    if (sftpPasswordInput) sftpPasswordInput.value = preferences.sftp_password || "";
-    if (sftpPathInput) sftpPathInput.value = preferences.sftp_path || "/";
-    if (gdriveFolderIdInput) gdriveFolderIdInput.value = preferences.gdrive_folder_id || "root";
-    sortModeSelect.value = preferences.sort_mode;
-    themeModeSelect.value = preferences.theme_mode;
-    editorFontSizeInput.value = String(preferences.editor_font_size);
-    if (imageUploadModeSelect) imageUploadModeSelect.value = preferences.image_upload_mode || "same_dir";
-    if (imageUploadSubdirInput) imageUploadSubdirInput.value = preferences.image_upload_subdir || "assets";
-    if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", preferences.image_upload_mode !== "subdir");
-    contentRootDisplay.textContent = preferences.content_root;
-    applySourceTypeVisibility(preferences.source_type || "local");
-    applyTheme(preferences.theme_mode);
-    applyEditorFontSize(preferences.editor_font_size);
-  }
-
-  async function persistPreferences(overrides = {}) {
-    const payload = {
+  function buildPreferencesPayload(overrides = {}) {
+    return {
       source_type: sourceTypeSelect?.value || "local",
       content_root: contentRootInput?.value || "",
       sftp_host: sftpHostInput?.value || "",
@@ -716,14 +966,259 @@ if (shell) {
       image_upload_subdir: imageUploadSubdirInput?.value?.trim() || "assets",
       ...overrides,
     };
-    preferences = await requestJson(config.preferencesUrl, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
+  }
+
+  function applyPreferencesToForm(nextPreferences) {
+    if (sourceTypeSelect) sourceTypeSelect.value = nextPreferences.source_type || "local";
+    if (sourceTypeSelect) sourceTypeSelect.value = nextPreferences.source_type || "local";
+    if (contentRootInput) contentRootInput.value = nextPreferences.content_root;
+    if (sftpHostInput) sftpHostInput.value = nextPreferences.sftp_host || "";
+    if (sftpPortInput) sftpPortInput.value = nextPreferences.sftp_port || 22;
+    if (sftpUsernameInput) sftpUsernameInput.value = nextPreferences.sftp_username || "";
+    if (sftpPasswordInput) sftpPasswordInput.value = nextPreferences.sftp_password || "";
+    if (sftpPathInput) sftpPathInput.value = nextPreferences.sftp_path || "/";
+    if (gdriveFolderIdInput) gdriveFolderIdInput.value = nextPreferences.gdrive_folder_id || "root";
+    sortModeSelect.value = nextPreferences.sort_mode;
+    themeModeSelect.value = nextPreferences.theme_mode;
+    editorFontSizeInput.value = String(nextPreferences.editor_font_size);
+    if (imageUploadModeSelect) imageUploadModeSelect.value = nextPreferences.image_upload_mode || "same_dir";
+    if (imageUploadSubdirInput) imageUploadSubdirInput.value = nextPreferences.image_upload_subdir || "assets";
+    if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", nextPreferences.image_upload_mode !== "subdir");
+    applySourceTypeVisibility(nextPreferences.source_type || "local");
+    profileFormGdriveCredentials = nextPreferences.gdrive_credentials || "";
+  }
+
+  function applyPreferencesToUi(nextPreferences) {
+    preferences = nextPreferences;
+    applyPreferencesToForm(nextPreferences);
     contentRootDisplay.textContent = preferences.content_root;
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
+  }
+
+  async function loadPreferences() {
+    applyPreferencesToUi(await requestJson(config.preferencesUrl, { method: "GET" }));
+  }
+
+  async function persistPreferences(overrides = {}) {
+    const payload = buildPreferencesPayload(overrides);
+    const nextPreferences = await requestJson(config.preferencesUrl, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    applyPreferencesToUi(nextPreferences);
     return preferences;
+  }
+
+  function buildProfilePayload(overrides = {}) {
+    const gdriveCredentials =
+      overrides.gdrive_credentials ??
+      profileFormGdriveCredentials ??
+      preferences?.gdrive_credentials ??
+      "";
+    return {
+      ...buildPreferencesPayload(overrides),
+      gdrive_credentials: gdriveCredentials,
+    };
+  }
+
+  function findPreferenceProfile(profileId) {
+    return preferenceProfiles.find((profile) => profile.id === profileId) || null;
+  }
+
+  function resetProfileEditor({ resetForm = false } = {}) {
+    editingPreferenceProfileId = null;
+    if (profileEditorTitle) profileEditorTitle.textContent = "Nowy profil";
+    if (saveProfileButton) saveProfileButton.textContent = "Zapamietaj";
+    cancelProfileEditButton?.classList.add("hidden");
+    if (profileNameInput) profileNameInput.value = "";
+    if (resetForm && preferences) {
+      applyPreferencesToForm(preferences);
+    }
+    renderSettingsPreferenceProfiles();
+  }
+
+  function startProfileEditing(profile) {
+    editingPreferenceProfileId = profile.id;
+    if (profileEditorTitle) profileEditorTitle.textContent = `Edytujesz: ${profile.name}`;
+    if (saveProfileButton) saveProfileButton.textContent = "Zapisz zmiany";
+    cancelProfileEditButton?.classList.remove("hidden");
+    if (profileNameInput) profileNameInput.value = profile.name;
+    applyPreferencesToForm(profile);
+    renderSettingsPreferenceProfiles();
+    profileNameInput?.focus();
+    profileNameInput?.select();
+  }
+
+  function getProfileSummary(profile) {
+    if (profile.source_type === "sftp") {
+      const identity = [profile.sftp_username, profile.sftp_host].filter(Boolean).join("@");
+      const remotePath = profile.sftp_path || "/";
+      return identity ? `${identity}:${remotePath}` : `SFTP ${remotePath}`;
+    }
+    if (profile.source_type === "gdrive") {
+      return `Google Drive: ${profile.gdrive_folder_id || "root"}`;
+    }
+    return profile.content_root;
+  }
+
+  function renderPreferenceProfiles() {
+    if (!preferenceProfilesList) {
+      return;
+    }
+
+    preferenceProfilesList.innerHTML = "";
+    if (!preferenceProfiles.length) {
+      const empty = document.createElement("div");
+      empty.className = "profiles-dropdown-empty muted";
+      empty.textContent = "Brak zapisanych zestawow. Utworz pierwszy profil w ustawieniach.";
+      preferenceProfilesList.appendChild(empty);
+      return;
+    }
+
+    preferenceProfiles.forEach((profile) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "profiles-dropdown-item";
+      const title = document.createElement("strong");
+      title.textContent = profile.name;
+      const summary = document.createElement("span");
+      summary.textContent = getProfileSummary(profile);
+      button.append(title, summary);
+      button.addEventListener("click", () => applyPreferenceProfile(profile.id, profile.name));
+      preferenceProfilesList.appendChild(button);
+    });
+  }
+
+  function renderSettingsPreferenceProfiles() {
+    if (!settingsProfileList) {
+      return;
+    }
+
+    settingsProfileList.innerHTML = "";
+    if (!preferenceProfiles.length) {
+      const empty = document.createElement("div");
+      empty.className = "settings-profile-empty muted";
+      empty.textContent = "Brak zapisanych profili.";
+      settingsProfileList.appendChild(empty);
+      return;
+    }
+
+    preferenceProfiles.forEach((profile) => {
+      const row = document.createElement("div");
+      row.className = "settings-profile-item";
+      if (editingPreferenceProfileId === profile.id) {
+        row.classList.add("is-editing");
+      }
+
+      const info = document.createElement("div");
+      info.className = "settings-profile-item-info";
+      const title = document.createElement("strong");
+      title.textContent = profile.name;
+      const summary = document.createElement("span");
+      summary.textContent = getProfileSummary(profile);
+      info.append(title, summary);
+
+      const actions = document.createElement("div");
+      actions.className = "settings-profile-actions";
+
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "button button-secondary settings-profile-action";
+      editButton.textContent = "Edytuj";
+      editButton.addEventListener("click", () => startProfileEditing(profile));
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "button button-secondary settings-profile-action";
+      deleteButton.textContent = "Usun";
+      deleteButton.addEventListener("click", () => deletePreferenceProfile(profile));
+
+      actions.append(editButton, deleteButton);
+      row.append(info, actions);
+      settingsProfileList.appendChild(row);
+    });
+  }
+
+  async function loadPreferenceProfiles() {
+    const payload = await requestJson(config.preferenceProfilesUrl, { method: "GET" });
+    preferenceProfiles = payload.profiles || [];
+    if (editingPreferenceProfileId && !findPreferenceProfile(editingPreferenceProfileId)) {
+      resetProfileEditor();
+    }
+    renderPreferenceProfiles();
+    renderSettingsPreferenceProfiles();
+  }
+
+  async function saveCurrentPreferenceProfile() {
+    const profileName = profileNameInput?.value.trim() || "";
+    if (!profileName) {
+      setStatus("Podaj nazwe profilu.", true);
+      profileNameInput?.focus();
+      return;
+    }
+
+    try {
+      const isEditing = editingPreferenceProfileId !== null;
+      setStatus(isEditing ? "Aktualizuje profil ustawien..." : "Zapisuje profil ustawien...");
+      const url = isEditing ? `${config.preferenceProfilesUrl}/${editingPreferenceProfileId}` : config.preferenceProfilesUrl;
+      const method = isEditing ? "PUT" : "POST";
+      const profile = await requestJson(url, {
+        method,
+        body: JSON.stringify(buildProfilePayload({ name: profileName })),
+      });
+      await loadPreferenceProfiles();
+      resetProfileEditor();
+      setStatus(isEditing ? `Profil zaktualizowany: ${profile.name}.` : `Profil zapisany: ${profile.name}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  async function deletePreferenceProfile(profile) {
+    if (!window.confirm(`Usunac profil "${profile.name}"?`)) {
+      return;
+    }
+
+    try {
+      setStatus(`Usuwam profil: ${profile.name}...`);
+      await requestJson(`${config.preferenceProfilesUrl}/${profile.id}`, {
+        method: "DELETE",
+      });
+      if (editingPreferenceProfileId === profile.id) {
+        resetProfileEditor({ resetForm: true });
+      }
+      await loadPreferenceProfiles();
+      setStatus(`Profil usuniety: ${profile.name}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  async function resetWorkspaceAfterPreferencesChange() {
+    selectedPath = null;
+    selectedEditable = false;
+    saveButton.disabled = true;
+    updateHeader("", "");
+    showEditorMode();
+    editor.setMarkdown("", false);
+    toggleOverlay({ empty: true, unsupported: false });
+    await loadTree({ autoSelect: true });
+  }
+
+  async function applyPreferenceProfile(profileId, profileName = "") {
+    try {
+      setStatus(`Laduje profil${profileName ? `: ${profileName}` : ""}...`);
+      const nextPreferences = await requestJson(`${config.preferenceProfilesUrl}/${profileId}/apply`, {
+        method: "POST",
+      });
+      applyPreferencesToUi(nextPreferences);
+      closePreferenceProfilesDropdown();
+      await resetWorkspaceAfterPreferencesChange();
+      setStatus(profileName ? `Zaladowano profil: ${profileName}.` : "Profil zaladowany.");
+    } catch (error) {
+      setStatus(error.message, true);
+    }
   }
 
   function getParentPath(path) {
@@ -906,7 +1401,7 @@ if (shell) {
 
   function renderDirectoryBrowser(payload) {
     directoryBrowserState = payload;
-    directoryBrowserCurrentPath.textContent = payload.current_path;
+    renderDirectoryBrowserPath(payload.current_path);
     directoryBrowserList.innerHTML = "";
     directoryBrowserUpButton.disabled = !payload.parent_path;
 
@@ -922,14 +1417,74 @@ if (shell) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "directory-browser-item";
-      button.innerHTML = `
-        <span class="directory-browser-item-name">${directory.name}</span>
-        <span class="directory-browser-item-path">${directory.path}</span>
-      `;
+      const name = document.createElement("span");
+      name.className = "directory-browser-item-name";
+      name.textContent = directory.name;
+      const path = document.createElement("span");
+      path.className = "directory-browser-item-path";
+      path.textContent = directory.path;
+      const arrow = document.createElement("span");
+      arrow.className = "directory-browser-item-arrow";
+      arrow.textContent = "›";
+      button.append(name, path, arrow);
       button.addEventListener("click", () => {
         loadDirectoryBrowser(directory.path);
       });
       directoryBrowserList.appendChild(button);
+    });
+  }
+
+  function renderDirectoryBrowserPath(path) {
+    if (!directoryBrowserCurrentPath) {
+      return;
+    }
+
+    directoryBrowserCurrentPath.innerHTML = "";
+    const normalized = path || "/";
+    if (normalized === "/") {
+      const rootButton = document.createElement("button");
+      rootButton.type = "button";
+      rootButton.className = "directory-browser-crumb is-current";
+      rootButton.textContent = "/";
+      rootButton.disabled = true;
+      directoryBrowserCurrentPath.appendChild(rootButton);
+      return;
+    }
+
+    const segments = normalized.split("/").filter(Boolean);
+    let currentPath = normalized.startsWith("/") ? "/" : "";
+    const rootButton = document.createElement("button");
+    rootButton.type = "button";
+    rootButton.className = "directory-browser-crumb";
+    rootButton.textContent = normalized.startsWith("/") ? "/" : segments[0];
+    rootButton.addEventListener("click", () => loadDirectoryBrowser(normalized.startsWith("/") ? "/" : segments[0]));
+    directoryBrowserCurrentPath.appendChild(rootButton);
+
+    if (!normalized.startsWith("/") && segments.length) {
+      currentPath = segments[0];
+      segments.shift();
+    }
+
+    segments.forEach((segment, index) => {
+      const separator = document.createElement("span");
+      separator.className = "directory-browser-separator";
+      separator.textContent = "›";
+      directoryBrowserCurrentPath.appendChild(separator);
+
+      currentPath = currentPath === "/" ? `/${segment}` : `${currentPath}/${segment}`;
+      const targetPath = currentPath;
+      const crumb = document.createElement("button");
+      crumb.type = "button";
+      crumb.className = "directory-browser-crumb";
+      crumb.textContent = segment;
+      const isLast = index === segments.length - 1;
+      if (isLast) {
+        crumb.classList.add("is-current");
+        crumb.disabled = true;
+      } else {
+        crumb.addEventListener("click", () => loadDirectoryBrowser(targetPath));
+      }
+      directoryBrowserCurrentPath.appendChild(crumb);
     });
   }
 
@@ -945,9 +1500,38 @@ if (shell) {
       openDirectoryBrowserModal();
       const startPath = contentRootInput.value.trim();
       await loadDirectoryBrowser(startPath);
+      toggleDirectoryCreate(false);
       setStatus("Mozesz wybrac katalog.");
     } catch (error) {
       closeDirectoryBrowserModal();
+      setStatus(error.message, true);
+    }
+  }
+
+  async function createDirectoryFromBrowser() {
+    const name = directoryBrowserCreateInput?.value.trim() || "";
+    if (!directoryBrowserState?.current_path) {
+      return;
+    }
+    if (!name) {
+      setStatus("Podaj nazwe nowego folderu.", true);
+      directoryBrowserCreateInput?.focus();
+      return;
+    }
+
+    try {
+      setStatus("Tworze nowy folder...");
+      const payload = await requestJson(config.createDirectoryUrl, {
+        method: "POST",
+        body: JSON.stringify({
+          parent_path: directoryBrowserState.current_path,
+          name,
+        }),
+      });
+      renderDirectoryBrowser(payload);
+      toggleDirectoryCreate(false);
+      setStatus(`Utworzono folder: ${name}.`);
+    } catch (error) {
       setStatus(error.message, true);
     }
   }
@@ -1337,15 +1921,8 @@ if (shell) {
     try {
       setStatus("Zapisuje ustawienia...");
       await persistPreferences();
-      selectedPath = null;
-      selectedEditable = false;
-      saveButton.disabled = true;
-      updateHeader("", "");
-      showEditorMode();
-      editor.setMarkdown("", false);
-      toggleOverlay({ empty: true, unsupported: false });
       closeSettingsModal();
-      await loadTree({ autoSelect: true });
+      await resetWorkspaceAfterPreferencesChange();
       setStatus("Ustawienia zapisane.");
     } catch (error) {
       setStatus(error.message, true);
@@ -1626,12 +2203,18 @@ if (shell) {
     uploadDropzone.classList.remove("is-dragover");
     addPendingUploadFiles(event.dataTransfer.files);
   });
+  togglePreferenceProfilesButton?.addEventListener("click", togglePreferenceProfilesDropdown);
   openSettingsButton.addEventListener("click", openSettingsModal);
   closeSettingsButton.addEventListener("click", closeSettingsModal);
   cancelSettingsButton.addEventListener("click", closeSettingsModal);
+  saveProfileButton?.addEventListener("click", saveCurrentPreferenceProfile);
+  cancelProfileEditButton?.addEventListener("click", () => resetProfileEditor({ resetForm: true }));
   browseContentRootButton.addEventListener("click", openDirectoryBrowser);
   closeDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);
   cancelDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);
+  directoryBrowserNewButton?.addEventListener("click", () => toggleDirectoryCreate());
+  directoryBrowserCreateConfirmButton?.addEventListener("click", createDirectoryFromBrowser);
+  directoryBrowserCreateCancelButton?.addEventListener("click", () => toggleDirectoryCreate(false));
   directoryBrowserUpButton.addEventListener("click", async () => {
     if (!directoryBrowserState?.parent_path) {
       return;
@@ -1652,6 +2235,21 @@ if (shell) {
     if (!treeContextMenu.classList.contains("hidden") && !treeContextMenu.contains(event.target)) {
       closeTreeContextMenu();
     }
+    if (
+      diagramToolbarMenu &&
+      !diagramToolbarMenu.classList.contains("hidden") &&
+      !diagramToolbarMenu.parentElement?.contains(event.target)
+    ) {
+      closeDiagramToolbarMenu();
+    }
+    if (
+      preferenceProfilesDropdown &&
+      !preferenceProfilesDropdown.classList.contains("hidden") &&
+      !preferenceProfilesDropdown.contains(event.target) &&
+      !togglePreferenceProfilesButton?.contains(event.target)
+    ) {
+      closePreferenceProfilesDropdown();
+    }
   });
   document.addEventListener("contextmenu", (event) => {
     if (!event.target.closest(".tree-row")) {
@@ -1670,7 +2268,19 @@ if (shell) {
       closeTreeContextMenu();
       return;
     }
+    if (event.key === "Escape" && diagramToolbarMenu && !diagramToolbarMenu.classList.contains("hidden")) {
+      closeDiagramToolbarMenu();
+      return;
+    }
+    if (event.key === "Escape" && preferenceProfilesDropdown && !preferenceProfilesDropdown.classList.contains("hidden")) {
+      closePreferenceProfilesDropdown();
+      return;
+    }
     if (event.key === "Escape" && !directoryBrowserModal.classList.contains("hidden")) {
+      if (directoryBrowserCreateOpen) {
+        toggleDirectoryCreate(false);
+        return;
+      }
       closeDirectoryBrowserModal();
       return;
     }
@@ -1685,6 +2295,9 @@ if (shell) {
     }
     if (event.key === "Enter" && document.activeElement === createNameInput && !createModal.classList.contains("hidden")) {
       createItem();
+    }
+    if (event.key === "Enter" && document.activeElement === directoryBrowserCreateInput && directoryBrowserCreateOpen) {
+      createDirectoryFromBrowser();
     }
   });
   closeCreateButton.addEventListener("click", closeCreateModal);
@@ -1707,8 +2320,10 @@ if (shell) {
   applyTreeScopeState();
   renderUploadFileList();
   showEditorMode();
+  attachDiagramToolbarButtons();
   toggleOverlay({ empty: true, unsupported: false });
   loadPreferences()
+    .then(() => loadPreferenceProfiles())
     .then(() => loadTree({ autoSelect: true }))
     .catch((error) => setStatus(error.message, true));
 }

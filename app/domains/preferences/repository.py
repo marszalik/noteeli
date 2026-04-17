@@ -1,8 +1,9 @@
+import json
 import sqlite3
 from contextlib import contextmanager
 
 from app.core.config import Settings, get_settings
-from app.domains.preferences.schemas import AppPreferences, SortMode, ThemeMode, SourceType, ImageUploadMode  # noqa: F401
+from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode  # noqa: F401
 
 
 class PreferencesRepository:
@@ -62,6 +63,15 @@ class PreferencesRepository:
                 ON item_preferences (parent_path, manual_order)
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS preference_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    payload TEXT NOT NULL
+                )
+                """
+            )
             connection.executemany(
                 "INSERT OR IGNORE INTO app_settings(key, value) VALUES(?, ?)",
                 defaults,
@@ -72,22 +82,7 @@ class PreferencesRepository:
             rows = connection.execute("SELECT key, value FROM app_settings").fetchall()
 
         values = {row["key"]: row["value"] for row in rows}
-        return AppPreferences(
-            source_type=values.get("source_type", "local"),
-            content_root=values["content_root"],
-            sftp_host=values.get("sftp_host", ""),
-            sftp_port=int(values.get("sftp_port", "22")),
-            sftp_username=values.get("sftp_username", ""),
-            sftp_password=values.get("sftp_password", ""),
-            sftp_path=values.get("sftp_path", "/"),
-            gdrive_folder_id=values.get("gdrive_folder_id", "root"),
-            gdrive_credentials=values.get("gdrive_credentials", ""),
-            sort_mode=values.get("sort_mode", "alphabetical"),
-            theme_mode=values.get("theme_mode", "light"),
-            editor_font_size=int(values.get("editor_font_size", "16")),
-            image_upload_mode=values.get("image_upload_mode", "same_dir"),
-            image_upload_subdir=values.get("image_upload_subdir", "assets"),
-        )
+        return self._preferences_from_values(values)
 
     def update_app_preferences(
         self,
@@ -146,6 +141,97 @@ class PreferencesRepository:
 
         return self.get_app_preferences()
 
+    def list_profiles(self) -> list[SavedPreferencesProfile]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, name, payload
+                FROM preference_profiles
+                ORDER BY name COLLATE NOCASE ASC
+                """
+            ).fetchall()
+
+        return [self._profile_from_row(row) for row in rows]
+
+    def create_profile(self, name: str, preferences: AppPreferences) -> SavedPreferencesProfile:
+        payload = json.dumps(preferences.model_dump(), ensure_ascii=False)
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO preference_profiles(name, payload)
+                VALUES(?, ?)
+                """,
+                (name, payload),
+            )
+            row = connection.execute(
+                """
+                SELECT id, name, payload
+                FROM preference_profiles
+                WHERE id = ?
+                """,
+                (cursor.lastrowid,),
+            ).fetchone()
+
+        if row is None:
+            raise RuntimeError("Saved profile could not be reloaded.")
+        return self._profile_from_row(row)
+
+    def update_profile(
+        self,
+        profile_id: int,
+        name: str,
+        preferences: AppPreferences,
+    ) -> SavedPreferencesProfile | None:
+        payload = json.dumps(preferences.model_dump(), ensure_ascii=False)
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE preference_profiles
+                SET name = ?, payload = ?
+                WHERE id = ?
+                """,
+                (name, payload, profile_id),
+            )
+            if cursor.rowcount == 0:
+                return None
+            row = connection.execute(
+                """
+                SELECT id, name, payload
+                FROM preference_profiles
+                WHERE id = ?
+                """,
+                (profile_id,),
+            ).fetchone()
+
+        if row is None:
+            return None
+        return self._profile_from_row(row)
+
+    def delete_profile(self, profile_id: int) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM preference_profiles WHERE id = ?",
+                (profile_id,),
+            )
+        return cursor.rowcount > 0
+
+    def get_profile_preferences(self, profile_id: int) -> AppPreferences | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT payload
+                FROM preference_profiles
+                WHERE id = ?
+                """,
+                (profile_id,),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        payload = json.loads(row["payload"])
+        return self._preferences_from_values(payload)
+
     def get_manual_order(self, parent_path: str) -> dict[str, int]:
         with self._connect() as connection:
             rows = connection.execute(
@@ -176,3 +262,43 @@ class PreferencesRepository:
                     for index, path in enumerate(ordered_paths)
                 ],
             )
+
+    def _preferences_from_values(self, values: dict) -> AppPreferences:
+        return AppPreferences(
+            source_type=values.get("source_type", "local"),
+            content_root=values.get("content_root", str(self.settings.content_root)),
+            sftp_host=values.get("sftp_host", ""),
+            sftp_port=int(values.get("sftp_port", "22")),
+            sftp_username=values.get("sftp_username", ""),
+            sftp_password=values.get("sftp_password", ""),
+            sftp_path=values.get("sftp_path", "/"),
+            gdrive_folder_id=values.get("gdrive_folder_id", "root"),
+            gdrive_credentials=values.get("gdrive_credentials", ""),
+            sort_mode=values.get("sort_mode", "alphabetical"),
+            theme_mode=values.get("theme_mode", "light"),
+            editor_font_size=int(values.get("editor_font_size", "16")),
+            image_upload_mode=values.get("image_upload_mode", "same_dir"),
+            image_upload_subdir=values.get("image_upload_subdir", "assets"),
+        )
+
+    def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:
+        payload = json.loads(row["payload"])
+        preferences = self._preferences_from_values(payload)
+        return SavedPreferencesProfile(
+            id=row["id"],
+            name=row["name"],
+            source_type=preferences.source_type,
+            content_root=preferences.content_root,
+            sftp_host=preferences.sftp_host,
+            sftp_port=preferences.sftp_port,
+            sftp_username=preferences.sftp_username,
+            sftp_password=preferences.sftp_password,
+            sftp_path=preferences.sftp_path,
+            gdrive_folder_id=preferences.gdrive_folder_id,
+            gdrive_credentials=preferences.gdrive_credentials,
+            sort_mode=preferences.sort_mode,
+            theme_mode=preferences.theme_mode,
+            editor_font_size=preferences.editor_font_size,
+            image_upload_mode=preferences.image_upload_mode,
+            image_upload_subdir=preferences.image_upload_subdir,
+        )

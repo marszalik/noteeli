@@ -54,6 +54,11 @@ class DirectoryBrowserResponse(BaseModel):
     directories: list[DirectoryOption] = Field(default_factory=list)
 
 
+class CreateDirectoryBrowserRequest(BaseModel):
+    parent_path: str
+    name: str
+
+
 class CreatedItem(BaseModel):
     name: str
     path: str
