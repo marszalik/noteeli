@@ -42,7 +42,7 @@ body[data-theme="dark"] {
 html,
 body {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
   font-family: var(--font-sans);
   color: var(--text);
   background:
@@ -59,7 +59,8 @@ body[data-theme="dark"] {
 }
 
 body {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 a {
@@ -75,7 +76,10 @@ button {
   display: none !important;
 }
 
-.eyebrow,
+.eyebrow {
+  display: none;
+}
+
 .label {
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -151,49 +155,98 @@ body[data-theme="dark"] .button-secondary:hover {
   align-items: center;
 }
 
+/* ── Login page ───────────────────────────────────────────── */
+
 .login-shell {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 2rem;
+  background: #18181a;
 }
 
-.login-card {
-  width: min(100%, 460px);
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 32px;
-  padding: 2.5rem;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
+.login-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  user-select: none;
 }
 
-body[data-theme="dark"] .login-card {
-  background:
-    linear-gradient(180deg, rgba(17, 28, 47, 0.96), rgba(15, 28, 52, 0.92));
-  border-color: var(--line-strong);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 rgba(191, 219, 254, 0.08);
+.login-wordmark {
+  margin: 0;
+  font-size: clamp(4rem, 14vw, 9rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #18181a;
+  text-shadow:
+    2px 3px 5px rgba(0, 0, 0, 0.95),
+    -1px -1px 0px rgba(255, 255, 255, 0.07);
 }
 
-.login-card h1 {
-  margin: 0.4rem 0 0.9rem;
-  font-size: clamp(2.1rem, 5vw, 3rem);
+.login-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.login-copy,
-.login-hint,
+.login-google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.1rem 0.55rem 0.75rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.login-google-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.login-google-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.login-google-btn:hover svg {
+  opacity: 1;
+}
+
+.login-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(253, 164, 175, 0.8);
+}
+
+.login-unconfigured {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.15);
+}
+
 .muted {
   color: var(--muted);
 }
 
 .alert {
-  padding: 1rem 1.1rem;
-  border-radius: 18px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  margin: 1rem 0 1.2rem;
+  font-size: 0.875rem;
+  text-align: center;
 }
 
 .alert-error {
@@ -208,11 +261,12 @@ body[data-theme="dark"] .alert-error {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
   gap: 1.2rem;
   padding: 1.2rem;
+  overflow: hidden;
 }
 
 .sidebar,
@@ -238,18 +292,36 @@ body[data-theme="dark"] .workspace-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .brand-block,
-.sidebar-actions,
-.workspace-topbar,
+.sidebar-actions {
+  padding: 0.8rem 1rem;
+}
+
+.workspace-topbar {
+  padding: 0.4rem 0.9rem;
+}
+
 .statusbar {
-  padding: 1.2rem 1.3rem;
+  padding: 0.2rem 0.9rem;
+  font-size: 0.74rem;
 }
 
 .brand-block h1,
 .workspace-topbar h2 {
-  margin: 0.3rem 0 0.25rem;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.workspace-topbar .label {
+  display: none;
+}
+
+#current-file-path {
+  margin: 0;
+  font-size: 0.72rem;
 }
 
 body[data-theme="dark"] .brand-block h1,
@@ -280,9 +352,18 @@ body[data-theme="dark"] .modal-header h3 {
 }
 
 .sidebar-tree-controls {
+  display: none;
+}
+
+.sidebar-toolbar-icons {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 0.7rem;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.sidebar-toolbar-sep {
+  flex: 1;
 }
 
 .sidebar-tree-icon {
@@ -358,6 +439,11 @@ body[data-theme="dark"] .sidebar-tree-icon.is-active {
 
 .context-menu-item-muted {
   color: var(--muted);
+}
+
+.context-menu-item-danger {
+  color: var(--warning);
+  font-weight: 600;
 }
 
 body[data-theme="dark"] .context-menu {
@@ -568,11 +654,8 @@ body[data-theme="dark"] .tree-row.is-drop-target {
   color: var(--muted);
 }
 
-.tree-link.is-disabled::after {
-  content: "tylko podglad";
-  margin-left: 0.5rem;
-  font-size: 0.74rem;
-  color: var(--muted);
+.tree-link.is-disabled {
+  opacity: 0.6;
 }
 
 .workspace-panel {
@@ -889,6 +972,37 @@ body[data-theme="dark"] .overlay-card {
 
 .toastui-editor-contents {
   font-size: var(--editor-font-size);
+}
+
+/* ── Hide default mode switch, use topbar button instead ── */
+.toastui-editor-mode-switch {
+  display: none !important;
+}
+
+.editor-mode-toggle {
+  min-width: 96px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+/* ── Diagrams ─────────────────────────────────────────────── */
+.mermaid-diagram {
+  text-align: center;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-plantuml {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem auto;
 }
 
 body[data-theme="dark"] .toastui-editor-defaultUI,
@@ -1209,7 +1323,10 @@ body[data-theme="dark"] .directory-browser-item:hover {
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: 320px minmax(60vh, 1fr);
+    grid-template-rows: 320px minmax(0, 1fr);
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
   }
 
   .workspace-topbar {
@@ -1226,3 +1343,415 @@ body[data-theme="dark"] .directory-browser-item:hover {
     flex-basis: calc(50% - 0.3rem);
   }
 }
+
+/* ── Tree icons ──────────────────────────────────────────── */
+
+.tree-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 0.3rem;
+}
+
+.tree-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tree-link-dir {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tree-toggle-file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-icon-folder { color: #c8974a; }
+.tree-icon-md     { color: #6b9fd4; }
+.tree-icon-image  { color: #6aaf76; }
+.tree-icon-pdf    { color: #c96b6b; }
+.tree-icon-generic { color: var(--muted); }
+
+/* ── Obsidian theme ──────────────────────────────────────── */
+
+body[data-theme="obsidian"] {
+  --bg: #1e1e1e;
+  --panel: #252526;
+  --panel-strong: #1e1e1e;
+  --surface: #2d2d30;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.13);
+  --text: #cccccc;
+  --muted: #808080;
+  --accent: #7c6fcd;
+  --accent-strong: #6a5db8;
+  --accent-soft: rgba(124, 111, 205, 0.15);
+  --warning: #f28779;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --glow: transparent;
+  --radius: 4px;
+
+  background: #1e1e1e;
+}
+
+body[data-theme="obsidian"] .app-shell {
+  gap: 0;
+  padding: 0;
+  height: 100vh;
+}
+
+body[data-theme="obsidian"] .sidebar,
+body[data-theme="obsidian"] .workspace-panel {
+  border-radius: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+  background: var(--panel);
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="obsidian"] .workspace-panel {
+  border-right: none;
+}
+
+body[data-theme="obsidian"] .brand-block h1,
+body[data-theme="obsidian"] .workspace-topbar h2,
+body[data-theme="obsidian"] .modal-header h3 {
+  color: #d4d4d4;
+}
+
+body[data-theme="obsidian"] .button {
+  border-radius: 4px;
+  transform: none !important;
+}
+
+body[data-theme="obsidian"] .button-primary {
+  background: var(--accent);
+  border-color: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+body[data-theme="obsidian"] .button-primary:hover {
+  background: var(--accent-strong);
+  box-shadow: none;
+}
+
+body[data-theme="obsidian"] .button-secondary {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+body[data-theme="obsidian"] .button-secondary:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+body[data-theme="obsidian"] .icon-button {
+  border-radius: 4px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+body[data-theme="obsidian"] .icon-button:hover {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+body[data-theme="obsidian"] .user-chip {
+  border-radius: 4px;
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+
+body[data-theme="obsidian"] .tree-toggle,
+body[data-theme="obsidian"] .tree-link {
+  border-radius: 3px;
+}
+
+body[data-theme="obsidian"] .tree-link:hover,
+body[data-theme="obsidian"] .tree-toggle:hover {
+  background: var(--accent-soft);
+}
+
+body[data-theme="obsidian"] .tree-link.is-active {
+  background: var(--accent-soft);
+  color: #a89de8;
+  box-shadow: none;
+}
+
+body[data-theme="obsidian"] .sidebar-tree-icon {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+body[data-theme="obsidian"] .sidebar-tree-icon:hover {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+body[data-theme="obsidian"] .sidebar-tree-icon.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+body[data-theme="obsidian"] .workspace-topbar,
+body[data-theme="obsidian"] .statusbar,
+body[data-theme="obsidian"] .modal-header,
+body[data-theme="obsidian"] .modal-actions {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="obsidian"] .editor-stage {
+  background: #1e1e1e;
+}
+
+body[data-theme="obsidian"] .toastui-editor-defaultUI,
+body[data-theme="obsidian"] .toastui-editor-main,
+body[data-theme="obsidian"] .toastui-editor-md-container,
+body[data-theme="obsidian"] .toastui-editor-ww-container,
+body[data-theme="obsidian"] .toastui-editor-popup {
+  background: #1e1e1e !important;
+  color: #cccccc !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar,
+body[data-theme="obsidian"] .toastui-editor-defaultUI-toolbar,
+body[data-theme="obsidian"] .toastui-editor-mode-switch {
+  background: #252526 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar-icons {
+  filter: invert(0.82) hue-rotate(180deg) saturate(0.7);
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar button,
+body[data-theme="obsidian"] .toastui-editor-defaultUI-toolbar button {
+  border-radius: 3px !important;
+  color: #808080 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar button:hover,
+body[data-theme="obsidian"] .toastui-editor-defaultUI-toolbar button:hover {
+  background: var(--accent-soft) !important;
+  color: #cccccc !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar-group {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-mode-switch {
+  min-height: 2.8rem;
+  padding: 0.5rem 0.6rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-mode-switch .tab-item {
+  border-radius: 3px !important;
+  background: var(--surface) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #808080 !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-mode-switch .tab-item.active {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: #a89de8 !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents,
+body[data-theme="obsidian"] .toastui-editor-contents p,
+body[data-theme="obsidian"] .ProseMirror,
+body[data-theme="obsidian"] .toastui-editor-md-preview {
+  background: #1e1e1e !important;
+  color: #cccccc !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents h1,
+body[data-theme="obsidian"] .toastui-editor-contents h2,
+body[data-theme="obsidian"] .toastui-editor-contents h3,
+body[data-theme="obsidian"] .toastui-editor-contents h4,
+body[data-theme="obsidian"] .toastui-editor-md-preview h1,
+body[data-theme="obsidian"] .toastui-editor-md-preview h2,
+body[data-theme="obsidian"] .toastui-editor-md-preview h3,
+body[data-theme="obsidian"] .toastui-editor-md-preview h4 {
+  color: #e8e8e8 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents h1,
+body[data-theme="obsidian"] .toastui-editor-md-preview h1 {
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents h2,
+body[data-theme="obsidian"] .toastui-editor-md-preview h2 {
+  border-bottom-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents code,
+body[data-theme="obsidian"] .toastui-editor-md-preview code {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #ce9178 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents pre,
+body[data-theme="obsidian"] .toastui-editor-md-preview pre {
+  background: #1a1a1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #d4d4d4 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents a,
+body[data-theme="obsidian"] .toastui-editor-md-preview a {
+  color: #569cd6 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents blockquote,
+body[data-theme="obsidian"] .toastui-editor-md-preview blockquote,
+body[data-theme="obsidian"] .toastui-editor-contents blockquote p,
+body[data-theme="obsidian"] .toastui-editor-md-preview blockquote p {
+  border-left-color: var(--accent) !important;
+  color: #808080 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents li,
+body[data-theme="obsidian"] .toastui-editor-md-preview li {
+  color: #cccccc !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents strong,
+body[data-theme="obsidian"] .toastui-editor-md-preview strong {
+  color: #e8e8e8 !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-popup-body input,
+body[data-theme="obsidian"] .toastui-editor-popup-body label,
+body[data-theme="obsidian"] .toastui-editor-popup-body select {
+  color: var(--text) !important;
+}
+
+body[data-theme="obsidian"] .context-menu {
+  border-radius: 6px;
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.13);
+  backdrop-filter: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+body[data-theme="obsidian"] .context-menu-item {
+  border-radius: 3px;
+  color: #cccccc;
+}
+
+body[data-theme="obsidian"] .context-menu-item:hover {
+  background: var(--accent-soft);
+}
+
+body[data-theme="obsidian"] .context-menu-item-muted {
+  color: #808080;
+}
+
+body[data-theme="obsidian"] .context-menu-header {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="obsidian"] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+body[data-theme="obsidian"] .modal-card {
+  border-radius: 6px;
+  background: #252526;
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+body[data-theme="obsidian"] .settings-input {
+  border-radius: 3px;
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.13);
+  color: #cccccc;
+}
+
+body[data-theme="obsidian"] .settings-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+body[data-theme="obsidian"] .directory-browser-path,
+body[data-theme="obsidian"] .directory-browser-item,
+body[data-theme="obsidian"] .directory-browser-empty {
+  border-radius: 4px;
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cccccc;
+}
+
+body[data-theme="obsidian"] .directory-browser-item:hover {
+  transform: none;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+
+body[data-theme="obsidian"] .upload-dropzone {
+  border-radius: 4px;
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+body[data-theme="obsidian"] .upload-dropzone:hover,
+body[data-theme="obsidian"] .upload-dropzone.is-dragover,
+body[data-theme="obsidian"] .upload-dropzone:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+body[data-theme="obsidian"] .upload-file-list {
+  border-radius: 4px;
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="obsidian"] .overlay-card {
+  border-radius: 4px;
+  background: rgba(37, 37, 38, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+body[data-theme="obsidian"] .tree-scope-up {
+  border-radius: 3px;
+  background: #2d2d30;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cccccc;
+}
+
+body[data-theme="obsidian"] .tree-scope-up:hover {
+  background: var(--accent-soft);
+}
+
+body[data-theme="obsidian"] .alert-error {
+  background: rgba(80, 20, 20, 0.6);
+  border-color: rgba(242, 135, 121, 0.3);
+}
+
+body[data-theme="obsidian"] .tree-icon-folder { color: #d4a73a; }
+body[data-theme="obsidian"] .tree-icon-md     { color: #6b9fd4; }
+body[data-theme="obsidian"] .tree-icon-image  { color: #6aaf76; }
+body[data-theme="obsidian"] .tree-icon-pdf    { color: #c96b6b; }
+body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }

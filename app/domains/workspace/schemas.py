@@ -67,4 +67,9 @@ class UploadItemsResponse(BaseModel):
     skipped_items: list[UploadedItemError] = Field(default_factory=list)
 
 
+class RenameItemRequest(BaseModel):
+    path: str
+    new_name: str
+
+
 TreeNode.model_rebuild()

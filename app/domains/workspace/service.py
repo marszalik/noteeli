@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.core.config import Settings, get_settings
 from app.domains.preferences.repository import PreferencesRepository
-from app.domains.preferences.schemas import AppPreferences, SortMode
+from app.domains.preferences.schemas import AppPreferences, SortMode, SourceType
 from app.domains.preferences.service import PreferencesService
 from app.domains.workspace.schemas import (
     CreatedItem,
@@ -15,6 +15,7 @@ from app.domains.workspace.schemas import (
     UploadItemsResponse,
     UploadedItemError,
 )
+from app.domains.workspace.storage import StorageBackend, StorageEntry, build_backend, invalidate_sftp_cache
 
 
 class WorkspaceError(Exception):
@@ -49,11 +50,13 @@ class WorkspaceService:
         self.settings = settings or get_settings()
         self.preferences_repository = preferences_repository or PreferencesRepository(self.settings)
         self.preferences_service = PreferencesService(self.settings, self.preferences_repository)
-        self.preferences_service.get_preferences()
+
+    def _get_backend(self) -> StorageBackend:
+        return build_backend(self.preferences_service.get_preferences())
 
     @property
-    def root_path(self) -> Path:
-        return Path(self.get_preferences().content_root)
+    def root_display(self) -> str:
+        return self._get_backend().root_display
 
     def get_preferences(self) -> AppPreferences:
         return self.preferences_service.get_preferences()
@@ -64,38 +67,57 @@ class WorkspaceService:
         sort_mode: SortMode,
         theme_mode: str,
         editor_font_size: int,
+        source_type: SourceType = "local",
+        sftp_host: str = "",
+        sftp_port: int = 22,
+        sftp_username: str = "",
+        sftp_password: str = "",
+        sftp_path: str = "/",
+        gdrive_folder_id: str = "root",
+        image_upload_mode: str = "same_dir",
+        image_upload_subdir: str = "assets",
     ) -> AppPreferences:
+        invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
-            content_root,
-            sort_mode,
-            theme_mode,
-            editor_font_size,
+            content_root=content_root,
+            sort_mode=sort_mode,
+            theme_mode=theme_mode,
+            editor_font_size=editor_font_size,
+            source_type=source_type,
+            sftp_host=sftp_host,
+            sftp_port=sftp_port,
+            sftp_username=sftp_username,
+            sftp_password=sftp_password,
+            sftp_path=sftp_path,
+            gdrive_folder_id=gdrive_folder_id,
+            image_upload_mode=image_upload_mode,
+            image_upload_subdir=image_upload_subdir,
         )
 
     def build_tree(self) -> TreeNode:
-        preferences = self.get_preferences()
-        root_name = self.root_path.name or str(self.root_path)
-        return self._build_directory_node(
-            self.root_path,
-            root_name,
-            "",
-            preferences.sort_mode,
-        )
+        prefs = self.get_preferences()
+        backend = build_backend(prefs)
+        display = backend.root_display
+        root_name = display.rstrip("/").rsplit("/", 1)[-1] or display
+        return self._build_directory_node("", root_name, prefs.sort_mode, backend)
 
     def read_document(self, relative_path: str) -> FileDocument:
-        path = self.get_document_path(relative_path)
-        if self.is_editable(path):
+        backend = self._get_backend()
+        rel = self._get_file_path(relative_path, backend)
+        name = Path(rel).name
+
+        if self.is_editable(rel):
             return FileDocument(
-                name=path.name,
+                name=name,
                 path=relative_path,
                 editable=True,
-                content=path.read_text(encoding="utf-8"),
+                content=backend.read_text(rel),
             )
 
-        preview_kind = self.get_preview_kind(path)
+        preview_kind = self.get_preview_kind(rel)
         if preview_kind is not None:
             return FileDocument(
-                name=path.name,
+                name=name,
                 path=relative_path,
                 editable=False,
                 content="",
@@ -105,7 +127,7 @@ class WorkspaceService:
             )
 
         return FileDocument(
-            name=path.name,
+            name=name,
             path=relative_path,
             editable=False,
             content="",
@@ -115,67 +137,86 @@ class WorkspaceService:
         )
 
     def save_document(self, relative_path: str, content: str) -> FileDocument:
-        path = self.get_document_path(relative_path)
-        if not self.is_editable(path):
+        backend = self._get_backend()
+        rel = self._get_file_path(relative_path, backend)
+        if not self.is_editable(rel):
             raise UnsupportedFileTypeError("Only Markdown files can be saved.")
-
-        path.write_text(content, encoding="utf-8")
+        backend.write_text(rel, content)
         return self.read_document(relative_path)
 
+    def get_document_path(self, relative_path: str) -> str:
+        return self._get_file_path(relative_path, self._get_backend())
+
+    def get_local_path(self, relative_path: str) -> tuple[Path, bool]:
+        return self._get_backend().get_as_local_path(relative_path)
+
     def create_item(self, parent_path: str, name: str, kind: str) -> CreatedItem:
-        parent = self.root_path if not parent_path else self._resolve_path(parent_path)
-        if not parent.is_dir():
-            raise InvalidPathError("The selected parent path is not a directory.")
+        backend = self._get_backend()
+        parent_rel = self._resolve_dir_path(parent_path, backend)
 
         normalized_name = self._normalize_item_name(name, kind)
-        target = parent / normalized_name
-        if target.exists():
+        target_rel = f"{parent_rel}/{normalized_name}" if parent_rel else normalized_name
+
+        if backend.exists(target_rel):
             raise ItemAlreadyExistsError("An item with this name already exists.")
 
         if kind == "directory":
-            target.mkdir(parents=False, exist_ok=False)
+            backend.create_dir(target_rel)
         else:
-            target.write_text("", encoding="utf-8")
+            backend.create_file(target_rel)
 
-        relative_target = target.relative_to(self.root_path).as_posix()
-        return CreatedItem(
-            name=target.name,
-            path=relative_target,
-            kind=kind,
-            editable=kind == "file" and self.is_editable(target),
-        )
+        return self._build_item_response(target_rel, backend)
+
+    def rename_item(self, path: str, new_name: str) -> CreatedItem:
+        backend = self._get_backend()
+        src_rel = self._resolve_path(path, backend)
+        kind = "directory" if backend.is_dir(src_rel) else "file"
+        normalized = self._normalize_item_name(new_name, kind)
+        parent_rel = str(Path(src_rel).parent)
+        if parent_rel == ".":
+            parent_rel = ""
+        dst_rel = f"{parent_rel}/{normalized}" if parent_rel else normalized
+        if backend.exists(dst_rel):
+            raise ItemAlreadyExistsError(f"Element '{normalized}' juz istnieje.")
+        backend.rename(src_rel, dst_rel)
+        return self._build_item_response(dst_rel, backend)
+
+    def delete_item(self, path: str) -> None:
+        backend = self._get_backend()
+        rel = self._resolve_path(path, backend)
+        backend.delete(rel)
 
     def move_item(self, source_path: str, target_parent_path: str) -> CreatedItem:
-        source = self._resolve_path(source_path)
-        target_parent = self.root_path if not target_parent_path else self._resolve_path(target_parent_path)
+        backend = self._get_backend()
+        src_rel = self._resolve_path(source_path, backend)
+        target_parent_rel = self._resolve_dir_path(target_parent_path, backend)
 
-        if not target_parent.is_dir():
-            raise InvalidPathError("The target parent path is not a directory.")
-        if source == self.root_path:
-            raise InvalidPathError("The content root cannot be moved.")
-        if source.parent == target_parent:
-            return self._build_item_response(source)
+        src_name = Path(src_rel).name
+        src_parent = str(Path(src_rel).parent)
+        if src_parent == ".":
+            src_parent = ""
 
-        if source.is_dir() and self._is_relative_to(target_parent, source):
+        if src_parent == target_parent_rel:
+            return self._build_item_response(src_rel, backend)
+
+        if backend.is_dir(src_rel) and self._is_subpath(target_parent_rel, src_rel):
             raise InvalidPathError("A directory cannot be moved into itself or one of its children.")
 
-        destination = target_parent / source.name
-        if destination.exists():
+        dst_rel = f"{target_parent_rel}/{src_name}" if target_parent_rel else src_name
+        if backend.exists(dst_rel):
             raise ItemAlreadyExistsError("An item with this name already exists in the target directory.")
 
-        previous_parent = source.parent
-        source.rename(destination)
+        backend.rename(src_rel, dst_rel)
 
         if self.get_preferences().sort_mode == "manual":
-            self._refresh_manual_order(previous_parent)
-            self._refresh_manual_order(target_parent)
+            self._refresh_manual_order(src_parent, backend)
+            self._refresh_manual_order(target_parent_rel, backend)
 
-        return self._build_item_response(destination)
+        return self._build_item_response(dst_rel, backend)
 
     def upload_files(self, parent_path: str, uploads: list[tuple[str, bytes]]) -> UploadItemsResponse:
-        parent = self.root_path if not parent_path else self._resolve_path(parent_path)
-        if not parent.is_dir():
-            raise InvalidPathError("The selected parent path is not a directory.")
+        backend = self._get_backend()
+        parent_rel = self._resolve_dir_path(parent_path, backend)
 
         created_items: list[CreatedItem] = []
         skipped_items: list[UploadedItemError] = []
@@ -189,30 +230,26 @@ class WorkspaceService:
                 continue
 
             if normalized_name in seen_names:
-                skipped_items.append(
-                    UploadedItemError(
-                        name=normalized_name,
-                        message="This upload batch already contains a file with the same name.",
-                    )
-                )
+                skipped_items.append(UploadedItemError(
+                    name=normalized_name,
+                    message="This upload batch already contains a file with the same name.",
+                ))
                 continue
             seen_names.add(normalized_name)
 
-            target = parent / normalized_name
-            if target.exists():
-                skipped_items.append(
-                    UploadedItemError(
-                        name=normalized_name,
-                        message="An item with this name already exists in the target directory.",
-                    )
-                )
+            target_rel = f"{parent_rel}/{normalized_name}" if parent_rel else normalized_name
+            if backend.exists(target_rel):
+                skipped_items.append(UploadedItemError(
+                    name=normalized_name,
+                    message="An item with this name already exists in the target directory.",
+                ))
                 continue
 
-            target.write_bytes(content)
-            created_items.append(self._build_item_response(target))
+            backend.write_bytes(target_rel, content)
+            created_items.append(self._build_item_response(target_rel, backend))
 
         if self.get_preferences().sort_mode == "manual" and created_items:
-            self._refresh_manual_order(parent)
+            self._refresh_manual_order(parent_rel, backend)
 
         return UploadItemsResponse(
             parent_path=parent_path,
@@ -225,204 +262,227 @@ class WorkspaceService:
         if preferences.sort_mode != "manual":
             raise InvalidPathError("Manual order is available only in manual sort mode.")
 
-        parent = self.root_path if not parent_path else self._resolve_path(parent_path)
-        if not parent.is_dir():
-            raise InvalidPathError("The selected parent path is not a directory.")
+        backend = self._get_backend()
+        parent_rel = self._resolve_dir_path(parent_path, backend)
 
-        existing_paths = [
-            child.relative_to(self.root_path).as_posix()
-            for child in parent.iterdir()
-        ]
-        if set(existing_paths) != set(ordered_paths) or len(existing_paths) != len(ordered_paths):
+        existing_paths = {entry.relative_path for entry in backend.list_children(parent_rel)}
+        if existing_paths != set(ordered_paths) or len(existing_paths) != len(ordered_paths):
             raise InvalidPathError("Ordered paths must match the current directory contents exactly.")
 
         self.preferences_repository.set_manual_order(parent_path, ordered_paths)
         return self.get_preferences()
 
     def browse_directories(self, directory_path: str | None = None) -> DirectoryBrowserResponse:
-        if directory_path:
-            current = Path(directory_path).expanduser().resolve()
-        else:
-            current = self.root_path
-
-        if not current.exists():
-            raise DocumentNotFoundError("Directory does not exist.")
-        if not current.is_dir():
-            raise InvalidPathError("The selected path is not a directory.")
-
-        directories: list[DirectoryOption] = []
-        try:
-            children = sorted(
-                (child for child in current.iterdir() if child.is_dir()),
-                key=lambda child: child.name.lower(),
-            )
-        except PermissionError as exc:
-            raise InvalidPathError("This directory cannot be read.") from exc
-
-        for child in children:
-            directories.append(
-                DirectoryOption(
-                    name=child.name,
-                    path=str(child.resolve()),
-                )
-            )
-
-        parent_path = str(current.parent.resolve()) if current.parent != current else None
+        result = self._get_backend().browse_dirs(directory_path)
         return DirectoryBrowserResponse(
-            current_path=str(current),
-            parent_path=parent_path,
-            directories=directories,
+            current_path=result.current_path,
+            parent_path=result.parent_path,
+            directories=[DirectoryOption(name=name, path=path) for name, path in result.directories],
         )
 
     def prepare_download(self, relative_path: str) -> tuple[Path, str, bool]:
-        source = self._resolve_path(relative_path)
-        if source.is_file():
-            return source, source.name, False
+        backend = self._get_backend()
+        rel = self._resolve_path(relative_path, backend)
+
+        if backend.is_file(rel):
+            local_path, is_temp = backend.get_as_local_path(rel)
+            return local_path, Path(rel).name, is_temp
 
         temp_file = tempfile.NamedTemporaryFile(prefix="noteeli-download-", suffix=".zip", delete=False)
         temp_path = Path(temp_file.name)
         temp_file.close()
 
+        dir_name = Path(rel).name if rel else "noteeli"
+        all_files = backend.rglob_files(rel)
+        parent_rel = str(Path(rel).parent) if rel else ""
+        if parent_rel == ".":
+            parent_rel = ""
+
         with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for child in source.rglob("*"):
-                archive.write(child, arcname=child.relative_to(source.parent))
+            for file_rel in all_files:
+                content = backend.read_bytes(file_rel)
+                if parent_rel:
+                    arcname = file_rel[len(parent_rel):].lstrip("/")
+                else:
+                    arcname = file_rel
+                archive.writestr(arcname, content)
 
-        return temp_path, f"{source.name}.zip", True
+        return temp_path, f"{dir_name}.zip", True
 
-    def is_editable(self, path: Path) -> bool:
-        return path.suffix.lower() in self.settings.allowed_markdown_extensions
+    def resolve_embedded_asset(self, source_document_path: str, asset_reference: str) -> tuple[str, str]:
+        backend = self._get_backend()
+        source_rel = self._get_file_path(source_document_path, backend)
+        normalized_reference = self._normalize_asset_reference(asset_reference)
+        if not normalized_reference:
+            raise InvalidPathError("Embedded asset reference is empty.")
 
-    def get_preview_kind(self, path: Path) -> str | None:
-        suffix = path.suffix.lower()
+        if normalized_reference.startswith("/"):
+            base_rel = normalized_reference.lstrip("/")
+        else:
+            doc_dir = str(Path(source_rel).parent)
+            if doc_dir == ".":
+                doc_dir = ""
+            base_rel = self._join_paths(doc_dir, normalized_reference)
+
+        candidate_rels = [base_rel]
+        if base_rel.endswith(".excalidraw"):
+            stem = base_rel[:-len(".excalidraw")]
+            candidate_rels.extend([
+                f"{base_rel}.png", f"{base_rel}.svg",
+                f"{stem}.png", f"{stem}.svg",
+                f"{stem}.jpg", f"{stem}.jpeg", f"{stem}.webp",
+            ])
+
+        for candidate in candidate_rels:
+            safe = self._sanitize_path(candidate)
+            if safe is None:
+                continue
+            if not backend.exists(safe) or not backend.is_file(safe):
+                continue
+            preview_kind = self.get_preview_kind(safe)
+            if preview_kind is not None:
+                return safe, preview_kind
+
+        safe_base = self._sanitize_path(base_rel)
+        if safe_base is not None and backend.exists(safe_base):
+            raise UnsupportedFileTypeError("This embedded asset type is not available in preview mode.")
+        raise DocumentNotFoundError("Embedded asset does not exist.")
+
+    def is_editable(self, path: str) -> bool:
+        return Path(path).suffix.lower() in self.settings.allowed_markdown_extensions
+
+    def get_preview_kind(self, path: str) -> str | None:
+        suffix = Path(path).suffix.lower()
         if suffix in self.IMAGE_EXTENSIONS:
             return "image"
         if suffix in self.PDF_EXTENSIONS:
             return "pdf"
         return None
 
-    def resolve_embedded_asset(self, source_document_path: str, asset_reference: str) -> tuple[Path, str]:
-        source_document = self.get_document_path(source_document_path)
-        normalized_reference = self._normalize_asset_reference(asset_reference)
-        if not normalized_reference:
-            raise InvalidPathError("Embedded asset reference is empty.")
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-        if normalized_reference.startswith("/"):
-            base_candidate = (self.root_path / normalized_reference.lstrip("/")).resolve()
-        else:
-            base_candidate = (source_document.parent / normalized_reference).resolve()
+    def _get_file_path(self, relative_path: str, backend: StorageBackend) -> str:
+        rel = self._resolve_path(relative_path, backend)
+        if not backend.is_file(rel):
+            raise DocumentNotFoundError("Document does not exist.")
+        return rel
 
-        candidate_paths = [base_candidate]
-        if base_candidate.suffix.lower() == ".excalidraw":
-            stem_candidate = base_candidate.with_suffix("")
-            candidate_paths.extend(
-                [
-                    Path(f"{base_candidate}.png"),
-                    Path(f"{base_candidate}.svg"),
-                    stem_candidate.with_suffix(".png"),
-                    stem_candidate.with_suffix(".svg"),
-                    stem_candidate.with_suffix(".jpg"),
-                    stem_candidate.with_suffix(".jpeg"),
-                    stem_candidate.with_suffix(".webp"),
-                ]
-            )
+    def _resolve_dir_path(self, relative_path: str, backend: StorageBackend) -> str:
+        if not relative_path:
+            return ""
+        rel = self._resolve_path(relative_path, backend)
+        if not backend.is_dir(rel):
+            raise InvalidPathError("The selected path is not a directory.")
+        return rel
 
-        for candidate in candidate_paths:
-            self._ensure_embedded_asset_in_allowed_roots(candidate)
-            if not candidate.exists() or not candidate.is_file():
-                continue
+    def _resolve_path(self, relative_path: str, backend: StorageBackend) -> str:
+        if not relative_path:
+            raise InvalidPathError("A file path is required.")
+        sanitized = self._sanitize_path(relative_path)
+        if sanitized is None:
+            raise InvalidPathError("Path escapes the configured content root.")
+        if not backend.exists(sanitized):
+            raise DocumentNotFoundError("Document does not exist.")
+        return sanitized
 
-            preview_kind = self.get_preview_kind(candidate)
-            if preview_kind is not None:
-                return candidate, preview_kind
+    @staticmethod
+    def _sanitize_path(path: str) -> str | None:
+        parts = path.replace("\\", "/").split("/")
+        normalized = []
+        for part in parts:
+            if part == "..":
+                return None
+            if part and part != ".":
+                normalized.append(part)
+        return "/".join(normalized)
 
-        if base_candidate.exists():
-            raise UnsupportedFileTypeError("This embedded asset type is not available in preview mode.")
-        raise DocumentNotFoundError("Embedded asset does not exist.")
+    @staticmethod
+    def _join_paths(base: str, rel: str) -> str:
+        parts = (base + "/" + rel).split("/")
+        normalized: list[str] = []
+        for part in parts:
+            if part == "..":
+                if normalized:
+                    normalized.pop()
+            elif part and part != ".":
+                normalized.append(part)
+        return "/".join(normalized)
 
     def _build_directory_node(
         self,
-        directory: Path,
-        name: str,
         relative_path: str,
+        name: str,
         sort_mode: SortMode,
+        backend: StorageBackend,
     ) -> TreeNode:
         children: list[TreeNode] = []
-        for child in self._sorted_children(directory, relative_path, sort_mode):
-            child_relative = child.relative_to(self.root_path).as_posix()
-            is_directory = child.is_dir(follow_symlinks=False)
-            is_symlink = child.is_symlink()
+        entries = backend.list_children(relative_path)
+        sorted_entries = self._sort_entries(entries, relative_path, sort_mode)
 
-            if is_directory and not is_symlink:
+        for entry in sorted_entries:
+            if entry.is_dir and not entry.is_symlink:
                 children.append(
-                    self._build_directory_node(
-                        child,
-                        child.name,
-                        child_relative,
-                        sort_mode,
-                    )
+                    self._build_directory_node(entry.relative_path, entry.name, sort_mode, backend)
                 )
-                continue
-
-            children.append(
-                TreeNode(
-                    name=child.name,
-                    path=child_relative,
+            else:
+                children.append(TreeNode(
+                    name=entry.name,
+                    path=entry.relative_path,
                     kind="file",
-                    editable=self.is_editable(child),
-                    symlink=is_symlink,
-                )
-            )
+                    editable=self.is_editable(entry.name),
+                    symlink=entry.is_symlink,
+                ))
 
-        return TreeNode(
-            name=name,
+        return TreeNode(name=name, path=relative_path, kind="directory", children=children, editable=False)
+
+    def _build_item_response(self, relative_path: str, backend: StorageBackend) -> CreatedItem:
+        return CreatedItem(
+            name=Path(relative_path).name,
             path=relative_path,
-            kind="directory",
-            children=children,
-            editable=False,
+            kind="directory" if backend.is_dir(relative_path) else "file",
+            editable=backend.is_file(relative_path) and self.is_editable(relative_path),
         )
 
-    def _resolve_file_path(self, relative_path: str) -> Path:
-        candidate = self._resolve_path(relative_path)
-        if not candidate.is_file():
-            raise DocumentNotFoundError("Document does not exist.")
-        return candidate
+    def _sort_entries(
+        self,
+        entries: list[StorageEntry],
+        parent_rel: str,
+        sort_mode: SortMode,
+    ) -> list[StorageEntry]:
+        if sort_mode != "manual":
+            return sorted(entries, key=lambda e: (0 if e.is_dir and not e.is_symlink else 1, e.name.lower()))
 
-    def get_document_path(self, relative_path: str) -> Path:
-        return self._resolve_file_path(relative_path)
+        order_map = self.preferences_repository.get_manual_order(parent_rel)
+        unordered_offset = len(order_map) + 1000
+        return sorted(
+            entries,
+            key=lambda e: (order_map.get(e.relative_path, unordered_offset), e.name.lower()),
+        )
 
-    def _resolve_path(self, relative_path: str) -> Path:
-        if not relative_path:
-            raise InvalidPathError("A file path is required.")
-
-        candidate = (self.root_path / relative_path).resolve()
-        try:
-            candidate.relative_to(self.root_path)
-        except ValueError as exc:
-            raise InvalidPathError("Path escapes the configured content root.") from exc
-
-        if not candidate.exists():
-            raise DocumentNotFoundError("Document does not exist.")
-
-        return candidate
+    def _refresh_manual_order(self, parent_rel: str, backend: StorageBackend) -> None:
+        if not backend.is_dir(parent_rel if parent_rel else ""):
+            return
+        entries = backend.list_children(parent_rel)
+        sorted_entries = self._sort_entries(entries, parent_rel, "manual")
+        self.preferences_repository.set_manual_order(parent_rel, [e.relative_path for e in sorted_entries])
 
     def _normalize_item_name(self, name: str, kind: str) -> str:
         candidate = name.strip()
         if not candidate:
             raise InvalidPathError("A name is required.")
-
-        invalid_names = {".", ".."}
-        if candidate in invalid_names or "/" in candidate or "\\" in candidate:
+        if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
             raise InvalidPathError("The item name contains unsupported path separators.")
-
         if kind == "file" and not any(
             candidate.lower().endswith(extension)
             for extension in self.settings.allowed_markdown_extensions
         ):
             candidate = f"{candidate}.md"
-
         return candidate
 
-    def _normalize_uploaded_name(self, name: str) -> str:
+    @staticmethod
+    def _normalize_uploaded_name(name: str) -> str:
         candidate = Path(name.strip()).name
         if not candidate or candidate in {".", ".."}:
             raise InvalidPathError("The uploaded file name is invalid.")
@@ -430,15 +490,12 @@ class WorkspaceService:
             raise InvalidPathError("The uploaded file name contains unsupported path separators.")
         return candidate
 
-    def _build_item_response(self, path: Path) -> CreatedItem:
-        return CreatedItem(
-            name=path.name,
-            path=path.relative_to(self.root_path).as_posix(),
-            kind="directory" if path.is_dir() else "file",
-            editable=path.is_file() and self.is_editable(path),
-        )
+    @staticmethod
+    def _is_subpath(potential_child: str, parent: str) -> bool:
+        return potential_child == parent or potential_child.startswith(parent + "/")
 
-    def _normalize_asset_reference(self, asset_reference: str) -> str:
+    @staticmethod
+    def _normalize_asset_reference(asset_reference: str) -> str:
         candidate = asset_reference.strip()
         if candidate.startswith("<") and candidate.endswith(">"):
             candidate = candidate[1:-1]
@@ -447,57 +504,3 @@ class WorkspaceService:
         if "#" in candidate:
             candidate = candidate.split("#", 1)[0]
         return candidate.strip()
-
-    def _ensure_embedded_asset_in_allowed_roots(self, candidate: Path) -> None:
-        content_root = self.root_path.resolve()
-        allowed_roots = [content_root]
-        if content_root.parent != content_root:
-            allowed_roots.append(content_root.parent.resolve())
-
-        if any(self._is_relative_to(candidate, allowed_root) for allowed_root in allowed_roots):
-            return
-        raise InvalidPathError("Embedded asset path escapes the allowed note roots.")
-
-    def _refresh_manual_order(self, parent: Path) -> None:
-        if not parent.exists() or not parent.is_dir():
-            return
-
-        parent_relative = "" if parent == self.root_path else parent.relative_to(self.root_path).as_posix()
-        ordered_paths = [
-            child.relative_to(self.root_path).as_posix()
-            for child in self._sorted_children(parent, parent_relative, "manual")
-        ]
-        self.preferences_repository.set_manual_order(parent_relative, ordered_paths)
-
-    @staticmethod
-    def _is_relative_to(path: Path, base: Path) -> bool:
-        try:
-            path.relative_to(base)
-            return True
-        except ValueError:
-            return False
-
-    @staticmethod
-    def _alphabetical_sort_key(path: Path) -> tuple[int, str]:
-        is_directory = path.is_dir(follow_symlinks=False) and not path.is_symlink()
-        return (0 if is_directory else 1, path.name.lower())
-
-    def _sorted_children(
-        self,
-        directory: Path,
-        parent_relative_path: str,
-        sort_mode: SortMode,
-    ) -> list[Path]:
-        children = list(directory.iterdir())
-        if sort_mode != "manual":
-            return sorted(children, key=self._alphabetical_sort_key)
-
-        order_map = self.preferences_repository.get_manual_order(parent_relative_path)
-        unordered_offset = len(order_map) + 1000
-        return sorted(
-            children,
-            key=lambda child: (
-                order_map.get(child.relative_to(self.root_path).as_posix(), unordered_offset),
-                child.name.lower(),
-            ),
-        )

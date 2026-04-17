@@ -19,6 +19,7 @@ from app.domains.workspace.schemas import (
     DirectoryBrowserResponse,
     FileDocument,
     MoveItemRequest,
+    RenameItemRequest,
     SaveFileRequest,
     TreeNode,
     UploadItemsResponse,
@@ -56,6 +57,8 @@ async def workspace_page(request: Request):
             "moveUrl": str(request.url_for("workspace_move_item_api")),
             "uploadUrl": str(request.url_for("workspace_upload_items_api")),
             "downloadUrl": str(request.url_for("workspace_download_item_api")),
+            "deleteUrl": str(request.url_for("workspace_delete_item_api")),
+            "renameUrl": str(request.url_for("workspace_rename_item_api")),
             "directoriesUrl": str(request.url_for("workspace_directories_api")),
             "previewUrl": str(request.url_for("workspace_file_preview_api")),
             "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
@@ -65,7 +68,7 @@ async def workspace_page(request: Request):
         "domains/workspace/views/index.mako",
         request,
         user=user,
-        content_root=str(workspace_service.root_path),
+        content_root=workspace_service.root_display,
         preferences=preferences,
         database_path=str(settings.database_path),
         frontend_config=frontend_config,
@@ -90,28 +93,37 @@ async def workspace_file_api(request: Request, path: str):
 
 
 @router.get("/api/file/preview", name="workspace_file_preview_api")
-async def workspace_file_preview_api(request: Request, path: str):
+async def workspace_file_preview_api(request: Request, background_tasks: BackgroundTasks, path: str):
     auth_service.require_api_access(request)
     try:
-        file_path = workspace_service.get_document_path(path)
+        rel_path = workspace_service.get_document_path(path)
     except InvalidPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    preview_kind = workspace_service.get_preview_kind(file_path)
+    preview_kind = workspace_service.get_preview_kind(rel_path)
     if preview_kind is None:
         raise HTTPException(status_code=422, detail="This file type is not available in preview mode.")
 
-    media_type, _ = mimetypes.guess_type(str(file_path))
-    return FileResponse(path=file_path, media_type=media_type or "application/octet-stream")
+    local_path, is_temporary = workspace_service.get_local_path(rel_path)
+    if is_temporary:
+        background_tasks.add_task(Path.unlink, local_path, missing_ok=True)
+
+    media_type, _ = mimetypes.guess_type(str(local_path))
+    return FileResponse(path=local_path, media_type=media_type or "application/octet-stream")
 
 
 @router.get("/api/embedded-asset", name="workspace_embedded_asset_preview_api")
-async def workspace_embedded_asset_preview_api(request: Request, source_path: str, target: str):
+async def workspace_embedded_asset_preview_api(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    source_path: str,
+    target: str,
+):
     auth_service.require_api_access(request)
     try:
-        file_path, _preview_kind = workspace_service.resolve_embedded_asset(source_path, target)
+        rel_path, _preview_kind = workspace_service.resolve_embedded_asset(source_path, target)
     except InvalidPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DocumentNotFoundError as exc:
@@ -119,8 +131,12 @@ async def workspace_embedded_asset_preview_api(request: Request, source_path: st
     except UnsupportedFileTypeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    media_type, _ = mimetypes.guess_type(str(file_path))
-    return FileResponse(path=file_path, media_type=media_type or "application/octet-stream")
+    local_path, is_temporary = workspace_service.get_local_path(rel_path)
+    if is_temporary:
+        background_tasks.add_task(Path.unlink, local_path, missing_ok=True)
+
+    media_type, _ = mimetypes.guess_type(str(local_path))
+    return FileResponse(path=local_path, media_type=media_type or "application/octet-stream")
 
 
 @router.put("/api/file", response_model=FileDocument, name="workspace_save_api")
@@ -205,6 +221,31 @@ async def workspace_download_item_api(request: Request, background_tasks: Backgr
     )
 
 
+@router.post("/api/items/rename", response_model=CreatedItem, name="workspace_rename_item_api")
+async def workspace_rename_item_api(request: Request, payload: RenameItemRequest):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.rename_item(payload.path, payload.new_name)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ItemAlreadyExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete("/api/items", name="workspace_delete_item_api")
+async def workspace_delete_item_api(request: Request, path: str):
+    auth_service.require_api_access(request)
+    try:
+        workspace_service.delete_item(path)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
+
+
 @router.get("/api/directories", response_model=DirectoryBrowserResponse, name="workspace_directories_api")
 async def workspace_directories_api(request: Request, path: str | None = None):
     auth_service.require_api_access(request)
@@ -226,10 +267,19 @@ async def workspace_preferences_api(request: Request):
 async def workspace_update_preferences_api(request: Request, payload: UpdatePreferencesRequest):
     auth_service.require_api_access(request)
     return workspace_service.update_preferences(
-        payload.content_root,
-        payload.sort_mode,
-        payload.theme_mode,
-        payload.editor_font_size,
+        content_root=payload.content_root,
+        sort_mode=payload.sort_mode,
+        theme_mode=payload.theme_mode,
+        editor_font_size=payload.editor_font_size,
+        source_type=payload.source_type,
+        sftp_host=payload.sftp_host,
+        sftp_port=payload.sftp_port,
+        sftp_username=payload.sftp_username,
+        sftp_password=payload.sftp_password,
+        sftp_path=payload.sftp_path,
+        gdrive_folder_id=payload.gdrive_folder_id,
+        image_upload_mode=payload.image_upload_mode,
+        image_upload_subdir=payload.image_upload_subdir,
     )
 
 

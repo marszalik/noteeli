@@ -2,7 +2,7 @@ from pathlib import Path
 
 from app.core.config import Settings, get_settings
 from app.domains.preferences.repository import PreferencesRepository
-from app.domains.preferences.schemas import AppPreferences, SortMode, ThemeMode
+from app.domains.preferences.schemas import AppPreferences, SortMode, ThemeMode, SourceType, ImageUploadMode
 
 
 class PreferencesService:
@@ -16,15 +16,24 @@ class PreferencesService:
 
     def get_preferences(self) -> AppPreferences:
         preferences = self.repository.get_app_preferences()
-        content_root = Path(preferences.content_root).expanduser().resolve()
-        content_root.mkdir(parents=True, exist_ok=True)
-        if str(content_root) != preferences.content_root:
-            preferences = self.repository.update_app_preferences(
-                content_root=str(content_root),
-                sort_mode=preferences.sort_mode,
-                theme_mode=preferences.theme_mode,
-                editor_font_size=preferences.editor_font_size,
-            )
+        if preferences.source_type == "local":
+            content_root = Path(preferences.content_root).expanduser().resolve()
+            try:
+                content_root.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                fallback_root = self.settings.content_root.expanduser().resolve()
+                self.settings.ensure_content_root()
+                preferences = self.repository.update_app_preferences(
+                    content_root=str(fallback_root),
+                    sort_mode=preferences.sort_mode,
+                    theme_mode=preferences.theme_mode,
+                    editor_font_size=preferences.editor_font_size,
+                )
+                return preferences
+            if str(content_root) != preferences.content_root:
+                preferences = self.repository.update_app_preferences(
+                    content_root=str(content_root),
+                )
         return preferences
 
     def update_preferences(
@@ -33,12 +42,33 @@ class PreferencesService:
         sort_mode: SortMode,
         theme_mode: ThemeMode,
         editor_font_size: int,
+        source_type: SourceType = "local",
+        sftp_host: str = "",
+        sftp_port: int = 22,
+        sftp_username: str = "",
+        sftp_password: str = "",
+        sftp_path: str = "/",
+        gdrive_folder_id: str = "root",
+        image_upload_mode: ImageUploadMode = "same_dir",
+        image_upload_subdir: str = "assets",
     ) -> AppPreferences:
-        resolved_root = Path(content_root).expanduser().resolve()
-        resolved_root.mkdir(parents=True, exist_ok=True)
+        if source_type == "local":
+            resolved_root = Path(content_root).expanduser().resolve()
+            resolved_root.mkdir(parents=True, exist_ok=True)
+            content_root = str(resolved_root)
+
         return self.repository.update_app_preferences(
-            content_root=str(resolved_root),
+            source_type=source_type,
+            content_root=content_root,
+            sftp_host=sftp_host,
+            sftp_port=sftp_port,
+            sftp_username=sftp_username,
+            sftp_password=sftp_password,
+            sftp_path=sftp_path,
+            gdrive_folder_id=gdrive_folder_id,
             sort_mode=sort_mode,
             theme_mode=theme_mode,
             editor_font_size=editor_font_size,
+            image_upload_mode=image_upload_mode,
+            image_upload_subdir=image_upload_subdir,
         )

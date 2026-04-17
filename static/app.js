@@ -12,6 +12,7 @@ if (shell) {
   const increaseFontSizeButton = document.getElementById("increase-font-size");
   const fontSizeLabel = document.getElementById("font-size-label");
   const saveButton = document.getElementById("save-button");
+  const editorModeToggle = document.getElementById("editor-mode-toggle");
   const openSettingsButton = document.getElementById("open-settings");
   const closeSettingsButton = document.getElementById("close-settings");
   const cancelSettingsButton = document.getElementById("cancel-settings");
@@ -33,10 +34,23 @@ if (shell) {
   const createParentLabel = document.getElementById("create-parent-label");
   const createTitle = document.getElementById("create-title");
   const createHint = document.getElementById("create-hint");
+  const sourceTypeSelect = document.getElementById("source-type-select");
+  const localSourceSection = document.getElementById("local-source-section");
+  const sftpSourceSection = document.getElementById("sftp-source-section");
+  const gdriveSourceSection = document.getElementById("gdrive-source-section");
   const contentRootInput = document.getElementById("content-root-input");
+  const sftpHostInput = document.getElementById("sftp-host-input");
+  const sftpPortInput = document.getElementById("sftp-port-input");
+  const sftpUsernameInput = document.getElementById("sftp-username-input");
+  const sftpPasswordInput = document.getElementById("sftp-password-input");
+  const sftpPathInput = document.getElementById("sftp-path-input");
+  const gdriveFolderIdInput = document.getElementById("gdrive-folder-id-input");
   const sortModeSelect = document.getElementById("sort-mode-select");
   const themeModeSelect = document.getElementById("theme-mode-select");
   const editorFontSizeInput = document.getElementById("editor-font-size-input");
+  const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
+  const imageUploadSubdirInput = document.getElementById("image-upload-subdir-input");
+  const imageUploadSubdirSection = document.getElementById("image-upload-subdir-section");
   const contentRootDisplay = document.getElementById("content-root-display");
   const currentFileLabel = document.getElementById("current-file-label");
   const currentFilePath = document.getElementById("current-file-path");
@@ -67,12 +81,33 @@ if (shell) {
   let dragState = null;
   let createKind = "file";
   let createParentPathOverride = null;
+  let modalAction = "create"; // "create" | "rename"
+  let renameTargetNode = null;
   let directoryBrowserState = null;
   let contextMenuState = null;
   let showHiddenFiles = false;
   let scopedRootPath = "";
   let uploadTargetPath = "";
   let pendingUploadFiles = [];
+
+  function computeInsertRef(sourceMdPath, uploadedPath) {
+    const sourceParts = getParentPath(sourceMdPath).split("/").filter(Boolean);
+    const targetParts = uploadedPath.split("/").filter(Boolean);
+    let i = 0;
+    while (i < sourceParts.length && i < targetParts.length && sourceParts[i] === targetParts[i]) {
+      i += 1;
+    }
+    const ups = sourceParts.length - i;
+    const downs = targetParts.slice(i);
+    return (ups > 0 ? "../".repeat(ups) : "./") + downs.join("/");
+  }
+
+  function plantUmlSvgUrl(code) {
+    const hex = Array.from(new TextEncoder().encode(code))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+    return `https://www.plantuml.com/plantuml/svg/~h${hex}`;
+  }
 
   const editor = new toastui.Editor({
     el: editorContainer,
@@ -81,11 +116,171 @@ if (shell) {
     previewStyle: "vertical",
     initialValue: "",
     usageStatistics: false,
-    hideModeSwitch: false,
+    hideModeSwitch: true,
     autofocus: false,
     previewBeforeHook(markdown) {
       return decorateMarkdownForPreview(markdown, selectedPath);
     },
+    customHTMLRenderer: {
+      image(node) {
+        const src = node.destination || "";
+        if (selectedPath && !isExternalAssetTarget(src) && isEmbeddableAssetTarget(src)) {
+          const assetUrl = getEmbeddedAssetUrl(selectedPath, src);
+          const alt = (node.firstChild && node.firstChild.literal) || "";
+          return {
+            type: "openTag",
+            tagName: "img",
+            selfClose: true,
+            attributes: { src: assetUrl, alt, class: "toastui-editor-image" },
+          };
+        }
+        return false;
+      },
+      codeBlock(node) {
+        // In WYSIWYG mode ProseMirror conflicts with injected divs – only intercept in preview mode.
+        if (currentEditorMode !== "markdown") return false;
+        const lang = (node.info || "").toLowerCase().trim();
+        if (lang === "mermaid") {
+          return [
+            { type: "openTag", tagName: "div", classNames: ["mermaid-diagram"] },
+            { type: "text", content: node.literal || "" },
+            { type: "closeTag", tagName: "div" },
+          ];
+        }
+        if (lang === "plantuml" || lang === "puml") {
+          const url = plantUmlSvgUrl((node.literal || "").trim());
+          return {
+            type: "openTag",
+            tagName: "img",
+            selfClose: true,
+            attributes: { src: url, class: "diagram-plantuml", alt: "PlantUML diagram" },
+          };
+        }
+        return false;
+      },
+    },
+  });
+
+  // Replace ToastUI's default addImageBlobHook (which inserts a base64 data URL)
+  // with our upload-to-notes-dir flow.
+  function handleImageBlob(blob, insertCallback) {
+    if (!selectedPath) {
+      setStatus("Najpierw otworz plik Markdown.", true);
+      return;
+    }
+    const fileDir = getParentPath(selectedPath);
+    const prefs = preferences;
+    let targetDir = fileDir;
+    const subdir = (prefs?.image_upload_subdir || "assets").trim();
+    const useSubdir = prefs?.image_upload_mode === "subdir" && subdir;
+    if (useSubdir) {
+      targetDir = fileDir ? `${fileDir}/${subdir}` : subdir;
+    }
+
+    const extFromType = (blob.type || "").split("/")[1] || "png";
+    const fileName = blob.name && blob.name !== "image.png"
+      ? blob.name
+      : `image-${Date.now()}.${extFromType}`;
+    const formData = new FormData();
+    formData.append("parent_path", targetDir);
+    formData.append("files", blob, fileName);
+
+    const doUpload = () =>
+      requestMultipart(config.uploadUrl, formData).then((result) => {
+        const created = result.created_items[0];
+        if (!created) {
+          const skipped = result.skipped_items[0];
+          setStatus(skipped?.message || "Nie udalo sie dodac obrazka.", true);
+          return;
+        }
+        const ref = computeInsertRef(selectedPath, created.path);
+        insertCallback(getEmbeddedAssetUrl(selectedPath, ref), created.name);
+        setStatus(`Obraz dodany: ${created.name}`);
+        loadTree();
+      });
+
+    if (useSubdir) {
+      requestJson(config.createUrl, {
+        method: "POST",
+        body: JSON.stringify({ parent_path: fileDir, name: subdir, kind: "directory" }),
+      })
+        .catch(() => {})
+        .then(doUpload)
+        .catch((err) => setStatus(err.message, true));
+    } else {
+      doUpload().catch((err) => setStatus(err.message, true));
+    }
+  }
+  editor.off("addImageBlobHook");
+  editor.on("addImageBlobHook", handleImageBlob);
+
+  // ── Mermaid setup ─────────────────────────────────────────
+  let currentEditorMode = "wysiwyg";
+
+  function getMermaidTheme() {
+    const t = document.body.dataset.theme;
+    return t === "dark" || t === "obsidian" ? "dark" : "default";
+  }
+
+  mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
+
+  // ── Preview-pane (markdown mode) mermaid rendering ────────
+  let mermaidPreviewTimer = null;
+  new MutationObserver(() => {
+    // Only render in markdown-mode preview pane; in WYSIWYG mode ProseMirror would conflict.
+    if (currentEditorMode !== "markdown") return;
+    clearTimeout(mermaidPreviewTimer);
+    mermaidPreviewTimer = setTimeout(() => {
+      const els = editorContainer.querySelectorAll(".mermaid-diagram:not([data-processed])");
+      if (els.length) mermaid.run({ nodes: Array.from(els) }).catch(() => {});
+    }, 80);
+  }).observe(editorContainer, { childList: true, subtree: true });
+
+  // ── WYSIWYG mode diagram rendering ───────────────────────
+  // ToastUI code blocks: div.toastui-editor-ww-code-block
+  //   ├── div.toastui-editor-ww-code-block-language  (contenteditable=false)
+  //   └── pre  ← contentDOM (ProseMirror manages only this)
+  // Siblings appended to the outer div are outside contentDOM and are preserved.
+  let wysiwygDiagramTimer = null;
+
+  async function renderWysiwygDiagrams() {
+    if (currentEditorMode !== "wysiwyg") return;
+    const blocks = editorContainer.querySelectorAll(".toastui-editor-ww-code-block");
+    for (const block of blocks) {
+      const langEl = block.querySelector(".toastui-editor-ww-code-block-language");
+      const lang = (langEl?.textContent || "").toLowerCase().trim();
+      if (lang !== "mermaid" && lang !== "plantuml" && lang !== "puml") continue;
+
+      const code = (block.querySelector("pre")?.textContent || "").trim();
+      if (!code) continue;
+
+      let out = block.querySelector(".ww-diagram-out");
+      if (!out) {
+        out = document.createElement("div");
+        out.className = "ww-diagram-out";
+        block.appendChild(out);
+      }
+
+      if (out.dataset.code === code) continue; // nothing changed
+      out.dataset.code = code;
+
+      if (lang === "mermaid") {
+        out.removeAttribute("data-processed");
+        out.textContent = code;
+        await mermaid.run({ nodes: [out] }).catch(() => {});
+      } else {
+        out.innerHTML = `<img src="${plantUmlSvgUrl(code)}" class="diagram-plantuml" alt="PlantUML diagram" />`;
+      }
+    }
+  }
+
+  // ── Mode switch button in topbar ──────────────────────────
+  editorModeToggle.addEventListener("click", () => {
+    currentEditorMode = currentEditorMode === "wysiwyg" ? "markdown" : "wysiwyg";
+    editor.changeMode(currentEditorMode);
+    editorModeToggle.textContent = currentEditorMode === "wysiwyg" ? "WYSIWYG" : "Markdown";
+    editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
+    if (currentEditorMode === "wysiwyg") setTimeout(renderWysiwygDiagrams, 200);
   });
 
   function clampFontSize(value) {
@@ -95,6 +290,7 @@ if (shell) {
   function applyTheme(themeMode) {
     document.body.dataset.theme = themeMode;
     shell.dataset.themeMode = themeMode;
+    mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
   }
 
   function applyEditorFontSize(fontSize) {
@@ -149,10 +345,26 @@ if (shell) {
     window.setTimeout(() => createNameInput.focus(), 0);
   }
 
+  function openRenameModal(node) {
+    modalAction = "rename";
+    renameTargetNode = node;
+    createTitle.textContent = "Zmien nazwe";
+    createHint.textContent = "Podaj nowa nazwe. Rozszerzenie .md zostanie dodane automatycznie dla plikow Markdown.";
+    createParentLabel.textContent = `Element: ${node.path || node.name}`;
+    createNameInput.value = node.name;
+    confirmCreateButton.textContent = "Zmien nazwe";
+    createModal.classList.remove("hidden");
+    createModal.setAttribute("aria-hidden", "false");
+    window.setTimeout(() => { createNameInput.focus(); createNameInput.select(); }, 0);
+  }
+
   function closeCreateModal() {
     createModal.classList.add("hidden");
     createModal.setAttribute("aria-hidden", "true");
     createParentPathOverride = null;
+    modalAction = "create";
+    renameTargetNode = null;
+    confirmCreateButton.textContent = "Utworz";
   }
 
   function setStatus(message, isError = false) {
@@ -191,6 +403,13 @@ if (shell) {
 
   function getEmbeddedAssetUrl(sourcePath, target) {
     return `${config.embeddedAssetUrl}?source_path=${encodeURIComponent(sourcePath)}&target=${encodeURIComponent(target)}`;
+  }
+
+  function cleanEmbeddedUrls(markdown) {
+    if (!markdown || !config.embeddedAssetUrl) return markdown;
+    const base = config.embeddedAssetUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(base + "\\?source_path=[^&)\\s]+&target=([^)\\s]+)", "g");
+    return markdown.replace(re, (_, encodedTarget) => decodeURIComponent(encodedTarget));
   }
 
   function normalizeEmbedTarget(target) {
@@ -441,23 +660,60 @@ if (shell) {
     return null;
   }
 
+  function applySourceTypeVisibility(sourceType) {
+    if (!localSourceSection) return;
+    localSourceSection.classList.toggle("hidden", sourceType !== "local");
+    sftpSourceSection?.classList.toggle("hidden", sourceType !== "sftp");
+    gdriveSourceSection?.classList.toggle("hidden", sourceType !== "gdrive");
+  }
+
+  if (sourceTypeSelect) {
+    sourceTypeSelect.addEventListener("change", () => applySourceTypeVisibility(sourceTypeSelect.value));
+  }
+
+  if (imageUploadModeSelect) {
+    imageUploadModeSelect.addEventListener("change", () => {
+      imageUploadSubdirSection?.classList.toggle("hidden", imageUploadModeSelect.value !== "subdir");
+    });
+  }
+
   async function loadPreferences() {
     preferences = await requestJson(config.preferencesUrl, { method: "GET" });
-    contentRootInput.value = preferences.content_root;
+    if (sourceTypeSelect) sourceTypeSelect.value = preferences.source_type || "local";
+    if (contentRootInput) contentRootInput.value = preferences.content_root;
+    if (sftpHostInput) sftpHostInput.value = preferences.sftp_host || "";
+    if (sftpPortInput) sftpPortInput.value = preferences.sftp_port || 22;
+    if (sftpUsernameInput) sftpUsernameInput.value = preferences.sftp_username || "";
+    if (sftpPasswordInput) sftpPasswordInput.value = preferences.sftp_password || "";
+    if (sftpPathInput) sftpPathInput.value = preferences.sftp_path || "/";
+    if (gdriveFolderIdInput) gdriveFolderIdInput.value = preferences.gdrive_folder_id || "root";
     sortModeSelect.value = preferences.sort_mode;
     themeModeSelect.value = preferences.theme_mode;
     editorFontSizeInput.value = String(preferences.editor_font_size);
+    if (imageUploadModeSelect) imageUploadModeSelect.value = preferences.image_upload_mode || "same_dir";
+    if (imageUploadSubdirInput) imageUploadSubdirInput.value = preferences.image_upload_subdir || "assets";
+    if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", preferences.image_upload_mode !== "subdir");
     contentRootDisplay.textContent = preferences.content_root;
+    applySourceTypeVisibility(preferences.source_type || "local");
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
   }
 
   async function persistPreferences(overrides = {}) {
     const payload = {
-      content_root: contentRootInput.value,
+      source_type: sourceTypeSelect?.value || "local",
+      content_root: contentRootInput?.value || "",
+      sftp_host: sftpHostInput?.value || "",
+      sftp_port: parseInt(sftpPortInput?.value || "22", 10),
+      sftp_username: sftpUsernameInput?.value || "",
+      sftp_password: sftpPasswordInput?.value || "",
+      sftp_path: sftpPathInput?.value || "/",
+      gdrive_folder_id: gdriveFolderIdInput?.value || "root",
       sort_mode: sortModeSelect.value,
       theme_mode: themeModeSelect.value,
       editor_font_size: clampFontSize(editorFontSizeInput.value),
+      image_upload_mode: imageUploadModeSelect?.value || "same_dir",
+      image_upload_subdir: imageUploadSubdirInput?.value?.trim() || "assets",
       ...overrides,
     };
     preferences = await requestJson(config.preferencesUrl, {
@@ -499,13 +755,34 @@ if (shell) {
     });
   }
 
-  function createContextMenuButton(label, onClick, tone = "default") {
+  async function deleteItem(node) {
+    try {
+      const resp = await fetch(`${config.deleteUrl}?path=${encodeURIComponent(node.path)}`, { method: "DELETE" });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        setStatus(data.detail || "Blad usuwania.", true);
+        return;
+      }
+      if (selectedTreePath === node.path) {
+        selectedTreePath = "";
+        selectedTreeKind = "directory";
+        toggleOverlay({ empty: true });
+      }
+      await loadTree();
+      setStatus(`Usunieto: ${node.name}.`);
+    } catch {
+      setStatus("Blad polaczenia przy usuwaniu.", true);
+    }
+  }
+
+  function createContextMenuButton(label, onClick, tone = "default", skipClose = false) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `context-menu-item context-menu-item-${tone}`;
     button.textContent = label;
-    button.addEventListener("click", async () => {
-      closeTreeContextMenu();
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!skipClose) closeTreeContextMenu();
       await onClick();
     });
     return button;
@@ -589,9 +866,32 @@ if (shell) {
       }),
     );
     treeContextMenu.appendChild(
+      createContextMenuButton("Zmien nazwe", async () => {
+        openRenameModal(node);
+      }),
+    );
+    treeContextMenu.appendChild(
       createContextMenuButton("Odswiez drzewo", async () => {
         await loadTree();
       }, "muted"),
+    );
+
+    const isConfirming = contextMenuState.deleteConfirm === true;
+    treeContextMenu.appendChild(
+      createContextMenuButton(
+        isConfirming ? "Kliknij ponownie aby potwierdzic" : "Usun",
+        async () => {
+          if (isConfirming) {
+            contextMenuState.deleteConfirm = false;
+            await deleteItem(node);
+          } else {
+            contextMenuState.deleteConfirm = true;
+            renderTreeContextMenu();
+          }
+        },
+        isConfirming ? "danger" : "muted",
+        true,
+      ),
     );
   }
 
@@ -790,6 +1090,39 @@ if (shell) {
     });
   }
 
+  function makeSvgIcon(d) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.cssText = "fill:currentColor;flex-shrink:0;display:block";
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.appendChild(path);
+    return svg;
+  }
+
+  const TREE_ICONS = {
+    chevronRight: "M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+    chevronDown: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z",
+    folderClosed: "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z",
+    folderOpen: "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2zm0 12H4V8h16v10z",
+    fileMd: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5-5H9v-2h4v2zm2-4H9v-2h6v2z",
+    fileImage: "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
+    filePdf: "M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z",
+    fileGeneric: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z",
+  };
+
+  function getFileIconInfo(name) {
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "avif"].includes(ext))
+      return { d: TREE_ICONS.fileImage, cls: "tree-icon-image" };
+    if (ext === "pdf")
+      return { d: TREE_ICONS.filePdf, cls: "tree-icon-pdf" };
+    if (ext === "md" || ext === "markdown")
+      return { d: TREE_ICONS.fileMd, cls: "tree-icon-md" };
+    return { d: TREE_ICONS.fileGeneric, cls: "tree-icon-generic" };
+  }
+
   function renderNode(node) {
     const listItem = document.createElement("li");
     listItem.className = "tree-item";
@@ -802,7 +1135,7 @@ if (shell) {
       toggle.type = "button";
       toggle.className = "tree-toggle";
       const isExpanded = expandedDirectories.has(node.path);
-      toggle.textContent = isExpanded ? "▾" : "▸";
+      toggle.appendChild(makeSvgIcon(isExpanded ? TREE_ICONS.chevronDown : TREE_ICONS.chevronRight));
       toggle.addEventListener("click", () => {
         if (expandedDirectories.has(node.path)) {
           expandedDirectories.delete(node.path);
@@ -815,8 +1148,12 @@ if (shell) {
 
       const label = document.createElement("button");
       label.type = "button";
-      label.className = "tree-link";
-      label.textContent = node.name;
+      label.className = "tree-link tree-link-dir";
+      const folderIconSpan = document.createElement("span");
+      folderIconSpan.className = "tree-icon tree-icon-folder";
+      folderIconSpan.appendChild(makeSvgIcon(isExpanded ? TREE_ICONS.folderOpen : TREE_ICONS.folderClosed));
+      label.appendChild(folderIconSpan);
+      label.appendChild(document.createTextNode(node.name));
       if (selectedTreePath === node.path) {
         label.classList.add("is-active");
       }
@@ -846,8 +1183,12 @@ if (shell) {
     }
 
     const spacer = document.createElement("span");
-    spacer.className = "tree-toggle";
-    spacer.textContent = "·";
+    spacer.className = "tree-toggle tree-toggle-file";
+    const fileIconInfo = getFileIconInfo(node.name);
+    const fileIconSpan = document.createElement("span");
+    fileIconSpan.className = `tree-icon ${fileIconInfo.cls}`;
+    fileIconSpan.appendChild(makeSvgIcon(fileIconInfo.d));
+    spacer.appendChild(fileIconSpan);
     row.appendChild(spacer);
 
     const fileButton = document.createElement("button");
@@ -949,6 +1290,7 @@ if (shell) {
       if (file.editable) {
         showEditorMode();
         editor.setMarkdown(file.content || "", false);
+        setTimeout(renderWysiwygDiagrams, 200);
         toggleOverlay({ empty: false, unsupported: false });
         setStatus("Plik gotowy do edycji.");
       } else if (file.previewable) {
@@ -980,7 +1322,7 @@ if (shell) {
         method: "PUT",
         body: JSON.stringify({
           path: selectedPath,
-          content: editor.getMarkdown(),
+          content: cleanEmbeddedUrls(editor.getMarkdown()),
         }),
       });
       toggleOverlay({ empty: false, unsupported: false });
@@ -1054,6 +1396,33 @@ if (shell) {
         renderTree(treeData);
         setStatus("Katalog utworzony.");
       }
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  async function renameItem() {
+    const node = renameTargetNode;
+    const newName = createNameInput.value.trim();
+    if (!newName) {
+      setStatus("Podaj nowa nazwe.", true);
+      createNameInput.focus();
+      return;
+    }
+    try {
+      setStatus("Zmieniam nazwe...");
+      const renamed = await requestJson(config.renameUrl, {
+        method: "POST",
+        body: JSON.stringify({ path: node.path, new_name: newName }),
+      });
+      if (selectedTreePath === node.path) {
+        selectedTreePath = renamed.path;
+        selectedTreeKind = renamed.kind;
+        if (renamed.kind === "file") await loadFile(renamed.path);
+      }
+      closeCreateModal();
+      await loadTree();
+      setStatus(`Zmieniono nazwe na: ${renamed.name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -1320,7 +1689,10 @@ if (shell) {
   });
   closeCreateButton.addEventListener("click", closeCreateModal);
   cancelCreateButton.addEventListener("click", closeCreateModal);
-  confirmCreateButton.addEventListener("click", createItem);
+  confirmCreateButton.addEventListener("click", () => {
+    if (modalAction === "rename") renameItem();
+    else createItem();
+  });
   createModal.addEventListener("click", (event) => {
     if (event.target === createModal) {
       closeCreateModal();
