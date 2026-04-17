@@ -17,17 +17,12 @@ class PreferencesService:
     def get_preferences(self) -> AppPreferences:
         preferences = self.repository.get_app_preferences()
         if preferences.source_type == "local":
-            content_root = Path(preferences.content_root).expanduser().resolve()
             try:
-                content_root.mkdir(parents=True, exist_ok=True)
-            except PermissionError:
-                fallback_root = self.settings.content_root.expanduser().resolve()
-                self.settings.ensure_content_root()
+                content_root = self._ensure_local_content_root(preferences.content_root)
+            except OSError:
+                fallback_root = self._ensure_local_content_root(self.settings.content_root)
                 preferences = self.repository.update_app_preferences(
                     content_root=str(fallback_root),
-                    sort_mode=preferences.sort_mode,
-                    theme_mode=preferences.theme_mode,
-                    editor_font_size=preferences.editor_font_size,
                 )
                 return preferences
             if str(content_root) != preferences.content_root:
@@ -53,8 +48,7 @@ class PreferencesService:
         image_upload_subdir: str = "assets",
     ) -> AppPreferences:
         if source_type == "local":
-            resolved_root = Path(content_root).expanduser().resolve()
-            resolved_root.mkdir(parents=True, exist_ok=True)
+            resolved_root = self._ensure_local_content_root(content_root)
             content_root = str(resolved_root)
 
         return self.repository.update_app_preferences(
@@ -72,3 +66,8 @@ class PreferencesService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
         )
+
+    def _ensure_local_content_root(self, value: str | Path) -> Path:
+        content_root = Path(value).expanduser().resolve()
+        content_root.mkdir(parents=True, exist_ok=True)
+        return content_root
