@@ -290,9 +290,9 @@
         </div>
 
         <div class="directory-browser-actions">
-          <button id="directory-browser-up" class="button button-secondary" type="button">Poziom wyzej</button>
-          <button id="directory-browser-new" class="button button-secondary" type="button">Nowy folder</button>
-          <button id="directory-browser-select" class="button button-primary" type="button">Wybierz ten katalog</button>
+          <button id="directory-browser-up" class="button button-secondary button-sm" type="button"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="8,12 8,4"/><polyline points="4,8 8,4 12,8"/></svg>Poziom wyzej</button>
+          <button id="directory-browser-new" class="button button-secondary button-sm" type="button"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3.586a1 1 0 0 1 .707.293l.914.914A1 1 0 0 0 9.414 4.5H12.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z"/><line x1="8" y1="8" x2="8" y2="12"/><line x1="6" y1="10" x2="10" y2="10"/></svg>Nowy folder</button>
+          <button id="directory-browser-select" class="button button-primary button-sm" type="button"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,8 6,11 13,4"/></svg>Wybierz</button>
         </div>
 
         <div id="directory-browser-create" class="directory-browser-create hidden">

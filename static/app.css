@@ -110,6 +110,18 @@ button {
   transform: none;
 }
 
+.button-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.button-sm svg {
+  flex-shrink: 0;
+}
+
 .button-primary {
   background: var(--accent);
   color: #f7fbfb;
@@ -833,6 +845,12 @@ body[data-theme="dark"] .profiles-dropdown-item:hover {
   background: var(--panel-strong);
 }
 
+.editor-stage.is-drop-target-link {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  background: var(--accent-soft);
+}
+
 body[data-theme="dark"] .editor-stage {
   background:
     linear-gradient(180deg, rgba(15, 28, 52, 0.98), rgba(11, 18, 32, 0.96));
@@ -1031,13 +1049,15 @@ body[data-theme="dark"] .overlay-card {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  /* No overflow:hidden here — it would clip absolutely-positioned
+     toolbar dropdowns. Clipping is handled by .toastui-editor-main below. */
 }
 
 .toastui-editor-main {
   flex: 1 1 auto;
   height: auto !important;
   min-height: 0;
+  overflow: hidden;
 }
 
 .toastui-editor-md-container,
@@ -1046,14 +1066,25 @@ body[data-theme="dark"] .overlay-card {
   min-height: 0;
 }
 
-.toastui-editor-toolbar {
-  border-bottom-color: var(--line) !important;
-  background: var(--surface) !important;
+/* Force scroll on the actual ProseMirror / CodeMirror wrapper.
+   Without this the wrapper grows with content and never scrolls. */
+.toastui-editor-ww-editor,
+.toastui-editor-md-editor {
+  overflow-y: auto !important;
 }
 
+.toastui-editor-toolbar,
 .toastui-editor-defaultUI-toolbar {
   border-bottom-color: var(--line) !important;
   background: var(--surface) !important;
+  padding: 2px 4px !important;
+}
+
+/* zoom scales layout + background sprites proportionally — unlike
+   transform:scale which only scales visually and leaves layout space intact */
+.toastui-editor-toolbar .toastui-editor-toolbar-group,
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-group {
+  zoom: 0.78;
 }
 
 .toastui-editor-contents {
@@ -1073,6 +1104,77 @@ body[data-theme="dark"] .overlay-card {
 }
 
 /* ── Diagrams ─────────────────────────────────────────────── */
+/* ── Tables ───────────────────────────────────────────────── */
+
+.toastui-editor-contents table,
+.toastui-editor-md-preview table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  width: auto;
+  margin: 1rem 0;
+  border: 1.5px solid var(--line-strong) !important;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.92em;
+}
+
+.toastui-editor-contents th,
+.toastui-editor-contents td,
+.toastui-editor-md-preview th,
+.toastui-editor-md-preview td {
+  border: 1px solid var(--line-strong) !important;
+  padding: 0.42rem 0.72rem !important;
+  text-align: left;
+  vertical-align: top;
+  min-width: 5rem;
+}
+
+.toastui-editor-contents thead tr,
+.toastui-editor-md-preview thead tr {
+  background: var(--accent-soft) !important;
+}
+
+.toastui-editor-contents th,
+.toastui-editor-md-preview th {
+  font-weight: 600;
+  color: var(--text) !important;
+  background: var(--accent-soft) !important;
+}
+
+.toastui-editor-contents tbody tr:nth-child(even),
+.toastui-editor-md-preview tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+body[data-theme="dark"] .toastui-editor-contents tbody tr:nth-child(even),
+body[data-theme="dark"] .toastui-editor-md-preview tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body[data-theme="dark"] .toastui-editor-contents th,
+body[data-theme="dark"] .toastui-editor-md-preview th {
+  background: rgba(96, 165, 250, 0.12) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents th,
+body[data-theme="obsidian"] .toastui-editor-md-preview th {
+  background: rgba(124, 111, 205, 0.15) !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-contents tbody tr:nth-child(even),
+body[data-theme="obsidian"] .toastui-editor-md-preview tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Also style the selected/active cell in WYSIWYG */
+.toastui-editor-contents td.toastui-editor-ww-table-selected-cell {
+  background: var(--accent-soft) !important;
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px;
+}
+
+/* ── Diagrams ─────────────────────────────────────────────── */
+
 .mermaid-diagram {
   text-align: center;
   margin: 1rem 0;
@@ -1132,20 +1234,24 @@ body[data-theme="dark"] .overlay-card {
   display: inline-flex;
   align-items: center;
   padding-left: 0.35rem;
+  /* No zoom here — zoom creates a stacking context that breaks
+     position:fixed on the dropdown menu. Size button manually instead. */
 }
 
 .noteeli-toolbar-button {
-  min-width: 2.4rem;
-  height: 2rem;
-  padding: 0 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Match the visual size of zoomed toolbar buttons (28px × 0.78 ≈ 22px) */
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--surface);
   color: var(--text);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .noteeli-toolbar-button:hover {
@@ -1153,39 +1259,37 @@ body[data-theme="dark"] .overlay-card {
   border-color: var(--accent);
 }
 
-.noteeli-toolbar-button-dropdown {
-  min-width: 5.8rem;
-  justify-content: center;
-}
-
 .noteeli-toolbar-menu {
-  position: absolute;
-  top: calc(100% + 0.45rem);
-  left: 0;
-  min-width: 13rem;
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.4rem;
+  position: fixed;
+  /* top/left are set dynamically by JS via inline style */
+  min-width: 10rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.25rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
-  z-index: 15;
-}
-
-.noteeli-toolbar-menu-item {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
   border-radius: 10px;
-  padding: 0.55rem 0.65rem;
-  cursor: pointer;
-  font: inherit;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  z-index: 150;
 }
 
-.noteeli-toolbar-menu-item:hover {
+/* Reset all ToastUI toolbar-group button styles that bleed into our menu */
+.noteeli-toolbar-menu .noteeli-toolbar-menu-item {
+  all: unset;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.32rem 0.55rem;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.noteeli-toolbar-menu .noteeli-toolbar-menu-item:hover {
   background: var(--accent-soft);
 }
 
@@ -1413,16 +1517,22 @@ body[data-theme="dark"] .settings-profile-item {
 }
 
 body[data-theme="dark"] .directory-browser-path,
-body[data-theme="dark"] .directory-browser-item,
-body[data-theme="dark"] .directory-browser-empty,
 body[data-theme="dark"] .directory-browser-create {
   background: rgba(17, 24, 39, 0.78);
   border-color: rgba(148, 163, 184, 0.22);
 }
 
+body[data-theme="dark"] .directory-browser-list {
+  background: rgba(17, 24, 39, 0.78);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+body[data-theme="dark"] .directory-browser-item {
+  border-color: rgba(148, 163, 184, 0.1);
+}
+
 body[data-theme="dark"] .directory-browser-item:hover {
   background: rgba(59, 130, 246, 0.14);
-  border-color: rgba(191, 219, 254, 0.32);
 }
 
 .modal-header,
@@ -1579,57 +1689,68 @@ body[data-theme="dark"] .directory-browser-item:hover {
 }
 
 .directory-browser-list {
-  display: grid;
-  gap: 0.55rem;
+  display: flex;
+  flex-direction: column;
   max-height: min(50vh, 420px);
   overflow: auto;
-  padding-right: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .directory-browser-item {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.2rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   text-align: left;
-  padding: 0.9rem 1rem;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  padding: 0.38rem 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
   color: var(--text);
   cursor: pointer;
-  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  font: inherit;
+  font-size: 0.88rem;
+  transition: background-color 0.12s ease;
+}
+
+.directory-browser-item:last-child {
+  border-bottom: 0;
 }
 
 .directory-browser-item:hover {
-  transform: translateY(-1px);
   background: var(--accent-soft);
-  border-color: var(--accent);
+}
+
+.directory-browser-item-icon {
+  flex-shrink: 0;
+  color: #c8974a;
+  opacity: 0.9;
+}
+
+body[data-theme="obsidian"] .directory-browser-item-icon {
+  color: #d4a73a;
 }
 
 .directory-browser-item-name {
-  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.directory-browser-item-path {
-  font-size: 0.82rem;
+.directory-browser-item-chevron {
+  flex-shrink: 0;
   color: var(--muted);
-  word-break: break-word;
-}
-
-.directory-browser-item-arrow {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  color: var(--muted);
-  font-size: 1.25rem;
+  opacity: 0.6;
 }
 
 .directory-browser-empty {
-  padding: 1rem;
-  border-radius: 16px;
-  border: 1px dashed var(--line);
-  background: var(--surface);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.88rem;
+  color: var(--muted);
 }
 
 .modal-actions {
@@ -2067,19 +2188,26 @@ body[data-theme="obsidian"] .settings-input:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-body[data-theme="obsidian"] .directory-browser-path,
-body[data-theme="obsidian"] .directory-browser-item,
-body[data-theme="obsidian"] .directory-browser-empty {
+body[data-theme="obsidian"] .directory-browser-path {
   border-radius: 4px;
   background: #2d2d30;
   border-color: rgba(255, 255, 255, 0.1);
   color: #cccccc;
 }
 
+body[data-theme="obsidian"] .directory-browser-list {
+  background: #2d2d30;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+body[data-theme="obsidian"] .directory-browser-item {
+  color: #cccccc;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
 body[data-theme="obsidian"] .directory-browser-item:hover {
-  transform: none;
   background: var(--accent-soft);
-  border-color: var(--accent);
 }
 
 

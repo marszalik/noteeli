@@ -107,6 +107,7 @@ if (shell) {
   let uploadTargetPath = "";
   let pendingUploadFiles = [];
   let diagramToolbarMenu = null;
+  let diagramToolbarTrigger = null;
   let lastEditorSelection = null;
 
   function computeInsertRef(sourceMdPath, uploadedPath) {
@@ -136,21 +137,31 @@ if (shell) {
     let mdEnd = selection[1];
 
     if (editor.isWysiwygMode()) {
-      [mdStart, mdEnd] = editor.convertPosToMatchEditorMode(selection[0], selection[1], "markdown");
+      try {
+        [mdStart, mdEnd] = editor.convertPosToMatchEditorMode(selection[0], selection[1], "markdown");
+      } catch (_) {
+        mdStart = null;
+        mdEnd = null;
+      }
     }
 
     const current = editor.getMarkdown();
-    const startOffset = markdownPositionToOffset(current, mdStart);
-    const endOffset = markdownPositionToOffset(current, mdEnd);
-    const next = `${current.slice(0, startOffset)}${snippetText}${current.slice(endOffset)}`;
-    const caretOffset = startOffset + snippetText.length;
+    const startOffset = mdStart != null ? markdownPositionToOffset(current, mdStart) : current.length;
+    const endOffset = mdEnd != null ? markdownPositionToOffset(current, mdEnd) : current.length;
+    const sep = startOffset > 0 && current[startOffset - 1] !== "\n" ? "\n" : "";
+    const next = `${current.slice(0, startOffset)}${sep}${snippetText}\n${current.slice(endOffset)}`;
+    const caretOffset = startOffset + sep.length + snippetText.length + 1;
     const caretPos = offsetToMarkdownPosition(next, caretOffset);
 
     editor.setMarkdown(next, false);
 
     if (originalMode === "wysiwyg") {
-      const [wwStart, wwEnd] = editor.convertPosToMatchEditorMode(caretPos, caretPos, "wysiwyg");
-      editor.setSelection(wwStart, wwEnd);
+      try {
+        const [wwStart, wwEnd] = editor.convertPosToMatchEditorMode(caretPos, caretPos, "wysiwyg");
+        editor.setSelection(wwStart, wwEnd);
+      } catch (_) {
+        // position conversion failed – leave cursor where it is
+      }
       scheduleWysiwygDiagramRender();
     } else {
       editor.setSelection(caretPos, caretPos);
@@ -321,11 +332,64 @@ if (shell) {
   editor.on("focus", rememberEditorSelection);
   editor.on("caretChange", rememberEditorSelection);
 
+  // ── Drag-from-sidebar → editor ────────────────────────────
+  // Accepts drags originating from tree rows (dragState is set).
+  // Builds a markdown snippet appropriate for the file type and inserts it.
+
+  function buildSidebarDropSnippet(droppedPath) {
+    if (!selectedPath) return null;
+    const name = droppedPath.split("/").pop();
+    const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+    const ref = computeInsertRef(selectedPath, droppedPath);
+
+    if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "excalidraw"].includes(ext)) {
+      // Embedded image — use the asset proxy URL
+      const assetUrl = getEmbeddedAssetUrl(selectedPath, ref);
+      const altName = name.replace(/\.[^.]+$/, "");
+      return `![${altName}](${assetUrl})`;
+    }
+    // Everything else (md, pdf, txt, …) — plain markdown link
+    return `[${name}](${ref})`;
+  }
+
+  const editorStage = editorContainer.closest(".editor-stage") || editorContainer;
+
+  editorStage.addEventListener("dragover", (event) => {
+    if (!dragState || dragState.kind === "directory") return;
+    if (!selectedPath || !selectedEditable) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "link";
+    editorStage.classList.add("is-drop-target-link");
+  });
+
+  editorStage.addEventListener("dragleave", (event) => {
+    // Only clear when truly leaving the stage (not moving over a child)
+    if (!editorStage.contains(event.relatedTarget)) {
+      editorStage.classList.remove("is-drop-target-link");
+    }
+  });
+
+  editorStage.addEventListener("drop", (event) => {
+    editorStage.classList.remove("is-drop-target-link");
+    if (!dragState || dragState.kind === "directory") return;
+    if (!selectedPath || !selectedEditable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const snippet = buildSidebarDropSnippet(dragState.path);
+    if (snippet) {
+      insertEditorSnippet(snippet);
+      scheduleWysiwygDiagramRender();
+      scheduleMermaidPreviewRender();
+      const name = dragState.path.split("/").pop();
+      setStatus(`Wstawiono link do: ${name}`);
+    }
+  });
+
   function closeDiagramToolbarMenu() {
     if (!diagramToolbarMenu) return;
     diagramToolbarMenu.classList.add("hidden");
     diagramToolbarMenu.setAttribute("aria-hidden", "true");
-    diagramToolbarMenu.previousElementSibling?.setAttribute("aria-expanded", "false");
+    diagramToolbarTrigger?.setAttribute("aria-expanded", "false");
   }
 
   function toggleDiagramToolbarMenu() {
@@ -335,9 +399,16 @@ if (shell) {
       closeDiagramToolbarMenu();
       return;
     }
+    // Menu lives in document.body (outside any zoom context) so
+    // getBoundingClientRect() on the trigger gives true viewport coords.
+    if (diagramToolbarTrigger) {
+      const rect = diagramToolbarTrigger.getBoundingClientRect();
+      diagramToolbarMenu.style.top = `${rect.bottom + 4}px`;
+      diagramToolbarMenu.style.left = `${rect.left}px`;
+    }
     diagramToolbarMenu.classList.remove("hidden");
     diagramToolbarMenu.setAttribute("aria-hidden", "false");
-    diagramToolbarMenu.previousElementSibling?.setAttribute("aria-expanded", "true");
+    diagramToolbarTrigger?.setAttribute("aria-expanded", "true");
   }
 
   function attachDiagramToolbarButtons() {
@@ -355,7 +426,7 @@ if (shell) {
     trigger.setAttribute("aria-label", "Wstaw diagram");
     trigger.setAttribute("aria-expanded", "false");
     trigger.title = "Wstaw diagram";
-    trigger.textContent = "Diagram";
+    trigger.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="2" width="6" height="4" rx="1"/><rect x="9" y="10" width="6" height="4" rx="1"/><polyline points="4,6 4,8 12,8 12,10"/></svg>`;
     trigger.addEventListener("mousedown", (event) => {
       event.preventDefault();
     });
@@ -393,9 +464,14 @@ if (shell) {
       menu.appendChild(item);
     });
 
-    group.append(trigger, menu);
+    // Append menu to document.body so it's outside any zoom stacking context.
+    // position:fixed inside a zoomed ancestor positions relative to that
+    // ancestor instead of the viewport — moving it to body avoids that.
+    group.append(trigger);
     toolbar.appendChild(group);
+    document.body.appendChild(menu);
     diagramToolbarMenu = menu;
+    diagramToolbarTrigger = trigger;
   }
 
   // ── Mermaid setup ─────────────────────────────────────────
@@ -411,6 +487,11 @@ if (shell) {
   let mermaidPreviewTimer = null;
   let wysiwygDiagramTimer = null;
 
+  // Cache: trimmed mermaid source → rendered SVG innerHTML.
+  // Used to immediately restore the previous render when ToastUI rebuilds
+  // the preview DOM, eliminating the flash of unstyled/raw text.
+  const mermaidSvgCache = new Map();
+
   function normalizeDiagramLanguage(value) {
     const lang = (value || "").toLowerCase().trim();
     if (lang === "plantuml" || lang === "puml") return "plantuml";
@@ -418,12 +499,37 @@ if (shell) {
     return "";
   }
 
+  // Synchronously restore cached SVGs for any unprocessed .mermaid-diagram
+  // elements. Must run in the same task as the DOM mutation so the browser
+  // never paints the intermediate "raw text" state.
+  function restoreCachedMermaidDiagrams() {
+    editorContainer.querySelectorAll(".mermaid-diagram:not([data-processed])").forEach((el) => {
+      const code = el.textContent.trim();
+      const cached = mermaidSvgCache.get(code);
+      if (cached) {
+        el.innerHTML = cached;
+        el.setAttribute("data-processed", "true");
+      }
+    });
+  }
+
   function scheduleMermaidPreviewRender() {
     if (currentEditorMode !== "markdown") return;
     clearTimeout(mermaidPreviewTimer);
-    mermaidPreviewTimer = setTimeout(() => {
-      const els = editorContainer.querySelectorAll(".mermaid-diagram:not([data-processed])");
-      if (els.length) mermaid.run({ nodes: Array.from(els) }).catch(() => {});
+    mermaidPreviewTimer = setTimeout(async () => {
+      const unprocessed = Array.from(
+        editorContainer.querySelectorAll(".mermaid-diagram:not([data-processed])")
+      );
+      if (!unprocessed.length) return;
+      // Snapshot source before mermaid mutates the elements
+      const codes = unprocessed.map((el) => el.textContent.trim());
+      await mermaid.run({ nodes: unprocessed }).catch(() => {});
+      // Cache each successfully rendered SVG keyed by its source code
+      unprocessed.forEach((el, i) => {
+        if (el.getAttribute("data-processed") && el.querySelector("svg")) {
+          mermaidSvgCache.set(codes[i], el.innerHTML);
+        }
+      });
     }, 80);
   }
 
@@ -436,6 +542,8 @@ if (shell) {
   }
 
   new MutationObserver(() => {
+    // Restore cached SVGs synchronously (before next paint) to avoid flash
+    restoreCachedMermaidDiagrams();
     scheduleMermaidPreviewRender();
     scheduleWysiwygDiagramRender();
   }).observe(editorContainer, { childList: true, subtree: true, characterData: true });
@@ -443,6 +551,15 @@ if (shell) {
   async function renderWysiwygDiagrams() {
     if (currentEditorMode !== "wysiwyg") return;
     const blocks = editorContainer.querySelectorAll(".toastui-editor-ww-code-block");
+
+    // Grab ProseMirror's internal MutationObserver so we can suppress reconciliation
+    // around our synchronous DOM injections (mermaid SVG, classList, appendChild).
+    let pmInternalObserver = null;
+    for (const b of blocks) {
+      const obs = b.pmViewDesc?.spec?.view?.domObserver?.observer;
+      if (obs) { pmInternalObserver = obs; break; }
+    }
+
     for (const block of blocks) {
       const lang = normalizeDiagramLanguage(
         block.getAttribute("data-language") ||
@@ -451,19 +568,24 @@ if (shell) {
       );
       const out = block.querySelector(".ww-diagram-out");
       if (!lang) {
+        pmInternalObserver?.takeRecords();
         out?.remove();
         block.classList.remove("is-diagram-rendered", "is-source-visible");
+        pmInternalObserver?.takeRecords();
         continue;
       }
 
       const code = (block.querySelector("pre code")?.textContent || block.querySelector("pre")?.textContent || "").trim();
       if (!code) {
+        pmInternalObserver?.takeRecords();
         out?.remove();
         block.classList.remove("is-diagram-rendered", "is-source-visible");
+        pmInternalObserver?.takeRecords();
         continue;
       }
 
       let nextOut = out;
+      const isNew = !nextOut;
       if (!nextOut) {
         nextOut = document.createElement("div");
         nextOut.className = "ww-diagram-out";
@@ -471,32 +593,53 @@ if (shell) {
         nextOut.setAttribute("role", "button");
         nextOut.setAttribute("aria-label", "Kliknij, aby pokazac albo ukryc kod diagramu");
         nextOut.addEventListener("click", () => {
+          const obs = block.pmViewDesc?.spec?.view?.domObserver?.observer;
+          obs?.takeRecords();
           block.classList.toggle("is-source-visible");
+          obs?.takeRecords();
         });
         nextOut.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
+            const obs = block.pmViewDesc?.spec?.view?.domObserver?.observer;
+            obs?.takeRecords();
             block.classList.toggle("is-source-visible");
+            obs?.takeRecords();
           }
         });
-        block.appendChild(nextOut);
       }
 
       if (nextOut.dataset.code === code && nextOut.dataset.lang === lang) continue;
-      nextOut.dataset.code = code;
-      nextOut.dataset.lang = lang;
 
       if (lang === "mermaid") {
-        nextOut.removeAttribute("data-processed");
-        nextOut.textContent = code;
-        const rendered = await mermaid.run({ nodes: [nextOut] }).then(() => true).catch(() => false);
+        // Render in an off-screen element appended to document.body — mermaid needs a
+        // DOM-attached node, but body is outside ProseMirror's observed subtree.
+        const tempEl = document.createElement("div");
+        tempEl.style.cssText = "position:fixed;top:-9999px;left:-9999px;visibility:hidden";
+        tempEl.textContent = code;
+        document.body.appendChild(tempEl);
+        const rendered = await mermaid.run({ nodes: [tempEl] }).then(() => true).catch(() => false);
+        const svgHtml = tempEl.innerHTML;
+        document.body.removeChild(tempEl);
+
+        // Inject synchronously and immediately clear ProseMirror's pending mutation
+        // records so it never reconciles against our foreign DOM additions.
+        pmInternalObserver?.takeRecords();
+        nextOut.dataset.code = code;
+        nextOut.dataset.lang = lang;
+        nextOut.innerHTML = rendered ? svgHtml : code;
+        if (isNew) block.appendChild(nextOut);
         block.classList.toggle("is-diagram-rendered", rendered);
-        if (!rendered) {
-          block.classList.add("is-source-visible");
-        }
+        if (!rendered) block.classList.add("is-source-visible");
+        pmInternalObserver?.takeRecords();
       } else {
+        pmInternalObserver?.takeRecords();
+        nextOut.dataset.code = code;
+        nextOut.dataset.lang = lang;
         nextOut.innerHTML = `<img src="${plantUmlSvgUrl(code)}" class="diagram-plantuml" alt="PlantUML diagram" />`;
+        if (isNew) block.appendChild(nextOut);
         block.classList.add("is-diagram-rendered");
+        pmInternalObserver?.takeRecords();
       }
     }
   }
@@ -1417,16 +1560,7 @@ if (shell) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "directory-browser-item";
-      const name = document.createElement("span");
-      name.className = "directory-browser-item-name";
-      name.textContent = directory.name;
-      const path = document.createElement("span");
-      path.className = "directory-browser-item-path";
-      path.textContent = directory.path;
-      const arrow = document.createElement("span");
-      arrow.className = "directory-browser-item-arrow";
-      arrow.textContent = "›";
-      button.append(name, path, arrow);
+      button.innerHTML = `<svg class="directory-browser-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 3.5A1.5 1.5 0 0 1 3 2h3.586a1.5 1.5 0 0 1 1.06.44l.915.914A1.5 1.5 0 0 0 9.62 3.8H13a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 13 13.8H3A1.5 1.5 0 0 1 1.5 12.3V3.5Z"/></svg><span class="directory-browser-item-name">${directory.name}</span><svg class="directory-browser-item-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,4 10,8 6,12"/></svg>`;
       button.addEventListener("click", () => {
         loadDirectoryBrowser(directory.path);
       });
