@@ -7,6 +7,7 @@ SortMode = Literal["alphabetical", "manual"]
 ThemeMode = Literal["light", "dark", "obsidian"]
 SourceType = Literal["local", "sftp", "gdrive"]
 ImageUploadMode = Literal["same_dir", "subdir"]
+Language = Literal["pl", "en", "es", "de", "ru"]
 
 
 class AppPreferences(BaseModel):
@@ -24,6 +25,7 @@ class AppPreferences(BaseModel):
     editor_font_size: int = Field(default=16, ge=12, le=28)
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
+    language: Language = "pl"
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -40,6 +42,7 @@ class UpdatePreferencesRequest(BaseModel):
     editor_font_size: int = Field(ge=12, le=28)
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
+    language: Language = "pl"
 
 
 class SavedPreferencesProfile(BaseModel):
@@ -59,6 +62,7 @@ class SavedPreferencesProfile(BaseModel):
     editor_font_size: int = Field(default=16, ge=12, le=28)
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
+    language: Language = "pl"
 
 
 class SavedPreferencesProfilesResponse(BaseModel):

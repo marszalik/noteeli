@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.core.config import Settings, get_settings
 from app.domains.preferences.repository import PreferencesRepository
-from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode
+from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode, Language
 
 
 class PreferenceProfileNotFoundError(Exception):
@@ -56,6 +56,7 @@ class PreferencesService:
         gdrive_credentials: str | None = None,
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
+        language: Language = "pl",
     ) -> AppPreferences:
         if source_type == "local":
             resolved_root = self._ensure_local_content_root(content_root)
@@ -76,6 +77,7 @@ class PreferencesService:
             editor_font_size=editor_font_size,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
 
     def list_profiles(self) -> list[SavedPreferencesProfile]:
@@ -99,6 +101,7 @@ class PreferencesService:
         gdrive_credentials: str = "",
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
+        language: Language = "pl",
     ) -> SavedPreferencesProfile:
         profile_preferences = self._build_profile_preferences(
             content_root=content_root,
@@ -115,6 +118,7 @@ class PreferencesService:
             gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
         try:
             return self.repository.create_profile(name.strip(), profile_preferences)
@@ -140,6 +144,7 @@ class PreferencesService:
         gdrive_credentials: str = "",
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
+        language: Language = "pl",
     ) -> SavedPreferencesProfile:
         profile_preferences = self._build_profile_preferences(
             content_root=content_root,
@@ -156,6 +161,7 @@ class PreferencesService:
             gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
         try:
             profile = self.repository.update_profile(profile_id, name.strip(), profile_preferences)
@@ -191,6 +197,7 @@ class PreferencesService:
             gdrive_credentials=profile_preferences.gdrive_credentials,
             image_upload_mode=profile_preferences.image_upload_mode,
             image_upload_subdir=profile_preferences.image_upload_subdir,
+            language=profile_preferences.language,
         )
 
     def _ensure_local_content_root(self, value: str | Path) -> Path:
@@ -215,6 +222,7 @@ class PreferencesService:
         gdrive_credentials: str,
         image_upload_mode: ImageUploadMode,
         image_upload_subdir: str,
+        language: Language = "pl",
     ) -> AppPreferences:
         normalized_content_root = content_root
         if source_type == "local":
@@ -235,4 +243,5 @@ class PreferencesService:
             editor_font_size=editor_font_size,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )

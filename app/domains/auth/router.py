@@ -77,7 +77,7 @@ async def logout_action(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# Google Drive OAuth – uzyskanie dostępu do Drive (osobny scope od logowania)
+# Google Drive OAuth – grant access to Drive (separate scope from login)
 # ---------------------------------------------------------------------------
 
 @router.get("/auth/gdrive", name="auth_gdrive_start")

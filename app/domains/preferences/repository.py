@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import contextmanager
 
 from app.core.config import Settings, get_settings
-from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode  # noqa: F401
+from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode, Language  # noqa: F401
 
 
 class PreferencesRepository:
@@ -38,6 +38,7 @@ class PreferencesRepository:
             ("editor_font_size", "16"),
             ("image_upload_mode", "same_dir"),
             ("image_upload_subdir", "assets"),
+            ("language", "pl"),
         )
         with self._connect() as connection:
             connection.execute(
@@ -101,6 +102,7 @@ class PreferencesRepository:
         editor_font_size: int | None = None,
         image_upload_mode: ImageUploadMode | None = None,
         image_upload_subdir: str | None = None,
+        language: Language | None = None,
     ) -> AppPreferences:
         updates: list[tuple[str, str]] = []
         if source_type is not None:
@@ -131,6 +133,8 @@ class PreferencesRepository:
             updates.append(("image_upload_mode", image_upload_mode))
         if image_upload_subdir is not None:
             updates.append(("image_upload_subdir", image_upload_subdir))
+        if language is not None:
+            updates.append(("language", language))
 
         if updates:
             with self._connect() as connection:
@@ -279,6 +283,7 @@ class PreferencesRepository:
             editor_font_size=int(values.get("editor_font_size", "16")),
             image_upload_mode=values.get("image_upload_mode", "same_dir"),
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
+            language=values.get("language", "pl"),
         )
 
     def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:
@@ -301,4 +306,5 @@ class PreferencesRepository:
             editor_font_size=preferences.editor_font_size,
             image_upload_mode=preferences.image_upload_mode,
             image_upload_subdir=preferences.image_upload_subdir,
+            language=preferences.language,
         )

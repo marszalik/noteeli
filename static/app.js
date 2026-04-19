@@ -57,6 +57,7 @@ if (shell) {
   const gdriveFolderIdInput = document.getElementById("gdrive-folder-id-input");
   const sortModeSelect = document.getElementById("sort-mode-select");
   const themeModeSelect = document.getElementById("theme-mode-select");
+  const languageSelect = document.getElementById("language-select");
   const editorFontSizeInput = document.getElementById("editor-font-size-input");
   const profileNameInput = document.getElementById("profile-name-input");
   const profileEditorTitle = document.getElementById("profile-editor-title");
@@ -276,7 +277,7 @@ if (shell) {
   // with our upload-to-notes-dir flow.
   function handleImageBlob(blob, insertCallback) {
     if (!selectedPath) {
-      setStatus("Najpierw otworz plik Markdown.", true);
+      setStatus(t("st_open_file_first"), true);
       return;
     }
     const fileDir = getParentPath(selectedPath);
@@ -301,12 +302,12 @@ if (shell) {
         const created = result.created_items[0];
         if (!created) {
           const skipped = result.skipped_items[0];
-          setStatus(skipped?.message || "Nie udalo sie dodac obrazka.", true);
+          setStatus(skipped?.message || t("st_image_fail"), true);
           return;
         }
         const ref = computeInsertRef(selectedPath, created.path);
         insertCallback(getEmbeddedAssetUrl(selectedPath, ref), created.name);
-        setStatus(`Obraz dodany: ${created.name}`);
+        setStatus(`${t("st_image_added")}: ${created.name}`);
         loadTree();
       });
 
@@ -381,7 +382,7 @@ if (shell) {
       scheduleWysiwygDiagramRender();
       scheduleMermaidPreviewRender();
       const name = dragState.path.split("/").pop();
-      setStatus(`Wstawiono link do: ${name}`);
+      setStatus(`${t("st_link_inserted")}: ${name}`);
     }
   });
 
@@ -423,9 +424,9 @@ if (shell) {
     const trigger = document.createElement("button");
     trigger.type = "button";
     trigger.className = "noteeli-toolbar-button noteeli-toolbar-button-dropdown";
-    trigger.setAttribute("aria-label", "Wstaw diagram");
+    trigger.setAttribute("aria-label", "Insert diagram");
     trigger.setAttribute("aria-expanded", "false");
-    trigger.title = "Wstaw diagram";
+    trigger.title = "Insert diagram";
     trigger.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="2" width="6" height="4" rx="1"/><rect x="9" y="10" width="6" height="4" rx="1"/><polyline points="4,6 4,8 12,8 12,10"/></svg>`;
     trigger.addEventListener("mousedown", (event) => {
       event.preventDefault();
@@ -440,10 +441,10 @@ if (shell) {
     menu.setAttribute("aria-hidden", "true");
 
     const options = [
-      { type: "mermaid-flowchart", label: "Mermaid Flowchart", message: "Dodano blok Mermaid Flowchart." },
-      { type: "mermaid-sequence", label: "Mermaid Sequence", message: "Dodano blok Mermaid Sequence." },
-      { type: "mermaid-class", label: "Mermaid Class", message: "Dodano blok Mermaid Class." },
-      { type: "plantuml-sequence", label: "PlantUML Sequence", message: "Dodano blok PlantUML." },
+      { type: "mermaid-flowchart", label: "Mermaid Flowchart", message: "Mermaid Flowchart block inserted." },
+      { type: "mermaid-sequence", label: "Mermaid Sequence", message: "Mermaid Sequence block inserted." },
+      { type: "mermaid-class", label: "Mermaid Class", message: "Mermaid Class block inserted." },
+      { type: "plantuml-sequence", label: "PlantUML Sequence", message: "PlantUML block inserted." },
     ];
 
     options.forEach(({ type, label, message }) => {
@@ -591,7 +592,7 @@ if (shell) {
         nextOut.className = "ww-diagram-out";
         nextOut.tabIndex = 0;
         nextOut.setAttribute("role", "button");
-        nextOut.setAttribute("aria-label", "Kliknij, aby pokazac albo ukryc kod diagramu");
+        nextOut.setAttribute("aria-label", "Click to show or hide diagram code");
         nextOut.addEventListener("click", () => {
           const obs = block.pmViewDesc?.spec?.view?.domObserver?.observer;
           obs?.takeRecords();
@@ -648,7 +649,7 @@ if (shell) {
   editorModeToggle.addEventListener("click", () => {
     currentEditorMode = currentEditorMode === "wysiwyg" ? "markdown" : "wysiwyg";
     editor.changeMode(currentEditorMode);
-    editorModeToggle.textContent = currentEditorMode === "wysiwyg" ? "WYSIWYG" : "Markdown";
+    editorModeToggle.textContent = t(currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode");
     editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
     if (currentEditorMode === "wysiwyg") scheduleWysiwygDiagramRender();
     else scheduleMermaidPreviewRender();
@@ -656,6 +657,570 @@ if (shell) {
 
   function clampFontSize(value) {
     return Math.max(12, Math.min(28, Number.parseInt(value, 10) || 16));
+  }
+
+  // ── Translations ──────────────────────────────────────────
+  const TRANSLATIONS = {
+    pl: {
+      label_config: "Konfiguracja", settings_title: "Ustawienia",
+      label_profiles: "Profile", profile_new: "Nowy profil",
+      cancel_edit: "Anuluj edycję", save_profile: "Zapamiętaj",
+      save_changes: "Zapisz zmiany", edit: "Edytuj", delete_action: "Usuń",
+      profile_hint: "Zapisuje aktualne pola formularza jako profil.",
+      editing_profile_prefix: "Edytujesz",
+      no_profiles_hint: "Brak zapisanych zestawów. Utwórz pierwszy profil w ustawieniach.",
+      no_profiles_list: "Brak zapisanych profili.",
+      label_source: "Źródło notatek", source_local: "Lokalny dysk",
+      label_notes_dir: "Katalog notatek", browse: "Przeglądaj",
+      label_port: "Port", label_user: "Użytkownik",
+      label_password: "Hasło", label_remote_path: "Ścieżka zdalna",
+      sftp_password_hint: "Hasło przechowywane w lokalnej bazie SQLite.",
+      gdrive_connected: "Google Drive: połączono",
+      gdrive_disconnected: "Google Drive: brak autoryzacji",
+      gdrive_reconnect: "Połącz ponownie", gdrive_authorize: "Autoryzuj Drive",
+      gdrive_hint: "Po kliknięciu nastąpi przekierowanie do Google.",
+      gdrive_console_hint: "Dodaj do Google Console:",
+      label_folder_id: "ID folderu (opcjonalne)",
+      gdrive_folder_hint: "Skopiuj ID folderu z URL w Google Drive.",
+      label_sort: "Sortowanie", sort_alpha: "Alfabetyczne", sort_manual: "Manualne",
+      label_language: "Język interfejsu",
+      label_theme: "Motyw", theme_light: "Jasny", theme_dark: "Ciemny",
+      label_font_size: "Rozmiar czcionki edytora",
+      label_image_upload: "Wstawianie obrazków",
+      img_same_dir: "Ten sam katalog co plik MD",
+      img_subdir: "Podkatalog o nazwie",
+      db_path_label: "Baza SQLite:",
+      cancel: "Anuluj", save_settings: "Zapisz ustawienia",
+      no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
+      selected_file_label: "Wybrany plik",
+      wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
+      new_dir: "Nowy katalog", new_file_title: "Nowy plik",
+      create_dir_hint: "Katalog zostanie utworzony w wybranej lokalizacji.",
+      create_file_hint: "Rozszerzenie .md zostanie dodane automatycznie, jeśli go nie podasz.",
+      location_prefix: "Lokalizacja", element_prefix: "Element",
+      root_dir_label: "katalog główny",
+      rename_title: "Zmień nazwę", rename_button: "Zmień nazwę",
+      rename_hint: "Podaj nową nazwę. Rozszerzenie .md zostanie dodane automatycznie dla plików Markdown.",
+      create_button: "Utwórz",
+      no_files_selected: "Nie wybrano jeszcze żadnych plików.",
+      upload_files_title: "Upload plików",
+      upload_target_prefix: "Docelowy katalog",
+      no_subdirs: "Brak podkatalogów w tej lokalizacji.",
+      st_open_file_first: "Najpierw otwórz plik Markdown.",
+      st_image_fail: "Nie udało się dodać obrazka.",
+      st_image_added: "Obraz dodany",
+      st_link_inserted: "Wstawiono link do",
+      st_profile_name_required: "Podaj nazwę profilu.",
+      st_saving_profile: "Zapisuję profil ustawień...",
+      st_updating_profile: "Aktualizuję profil ustawień...",
+      st_profile_saved: "Profil zapisany",
+      st_profile_updated: "Profil zaktualizowany",
+      st_deleting_profile: "Usuwam profil",
+      st_profile_deleted: "Profil usunięty",
+      st_loading_profile: "Ładuję profil",
+      st_profile_loaded: "Profil załadowany.",
+      st_profile_loaded_prefix: "Załadowano profil",
+      st_delete_error: "Błąd usuwania.",
+      st_deleted: "Usunięto",
+      st_delete_fail: "Błąd połączenia przy usuwaniu.",
+      st_showing_only: "Pokazuję tylko",
+      st_upload_prepared: "Przygotowano upload do",
+      st_preparing_zip: "Przygotowuję archiwum ZIP...",
+      st_start_download: "Rozpoczynam pobieranie pliku.",
+      st_path_copied: "Ścieżka skopiowana.",
+      st_path_copy_fail: "Nie udało się skopiować ścieżki.",
+      st_loading_dirs: "Wczytuję katalogi...",
+      st_choose_dir: "Możesz wybrać katalog.",
+      st_folder_name_required: "Podaj nazwę nowego folderu.",
+      st_creating_folder: "Tworzę nowy folder...",
+      st_folder_created: "Utworzono folder",
+      st_dir_selected: "Katalog wybrany. Zapisz ustawienia, aby go zastosować.",
+      st_showing_parent: "Pokazuję katalog nadrzędny.",
+      st_back_full_tree: "Wróćono do pełnego drzewa.",
+      st_refreshing_tree: "Odświeżam drzewo plików...",
+      st_tree_ready: "Drzewo plików gotowe.",
+      st_loading_file: "Wczytuję plik...",
+      st_file_ready: "Plik gotowy do edycji.",
+      st_pdf_preview: "Podgląd PDF gotowy.",
+      st_image_preview: "Podgląd obrazu gotowy.",
+      st_file_not_editable: "Tego pliku nie można edytować.",
+      st_saving: "Zapisuję plik...",
+      st_saved: "Zmiany zapisane.",
+      st_saving_settings: "Zapisuję ustawienia...",
+      st_settings_saved: "Ustawienia zapisane.",
+      st_updating_font: "Aktualizuję rozmiar czcionki...",
+      st_font_saved: "Rozmiar czcionki zapisany.",
+      st_name_required: "Podaj nazwę nowego elementu.",
+      st_creating: "Tworzę nowy element...",
+      st_dir_created_msg: "Katalog utworzony.",
+      st_new_name_required: "Podaj nową nazwę.",
+      st_renaming: "Zmieniam nazwę...",
+      st_renamed: "Zmieniono nazwę na",
+      st_no_files_upload: "Najpierw wybierz pliki do uploadu.",
+      st_uploading: "Wysyłam pliki...",
+      st_files_added: "Dodano", st_files_skipped: "pominięto",
+      st_moving: "Przenoszę element...",
+      st_moved: "Element przeniesiony.",
+      st_updating_order: "Aktualizuję kolejność...",
+      st_order_saved: "Kolejność zapisana.",
+      st_showing_hidden: "Ukryte pliki są widoczne.",
+      st_hiding_hidden: "Ukryte pliki są ukryte.",
+    },
+    en: {
+      label_config: "Configuration", settings_title: "Settings",
+      label_profiles: "Profiles", profile_new: "New profile",
+      cancel_edit: "Cancel editing", save_profile: "Save",
+      save_changes: "Save changes", edit: "Edit", delete_action: "Delete",
+      profile_hint: "Saves the current form fields as a quick-switch profile.",
+      editing_profile_prefix: "Editing",
+      no_profiles_hint: "No saved profiles yet. Create your first profile in settings.",
+      no_profiles_list: "No saved profiles.",
+      label_source: "Notes source", source_local: "Local disk",
+      label_notes_dir: "Notes directory", browse: "Browse",
+      label_port: "Port", label_user: "Username",
+      label_password: "Password", label_remote_path: "Remote path",
+      sftp_password_hint: "Password is stored in the local SQLite database.",
+      gdrive_connected: "Google Drive: connected",
+      gdrive_disconnected: "Google Drive: not authorized",
+      gdrive_reconnect: "Reconnect", gdrive_authorize: "Authorize Drive",
+      gdrive_hint: "You will be redirected to Google after clicking.",
+      gdrive_console_hint: "Add to Google Console:",
+      label_folder_id: "Folder ID (optional)",
+      gdrive_folder_hint: "Copy the folder ID from the Google Drive URL.",
+      label_sort: "Sorting", sort_alpha: "Alphabetical", sort_manual: "Manual",
+      label_language: "Interface language",
+      label_theme: "Theme", theme_light: "Light", theme_dark: "Dark",
+      label_font_size: "Editor font size",
+      label_image_upload: "Image insertion",
+      img_same_dir: "Same directory as MD file",
+      img_subdir: "Subdirectory named",
+      db_path_label: "SQLite database:",
+      cancel: "Cancel", save_settings: "Save settings",
+      no_file: "Select a Markdown note", no_file_path: "No file selected.",
+      selected_file_label: "Selected file",
+      wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
+      new_dir: "New directory", new_file_title: "New file",
+      create_dir_hint: "The directory will be created at the selected location.",
+      create_file_hint: "The .md extension will be added automatically if not provided.",
+      location_prefix: "Location", element_prefix: "Item",
+      root_dir_label: "root directory",
+      rename_title: "Rename", rename_button: "Rename",
+      rename_hint: "Enter a new name. The .md extension will be added automatically for Markdown files.",
+      create_button: "Create",
+      no_files_selected: "No files selected yet.",
+      upload_files_title: "Upload files",
+      upload_target_prefix: "Target directory",
+      no_subdirs: "No subdirectories at this location.",
+      st_open_file_first: "Open a Markdown file first.",
+      st_image_fail: "Failed to add image.",
+      st_image_added: "Image added",
+      st_link_inserted: "Link inserted to",
+      st_profile_name_required: "Enter a profile name.",
+      st_saving_profile: "Saving settings profile...",
+      st_updating_profile: "Updating settings profile...",
+      st_profile_saved: "Profile saved",
+      st_profile_updated: "Profile updated",
+      st_deleting_profile: "Deleting profile",
+      st_profile_deleted: "Profile deleted",
+      st_loading_profile: "Loading profile",
+      st_profile_loaded: "Profile loaded.",
+      st_profile_loaded_prefix: "Profile loaded",
+      st_delete_error: "Delete error.",
+      st_deleted: "Deleted",
+      st_delete_fail: "Connection error while deleting.",
+      st_showing_only: "Showing only",
+      st_upload_prepared: "Upload prepared to",
+      st_preparing_zip: "Preparing ZIP archive...",
+      st_start_download: "Starting file download.",
+      st_path_copied: "Path copied.",
+      st_path_copy_fail: "Failed to copy path.",
+      st_loading_dirs: "Loading directories...",
+      st_choose_dir: "You can choose a directory.",
+      st_folder_name_required: "Enter a folder name.",
+      st_creating_folder: "Creating folder...",
+      st_folder_created: "Folder created",
+      st_dir_selected: "Directory selected. Save settings to apply.",
+      st_showing_parent: "Showing parent directory.",
+      st_back_full_tree: "Returned to full tree.",
+      st_refreshing_tree: "Refreshing file tree...",
+      st_tree_ready: "File tree ready.",
+      st_loading_file: "Loading file...",
+      st_file_ready: "File ready to edit.",
+      st_pdf_preview: "PDF preview ready.",
+      st_image_preview: "Image preview ready.",
+      st_file_not_editable: "This file cannot be edited.",
+      st_saving: "Saving file...",
+      st_saved: "Changes saved.",
+      st_saving_settings: "Saving settings...",
+      st_settings_saved: "Settings saved.",
+      st_updating_font: "Updating font size...",
+      st_font_saved: "Font size saved.",
+      st_name_required: "Enter a name for the new item.",
+      st_creating: "Creating item...",
+      st_dir_created_msg: "Directory created.",
+      st_new_name_required: "Enter a new name.",
+      st_renaming: "Renaming...",
+      st_renamed: "Renamed to",
+      st_no_files_upload: "Select files to upload first.",
+      st_uploading: "Uploading files...",
+      st_files_added: "Added", st_files_skipped: "skipped",
+      st_moving: "Moving item...",
+      st_moved: "Item moved.",
+      st_updating_order: "Updating order...",
+      st_order_saved: "Order saved.",
+      st_showing_hidden: "Hidden files are visible.",
+      st_hiding_hidden: "Hidden files are hidden.",
+    },
+    es: {
+      label_config: "Configuración", settings_title: "Configuración",
+      label_profiles: "Perfiles", profile_new: "Nuevo perfil",
+      cancel_edit: "Cancelar edición", save_profile: "Guardar",
+      save_changes: "Guardar cambios", edit: "Editar", delete_action: "Eliminar",
+      profile_hint: "Guarda los campos actuales como perfil de cambio rápido.",
+      editing_profile_prefix: "Editando",
+      no_profiles_hint: "No hay perfiles guardados. Crea el primero en los ajustes.",
+      no_profiles_list: "No hay perfiles guardados.",
+      label_source: "Fuente de notas", source_local: "Disco local",
+      label_notes_dir: "Directorio de notas", browse: "Explorar",
+      label_port: "Puerto", label_user: "Usuario",
+      label_password: "Contraseña", label_remote_path: "Ruta remota",
+      sftp_password_hint: "La contraseña se almacena en la base de datos SQLite local.",
+      gdrive_connected: "Google Drive: conectado",
+      gdrive_disconnected: "Google Drive: no autorizado",
+      gdrive_reconnect: "Reconectar", gdrive_authorize: "Autorizar Drive",
+      gdrive_hint: "Serás redirigido a Google al hacer clic.",
+      gdrive_console_hint: "Añadir a Google Console:",
+      label_folder_id: "ID de carpeta (opcional)",
+      gdrive_folder_hint: "Copia el ID de la carpeta desde la URL de Google Drive.",
+      label_sort: "Ordenación", sort_alpha: "Alfabético", sort_manual: "Manual",
+      label_language: "Idioma de la interfaz",
+      label_theme: "Tema", theme_light: "Claro", theme_dark: "Oscuro",
+      label_font_size: "Tamaño de fuente del editor",
+      label_image_upload: "Inserción de imágenes",
+      img_same_dir: "Mismo directorio que el archivo MD",
+      img_subdir: "Subdirectorio llamado",
+      db_path_label: "Base de datos SQLite:",
+      cancel: "Cancelar", save_settings: "Guardar configuración",
+      no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
+      selected_file_label: "Archivo seleccionado",
+      wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
+      new_dir: "Nuevo directorio", new_file_title: "Nuevo archivo",
+      create_dir_hint: "El directorio se creará en la ubicación seleccionada.",
+      create_file_hint: "La extensión .md se añadirá automáticamente si no se indica.",
+      location_prefix: "Ubicación", element_prefix: "Elemento",
+      root_dir_label: "directorio raíz",
+      rename_title: "Renombrar", rename_button: "Renombrar",
+      rename_hint: "Introduce un nuevo nombre. La extensión .md se añadirá automáticamente para archivos Markdown.",
+      create_button: "Crear",
+      no_files_selected: "Aún no se han seleccionado archivos.",
+      upload_files_title: "Subir archivos",
+      upload_target_prefix: "Directorio de destino",
+      no_subdirs: "No hay subdirectorios en esta ubicación.",
+      st_open_file_first: "Abre primero un archivo Markdown.",
+      st_image_fail: "No se pudo añadir la imagen.",
+      st_image_added: "Imagen añadida",
+      st_link_inserted: "Enlace insertado a",
+      st_profile_name_required: "Introduce un nombre de perfil.",
+      st_saving_profile: "Guardando perfil de ajustes...",
+      st_updating_profile: "Actualizando perfil de ajustes...",
+      st_profile_saved: "Perfil guardado",
+      st_profile_updated: "Perfil actualizado",
+      st_deleting_profile: "Eliminando perfil",
+      st_profile_deleted: "Perfil eliminado",
+      st_loading_profile: "Cargando perfil",
+      st_profile_loaded: "Perfil cargado.",
+      st_profile_loaded_prefix: "Perfil cargado",
+      st_delete_error: "Error al eliminar.",
+      st_deleted: "Eliminado",
+      st_delete_fail: "Error de conexión al eliminar.",
+      st_showing_only: "Mostrando solo",
+      st_upload_prepared: "Subida preparada a",
+      st_preparing_zip: "Preparando archivo ZIP...",
+      st_start_download: "Iniciando descarga del archivo.",
+      st_path_copied: "Ruta copiada.",
+      st_path_copy_fail: "No se pudo copiar la ruta.",
+      st_loading_dirs: "Cargando directorios...",
+      st_choose_dir: "Puedes elegir un directorio.",
+      st_folder_name_required: "Introduce un nombre de carpeta.",
+      st_creating_folder: "Creando carpeta...",
+      st_folder_created: "Carpeta creada",
+      st_dir_selected: "Directorio seleccionado. Guarda los ajustes para aplicarlo.",
+      st_showing_parent: "Mostrando directorio padre.",
+      st_back_full_tree: "Vuelto al árbol completo.",
+      st_refreshing_tree: "Actualizando árbol de archivos...",
+      st_tree_ready: "Árbol de archivos listo.",
+      st_loading_file: "Cargando archivo...",
+      st_file_ready: "Archivo listo para editar.",
+      st_pdf_preview: "Vista previa PDF lista.",
+      st_image_preview: "Vista previa de imagen lista.",
+      st_file_not_editable: "Este archivo no se puede editar.",
+      st_saving: "Guardando archivo...",
+      st_saved: "Cambios guardados.",
+      st_saving_settings: "Guardando ajustes...",
+      st_settings_saved: "Ajustes guardados.",
+      st_updating_font: "Actualizando tamaño de fuente...",
+      st_font_saved: "Tamaño de fuente guardado.",
+      st_name_required: "Introduce un nombre para el nuevo elemento.",
+      st_creating: "Creando elemento...",
+      st_dir_created_msg: "Directorio creado.",
+      st_new_name_required: "Introduce un nuevo nombre.",
+      st_renaming: "Renombrando...",
+      st_renamed: "Renombrado a",
+      st_no_files_upload: "Selecciona primero los archivos para subir.",
+      st_uploading: "Subiendo archivos...",
+      st_files_added: "Añadidos", st_files_skipped: "omitidos",
+      st_moving: "Moviendo elemento...",
+      st_moved: "Elemento movido.",
+      st_updating_order: "Actualizando orden...",
+      st_order_saved: "Orden guardado.",
+      st_showing_hidden: "Los archivos ocultos son visibles.",
+      st_hiding_hidden: "Los archivos ocultos están ocultos.",
+    },
+    de: {
+      label_config: "Konfiguration", settings_title: "Einstellungen",
+      label_profiles: "Profile", profile_new: "Neues Profil",
+      cancel_edit: "Bearbeitung abbrechen", save_profile: "Speichern",
+      save_changes: "Änderungen speichern", edit: "Bearbeiten", delete_action: "Löschen",
+      profile_hint: "Speichert die aktuellen Felder als Schnellwechsel-Profil.",
+      editing_profile_prefix: "Bearbeitung von",
+      no_profiles_hint: "Keine gespeicherten Profile. Erstelle das erste Profil in den Einstellungen.",
+      no_profiles_list: "Keine gespeicherten Profile.",
+      label_source: "Notizenquelle", source_local: "Lokale Festplatte",
+      label_notes_dir: "Notizenverzeichnis", browse: "Durchsuchen",
+      label_port: "Port", label_user: "Benutzer",
+      label_password: "Passwort", label_remote_path: "Remotepfad",
+      sftp_password_hint: "Passwort wird in der lokalen SQLite-Datenbank gespeichert.",
+      gdrive_connected: "Google Drive: verbunden",
+      gdrive_disconnected: "Google Drive: nicht autorisiert",
+      gdrive_reconnect: "Erneut verbinden", gdrive_authorize: "Drive autorisieren",
+      gdrive_hint: "Nach dem Klicken werden Sie zu Google weitergeleitet.",
+      gdrive_console_hint: "Zur Google Console hinzufügen:",
+      label_folder_id: "Ordner-ID (optional)",
+      gdrive_folder_hint: "Kopieren Sie die Ordner-ID aus der Google Drive URL.",
+      label_sort: "Sortierung", sort_alpha: "Alphabetisch", sort_manual: "Manuell",
+      label_language: "Oberflächensprache",
+      label_theme: "Design", theme_light: "Hell", theme_dark: "Dunkel",
+      label_font_size: "Editorschriftgröße",
+      label_image_upload: "Bildeinfügung",
+      img_same_dir: "Gleiches Verzeichnis wie MD-Datei",
+      img_subdir: "Unterverzeichnis namens",
+      db_path_label: "SQLite-Datenbank:",
+      cancel: "Abbrechen", save_settings: "Einstellungen speichern",
+      no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
+      selected_file_label: "Ausgewählte Datei",
+      wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
+      new_dir: "Neues Verzeichnis", new_file_title: "Neue Datei",
+      create_dir_hint: "Das Verzeichnis wird am gewählten Ort erstellt.",
+      create_file_hint: "Die Erweiterung .md wird automatisch hinzugefügt, wenn sie nicht angegeben wird.",
+      location_prefix: "Ort", element_prefix: "Element",
+      root_dir_label: "Stammverzeichnis",
+      rename_title: "Umbenennen", rename_button: "Umbenennen",
+      rename_hint: "Neuen Namen eingeben. Die Erweiterung .md wird für Markdown-Dateien automatisch ergänzt.",
+      create_button: "Erstellen",
+      no_files_selected: "Noch keine Dateien ausgewählt.",
+      upload_files_title: "Dateien hochladen",
+      upload_target_prefix: "Zielverzeichnis",
+      no_subdirs: "Keine Unterverzeichnisse an diesem Ort.",
+      st_open_file_first: "Bitte zuerst eine Markdown-Datei öffnen.",
+      st_image_fail: "Bild konnte nicht hinzugefügt werden.",
+      st_image_added: "Bild hinzugefügt",
+      st_link_inserted: "Link eingefügt zu",
+      st_profile_name_required: "Profilnamen eingeben.",
+      st_saving_profile: "Einstellungsprofil wird gespeichert...",
+      st_updating_profile: "Einstellungsprofil wird aktualisiert...",
+      st_profile_saved: "Profil gespeichert",
+      st_profile_updated: "Profil aktualisiert",
+      st_deleting_profile: "Profil wird gelöscht",
+      st_profile_deleted: "Profil gelöscht",
+      st_loading_profile: "Profil wird geladen",
+      st_profile_loaded: "Profil geladen.",
+      st_profile_loaded_prefix: "Profil geladen",
+      st_delete_error: "Fehler beim Löschen.",
+      st_deleted: "Gelöscht",
+      st_delete_fail: "Verbindungsfehler beim Löschen.",
+      st_showing_only: "Zeige nur",
+      st_upload_prepared: "Upload vorbereitet nach",
+      st_preparing_zip: "ZIP-Archiv wird vorbereitet...",
+      st_start_download: "Dateidownload wird gestartet.",
+      st_path_copied: "Pfad kopiert.",
+      st_path_copy_fail: "Pfad konnte nicht kopiert werden.",
+      st_loading_dirs: "Verzeichnisse werden geladen...",
+      st_choose_dir: "Sie können ein Verzeichnis auswählen.",
+      st_folder_name_required: "Ordnernamen eingeben.",
+      st_creating_folder: "Ordner wird erstellt...",
+      st_folder_created: "Ordner erstellt",
+      st_dir_selected: "Verzeichnis ausgewählt. Einstellungen speichern, um anzuwenden.",
+      st_showing_parent: "Übergeordnetes Verzeichnis wird angezeigt.",
+      st_back_full_tree: "Zurück zum vollständigen Baum.",
+      st_refreshing_tree: "Dateibaum wird aktualisiert...",
+      st_tree_ready: "Dateibaum bereit.",
+      st_loading_file: "Datei wird geladen...",
+      st_file_ready: "Datei bereit zur Bearbeitung.",
+      st_pdf_preview: "PDF-Vorschau bereit.",
+      st_image_preview: "Bildvorschau bereit.",
+      st_file_not_editable: "Diese Datei kann nicht bearbeitet werden.",
+      st_saving: "Datei wird gespeichert...",
+      st_saved: "Änderungen gespeichert.",
+      st_saving_settings: "Einstellungen werden gespeichert...",
+      st_settings_saved: "Einstellungen gespeichert.",
+      st_updating_font: "Schriftgröße wird aktualisiert...",
+      st_font_saved: "Schriftgröße gespeichert.",
+      st_name_required: "Namen für das neue Element eingeben.",
+      st_creating: "Element wird erstellt...",
+      st_dir_created_msg: "Verzeichnis erstellt.",
+      st_new_name_required: "Neuen Namen eingeben.",
+      st_renaming: "Umbenennen...",
+      st_renamed: "Umbenannt zu",
+      st_no_files_upload: "Zuerst Dateien zum Hochladen auswählen.",
+      st_uploading: "Dateien werden hochgeladen...",
+      st_files_added: "Hinzugefügt", st_files_skipped: "übersprungen",
+      st_moving: "Element wird verschoben...",
+      st_moved: "Element verschoben.",
+      st_updating_order: "Reihenfolge wird aktualisiert...",
+      st_order_saved: "Reihenfolge gespeichert.",
+      st_showing_hidden: "Versteckte Dateien sind sichtbar.",
+      st_hiding_hidden: "Versteckte Dateien sind ausgeblendet.",
+    },
+    ru: {
+      label_config: "Конфигурация", settings_title: "Настройки",
+      label_profiles: "Профили", profile_new: "Новый профиль",
+      cancel_edit: "Отмена редактирования", save_profile: "Сохранить",
+      save_changes: "Сохранить изменения", edit: "Редактировать", delete_action: "Удалить",
+      profile_hint: "Сохраняет текущие поля как профиль быстрого переключения.",
+      editing_profile_prefix: "Редактирование",
+      no_profiles_hint: "Нет сохранённых профилей. Создайте первый профиль в настройках.",
+      no_profiles_list: "Нет сохранённых профилей.",
+      label_source: "Источник заметок", source_local: "Локальный диск",
+      label_notes_dir: "Каталог заметок", browse: "Обзор",
+      label_port: "Порт", label_user: "Пользователь",
+      label_password: "Пароль", label_remote_path: "Удалённый путь",
+      sftp_password_hint: "Пароль хранится в локальной базе данных SQLite.",
+      gdrive_connected: "Google Drive: подключён",
+      gdrive_disconnected: "Google Drive: нет авторизации",
+      gdrive_reconnect: "Переподключить", gdrive_authorize: "Авторизовать Drive",
+      gdrive_hint: "После нажатия вы будете перенаправлены в Google.",
+      gdrive_console_hint: "Добавить в Google Console:",
+      label_folder_id: "ID папки (необязательно)",
+      gdrive_folder_hint: "Скопируйте ID папки из URL Google Drive.",
+      label_sort: "Сортировка", sort_alpha: "Алфавитная", sort_manual: "Ручная",
+      label_language: "Язык интерфейса",
+      label_theme: "Тема", theme_light: "Светлая", theme_dark: "Тёмная",
+      label_font_size: "Размер шрифта редактора",
+      label_image_upload: "Вставка изображений",
+      img_same_dir: "Тот же каталог, что и MD-файл",
+      img_subdir: "Подкаталог с именем",
+      db_path_label: "База данных SQLite:",
+      cancel: "Отмена", save_settings: "Сохранить настройки",
+      no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
+      selected_file_label: "Выбранный файл",
+      wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
+      new_dir: "Новый каталог", new_file_title: "Новый файл",
+      create_dir_hint: "Каталог будет создан в выбранном месте.",
+      create_file_hint: "Расширение .md будет добавлено автоматически, если не указано.",
+      location_prefix: "Расположение", element_prefix: "Элемент",
+      root_dir_label: "корневой каталог",
+      rename_title: "Переименовать", rename_button: "Переименовать",
+      rename_hint: "Введите новое имя. Расширение .md будет добавлено автоматически для файлов Markdown.",
+      create_button: "Создать",
+      no_files_selected: "Файлы ещё не выбраны.",
+      upload_files_title: "Загрузка файлов",
+      upload_target_prefix: "Целевой каталог",
+      no_subdirs: "Подкаталогов в этом расположении нет.",
+      st_open_file_first: "Сначала откройте файл Markdown.",
+      st_image_fail: "Не удалось добавить изображение.",
+      st_image_added: "Изображение добавлено",
+      st_link_inserted: "Ссылка вставлена на",
+      st_profile_name_required: "Введите имя профиля.",
+      st_saving_profile: "Сохранение профиля настроек...",
+      st_updating_profile: "Обновление профиля настроек...",
+      st_profile_saved: "Профиль сохранён",
+      st_profile_updated: "Профиль обновлён",
+      st_deleting_profile: "Удаление профиля",
+      st_profile_deleted: "Профиль удалён",
+      st_loading_profile: "Загрузка профиля",
+      st_profile_loaded: "Профиль загружен.",
+      st_profile_loaded_prefix: "Профиль загружен",
+      st_delete_error: "Ошибка удаления.",
+      st_deleted: "Удалено",
+      st_delete_fail: "Ошибка соединения при удалении.",
+      st_showing_only: "Показывается только",
+      st_upload_prepared: "Загрузка подготовлена в",
+      st_preparing_zip: "Подготовка ZIP-архива...",
+      st_start_download: "Начало загрузки файла.",
+      st_path_copied: "Путь скопирован.",
+      st_path_copy_fail: "Не удалось скопировать путь.",
+      st_loading_dirs: "Загрузка каталогов...",
+      st_choose_dir: "Можно выбрать каталог.",
+      st_folder_name_required: "Введите имя новой папки.",
+      st_creating_folder: "Создание папки...",
+      st_folder_created: "Папка создана",
+      st_dir_selected: "Каталог выбран. Сохраните настройки, чтобы применить.",
+      st_showing_parent: "Показывается родительский каталог.",
+      st_back_full_tree: "Возврат к полному дереву.",
+      st_refreshing_tree: "Обновление дерева файлов...",
+      st_tree_ready: "Дерево файлов готово.",
+      st_loading_file: "Загрузка файла...",
+      st_file_ready: "Файл готов к редактированию.",
+      st_pdf_preview: "Предпросмотр PDF готов.",
+      st_image_preview: "Предпросмотр изображения готов.",
+      st_file_not_editable: "Этот файл нельзя редактировать.",
+      st_saving: "Сохранение файла...",
+      st_saved: "Изменения сохранены.",
+      st_saving_settings: "Сохранение настроек...",
+      st_settings_saved: "Настройки сохранены.",
+      st_updating_font: "Обновление размера шрифта...",
+      st_font_saved: "Размер шрифта сохранён.",
+      st_name_required: "Введите имя нового элемента.",
+      st_creating: "Создание элемента...",
+      st_dir_created_msg: "Каталог создан.",
+      st_new_name_required: "Введите новое имя.",
+      st_renaming: "Переименование...",
+      st_renamed: "Переименовано в",
+      st_no_files_upload: "Сначала выберите файлы для загрузки.",
+      st_uploading: "Загрузка файлов...",
+      st_files_added: "Добавлено", st_files_skipped: "пропущено",
+      st_moving: "Перемещение элемента...",
+      st_moved: "Элемент перемещён.",
+      st_updating_order: "Обновление порядка...",
+      st_order_saved: "Порядок сохранён.",
+      st_showing_hidden: "Скрытые файлы видны.",
+      st_hiding_hidden: "Скрытые файлы скрыты.",
+    },
+  };
+
+  function applyLanguage(lang) {
+    const t = TRANSLATIONS[lang] || TRANSLATIONS.pl;
+    document.documentElement.lang = lang;
+    shell.dataset.language = lang;
+
+    // Translate all [data-i18n] elements
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.dataset.i18n;
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+
+    // Translate <option> elements with [data-i18n-opt]
+    document.querySelectorAll("[data-i18n-opt]").forEach((el) => {
+      const key = el.dataset.i18nOpt;
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+
+    // Update dynamic text nodes that are set by JS
+    if (currentFileLabel && !selectedPath) {
+      currentFileLabel.textContent = t.no_file;
+    }
+    if (currentFilePath && !selectedPath) {
+      currentFilePath.textContent = t.no_file_path;
+    }
+    if (editorModeToggle) {
+      const modeKey = currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode";
+      editorModeToggle.textContent = t[modeKey] || editorModeToggle.textContent;
+    }
+  }
+
+  function t(key) {
+    const lang = preferences?.language || shell?.dataset?.language || "pl";
+    return (TRANSLATIONS[lang] || TRANSLATIONS.pl)[key] || key;
   }
 
   function applyTheme(themeMode) {
@@ -748,12 +1313,9 @@ if (shell) {
     createKind = kind;
     createParentPathOverride = parentPathOverride;
     const parentPath = parentPathOverride ?? getCurrentParentPath();
-    createTitle.textContent = kind === "directory" ? "Nowy katalog" : "Nowy plik";
-    createHint.textContent =
-      kind === "directory"
-        ? "Katalog zostanie utworzony w wybranej lokalizacji."
-        : "Dla pliku rozszerzenie `.md` zostanie dodane automatycznie, jesli go nie podasz.";
-    createParentLabel.textContent = `Lokalizacja: ${parentPath || "katalog glowny"}`;
+    createTitle.textContent = kind === "directory" ? t("new_dir") : t("new_file_title");
+    createHint.textContent = kind === "directory" ? t("create_dir_hint") : t("create_file_hint");
+    createParentLabel.textContent = `${t("location_prefix")}: ${parentPath || t("root_dir_label")}`;
     createNameInput.value = "";
     createModal.classList.remove("hidden");
     createModal.setAttribute("aria-hidden", "false");
@@ -763,11 +1325,11 @@ if (shell) {
   function openRenameModal(node) {
     modalAction = "rename";
     renameTargetNode = node;
-    createTitle.textContent = "Zmien nazwe";
-    createHint.textContent = "Podaj nowa nazwe. Rozszerzenie .md zostanie dodane automatycznie dla plikow Markdown.";
-    createParentLabel.textContent = `Element: ${node.path || node.name}`;
+    createTitle.textContent = t("rename_title");
+    createHint.textContent = t("rename_hint");
+    createParentLabel.textContent = `${t("element_prefix")}: ${node.path || node.name}`;
     createNameInput.value = node.name;
-    confirmCreateButton.textContent = "Zmien nazwe";
+    confirmCreateButton.textContent = t("rename_button");
     createModal.classList.remove("hidden");
     createModal.setAttribute("aria-hidden", "false");
     window.setTimeout(() => { createNameInput.focus(); createNameInput.select(); }, 0);
@@ -779,7 +1341,7 @@ if (shell) {
     createParentPathOverride = null;
     modalAction = "create";
     renameTargetNode = null;
-    confirmCreateButton.textContent = "Utworz";
+    confirmCreateButton.textContent = t("create_button");
   }
 
   function setStatus(message, isError = false) {
@@ -793,8 +1355,8 @@ if (shell) {
   }
 
   function updateHeader(name, path) {
-    currentFileLabel.textContent = name || "Wybierz notatke Markdown";
-    currentFilePath.textContent = path || "Brak zaznaczonego pliku.";
+    currentFileLabel.textContent = name || t("no_file");
+    currentFilePath.textContent = path || t("no_file_path");
   }
 
   function applyHiddenFilesToggleState() {
@@ -802,9 +1364,9 @@ if (shell) {
     toggleHiddenFilesButton.setAttribute("aria-pressed", String(showHiddenFiles));
     toggleHiddenFilesButton.setAttribute(
       "aria-label",
-      showHiddenFiles ? "Ukryj ukryte pliki" : "Pokaz ukryte pliki",
+      showHiddenFiles ? "Hide hidden files" : "Show hidden files",
     );
-    toggleHiddenFilesButton.title = showHiddenFiles ? "Ukryj ukryte pliki" : "Pokaz ukryte pliki";
+    toggleHiddenFilesButton.title = showHiddenFiles ? "Hide hidden files" : "Show hidden files";
   }
 
   function applyTreeScopeState() {
@@ -929,7 +1491,7 @@ if (shell) {
   }
 
   function getUploadTargetLabel(path) {
-    return path || "katalog glowny";
+    return path || t("root_dir_label");
   }
 
   function renderUploadFileList() {
@@ -937,7 +1499,7 @@ if (shell) {
     if (!pendingUploadFiles.length) {
       const empty = document.createElement("div");
       empty.className = "upload-file-empty muted";
-      empty.textContent = "Nie wybrano jeszcze zadnych plikow.";
+      empty.textContent = t("no_files_selected");
       uploadFileList.appendChild(empty);
       return;
     }
@@ -970,8 +1532,8 @@ if (shell) {
     saveButton.disabled = true;
     selectedEditable = false;
     selectedPath = null;
-    updateHeader("Upload plikow", getUploadTargetLabel(uploadTargetPath));
-    uploadTargetLabel.textContent = `Docelowy katalog: ${getUploadTargetLabel(uploadTargetPath)}`;
+    updateHeader(t("upload_files_title"), getUploadTargetLabel(uploadTargetPath));
+    uploadTargetLabel.textContent = `${t("upload_target_prefix")}: ${getUploadTargetLabel(uploadTargetPath)}`;
     resetUploadState();
     toggleOverlay({ empty: false, unsupported: false });
   }
@@ -1009,7 +1571,7 @@ if (shell) {
     }
 
     if (!response.ok) {
-      let detail = "Wystapil blad.";
+      let detail = t("st_delete_error");
       try {
         const payload = await response.json();
         detail = payload.detail || detail;
@@ -1035,7 +1597,7 @@ if (shell) {
     }
 
     if (!response.ok) {
-      let detail = "Wystapil blad.";
+      let detail = t("st_delete_error");
       try {
         const payload = await response.json();
         detail = payload.detail || detail;
@@ -1107,12 +1669,12 @@ if (shell) {
       editor_font_size: clampFontSize(editorFontSizeInput.value),
       image_upload_mode: imageUploadModeSelect?.value || "same_dir",
       image_upload_subdir: imageUploadSubdirInput?.value?.trim() || "assets",
+      language: languageSelect?.value || "pl",
       ...overrides,
     };
   }
 
   function applyPreferencesToForm(nextPreferences) {
-    if (sourceTypeSelect) sourceTypeSelect.value = nextPreferences.source_type || "local";
     if (sourceTypeSelect) sourceTypeSelect.value = nextPreferences.source_type || "local";
     if (contentRootInput) contentRootInput.value = nextPreferences.content_root;
     if (sftpHostInput) sftpHostInput.value = nextPreferences.sftp_host || "";
@@ -1127,6 +1689,7 @@ if (shell) {
     if (imageUploadModeSelect) imageUploadModeSelect.value = nextPreferences.image_upload_mode || "same_dir";
     if (imageUploadSubdirInput) imageUploadSubdirInput.value = nextPreferences.image_upload_subdir || "assets";
     if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", nextPreferences.image_upload_mode !== "subdir");
+    if (languageSelect) languageSelect.value = nextPreferences.language || "pl";
     applySourceTypeVisibility(nextPreferences.source_type || "local");
     profileFormGdriveCredentials = nextPreferences.gdrive_credentials || "";
   }
@@ -1137,6 +1700,7 @@ if (shell) {
     contentRootDisplay.textContent = preferences.content_root;
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
+    applyLanguage(preferences.language || "pl");
   }
 
   async function loadPreferences() {
@@ -1171,8 +1735,8 @@ if (shell) {
 
   function resetProfileEditor({ resetForm = false } = {}) {
     editingPreferenceProfileId = null;
-    if (profileEditorTitle) profileEditorTitle.textContent = "Nowy profil";
-    if (saveProfileButton) saveProfileButton.textContent = "Zapamietaj";
+    if (profileEditorTitle) profileEditorTitle.textContent = t("profile_new");
+    if (saveProfileButton) saveProfileButton.textContent = t("save_profile");
     cancelProfileEditButton?.classList.add("hidden");
     if (profileNameInput) profileNameInput.value = "";
     if (resetForm && preferences) {
@@ -1183,8 +1747,8 @@ if (shell) {
 
   function startProfileEditing(profile) {
     editingPreferenceProfileId = profile.id;
-    if (profileEditorTitle) profileEditorTitle.textContent = `Edytujesz: ${profile.name}`;
-    if (saveProfileButton) saveProfileButton.textContent = "Zapisz zmiany";
+    if (profileEditorTitle) profileEditorTitle.textContent = `${t("editing_profile_prefix")}: ${profile.name}`;
+    if (saveProfileButton) saveProfileButton.textContent = t("save_changes");
     cancelProfileEditButton?.classList.remove("hidden");
     if (profileNameInput) profileNameInput.value = profile.name;
     applyPreferencesToForm(profile);
@@ -1214,7 +1778,7 @@ if (shell) {
     if (!preferenceProfiles.length) {
       const empty = document.createElement("div");
       empty.className = "profiles-dropdown-empty muted";
-      empty.textContent = "Brak zapisanych zestawow. Utworz pierwszy profil w ustawieniach.";
+      empty.textContent = t("no_profiles_hint");
       preferenceProfilesList.appendChild(empty);
       return;
     }
@@ -1242,7 +1806,7 @@ if (shell) {
     if (!preferenceProfiles.length) {
       const empty = document.createElement("div");
       empty.className = "settings-profile-empty muted";
-      empty.textContent = "Brak zapisanych profili.";
+      empty.textContent = t("no_profiles_list");
       settingsProfileList.appendChild(empty);
       return;
     }
@@ -1268,13 +1832,13 @@ if (shell) {
       const editButton = document.createElement("button");
       editButton.type = "button";
       editButton.className = "button button-secondary settings-profile-action";
-      editButton.textContent = "Edytuj";
+      editButton.textContent = t("edit");
       editButton.addEventListener("click", () => startProfileEditing(profile));
 
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "button button-secondary settings-profile-action";
-      deleteButton.textContent = "Usun";
+      deleteButton.textContent = t("delete_action");
       deleteButton.addEventListener("click", () => deletePreferenceProfile(profile));
 
       actions.append(editButton, deleteButton);
@@ -1296,14 +1860,14 @@ if (shell) {
   async function saveCurrentPreferenceProfile() {
     const profileName = profileNameInput?.value.trim() || "";
     if (!profileName) {
-      setStatus("Podaj nazwe profilu.", true);
+      setStatus(t("st_profile_name_required"), true);
       profileNameInput?.focus();
       return;
     }
 
     try {
       const isEditing = editingPreferenceProfileId !== null;
-      setStatus(isEditing ? "Aktualizuje profil ustawien..." : "Zapisuje profil ustawien...");
+      setStatus(isEditing ? t("st_updating_profile") : t("st_saving_profile"));
       const url = isEditing ? `${config.preferenceProfilesUrl}/${editingPreferenceProfileId}` : config.preferenceProfilesUrl;
       const method = isEditing ? "PUT" : "POST";
       const profile = await requestJson(url, {
@@ -1312,19 +1876,19 @@ if (shell) {
       });
       await loadPreferenceProfiles();
       resetProfileEditor();
-      setStatus(isEditing ? `Profil zaktualizowany: ${profile.name}.` : `Profil zapisany: ${profile.name}.`);
+      setStatus(isEditing ? `${t("st_profile_updated")}: ${profile.name}.` : `${t("st_profile_saved")}: ${profile.name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
   }
 
   async function deletePreferenceProfile(profile) {
-    if (!window.confirm(`Usunac profil "${profile.name}"?`)) {
+    if (!window.confirm(`Delete profile "${profile.name}"?`)) {
       return;
     }
 
     try {
-      setStatus(`Usuwam profil: ${profile.name}...`);
+      setStatus(`${t("st_deleting_profile")}: ${profile.name}...`);
       await requestJson(`${config.preferenceProfilesUrl}/${profile.id}`, {
         method: "DELETE",
       });
@@ -1332,7 +1896,7 @@ if (shell) {
         resetProfileEditor({ resetForm: true });
       }
       await loadPreferenceProfiles();
-      setStatus(`Profil usuniety: ${profile.name}.`);
+      setStatus(`${t("st_profile_deleted")}: ${profile.name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -1351,14 +1915,14 @@ if (shell) {
 
   async function applyPreferenceProfile(profileId, profileName = "") {
     try {
-      setStatus(`Laduje profil${profileName ? `: ${profileName}` : ""}...`);
+      setStatus(`${t("st_loading_profile")}${profileName ? `: ${profileName}` : ""}...`);
       const nextPreferences = await requestJson(`${config.preferenceProfilesUrl}/${profileId}/apply`, {
         method: "POST",
       });
       applyPreferencesToUi(nextPreferences);
       closePreferenceProfilesDropdown();
       await resetWorkspaceAfterPreferencesChange();
-      setStatus(profileName ? `Zaladowano profil: ${profileName}.` : "Profil zaladowany.");
+      setStatus(profileName ? `${t("st_profile_loaded_prefix")}: ${profileName}.` : t("st_profile_loaded"));
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -1398,7 +1962,7 @@ if (shell) {
       const resp = await fetch(`${config.deleteUrl}?path=${encodeURIComponent(node.path)}`, { method: "DELETE" });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
-        setStatus(data.detail || "Blad usuwania.", true);
+        setStatus(data.detail || t("st_delete_error"), true);
         return;
       }
       if (selectedTreePath === node.path) {
@@ -1407,9 +1971,9 @@ if (shell) {
         toggleOverlay({ empty: true });
       }
       await loadTree();
-      setStatus(`Usunieto: ${node.name}.`);
+      setStatus(`${t("st_deleted")}: ${node.name}.`);
     } catch {
-      setStatus("Blad polaczenia przy usuwaniu.", true);
+      setStatus(t("st_delete_fail"), true);
     }
   }
 
@@ -1446,7 +2010,7 @@ if (shell) {
 
     if (node.kind === "directory") {
       treeContextMenu.appendChild(
-        createContextMenuButton(expandedDirectories.has(node.path) ? "Zwin katalog" : "Rozwin katalog", async () => {
+        createContextMenuButton(expandedDirectories.has(node.path) ? "Collapse" : "Expand", async () => {
           selectedTreePath = node.path;
           selectedTreeKind = "directory";
           if (expandedDirectories.has(node.path)) {
@@ -1458,58 +2022,58 @@ if (shell) {
         }),
       );
       treeContextMenu.appendChild(
-        createContextMenuButton("Ustaw jako root tymczasowy", async () => {
+        createContextMenuButton("Scope to this folder", async () => {
           setScopedRoot(node.path);
-          setStatus(`Pokazuje tylko ${node.path}.`);
+          setStatus(`${t("st_showing_only")} ${node.path}.`);
         }),
       );
     } else {
       treeContextMenu.appendChild(
-        createContextMenuButton("Otworz", async () => {
+        createContextMenuButton("Open", async () => {
           await loadFile(node.path);
         }),
       );
     }
 
     treeContextMenu.appendChild(
-      createContextMenuButton("Upload tutaj", async () => {
+      createContextMenuButton("Upload here", async () => {
         showUploadMode(uploadPath);
-        setStatus(`Przygotowano upload do ${getUploadTargetLabel(uploadPath)}.`);
+        setStatus(`${t("st_upload_prepared")} ${getUploadTargetLabel(uploadPath)}.`);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Nowy plik tutaj", async () => {
+      createContextMenuButton("New file here", async () => {
         openCreateModal("file", parentPath);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Nowy katalog tutaj", async () => {
+      createContextMenuButton("New directory here", async () => {
         openCreateModal("directory", parentPath);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton(node.kind === "directory" ? "Pobierz jako ZIP" : "Pobierz", async () => {
+      createContextMenuButton(node.kind === "directory" ? "Download as ZIP" : "Download", async () => {
         window.location.href = `${config.downloadUrl}?path=${encodeURIComponent(node.path)}`;
-        setStatus(node.kind === "directory" ? "Przygotowuje archiwum ZIP..." : "Rozpoczynam pobieranie pliku.");
+        setStatus(node.kind === "directory" ? t("st_preparing_zip") : t("st_start_download"));
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Kopiuj sciezke", async () => {
+      createContextMenuButton("Copy path", async () => {
         try {
           await navigator.clipboard.writeText(node.path);
-          setStatus("Sciezka skopiowana.");
+          setStatus(t("st_path_copied"));
         } catch (error) {
-          setStatus("Nie udalo sie skopiowac sciezki.", true);
+          setStatus(t("st_path_copy_fail"), true);
         }
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Zmien nazwe", async () => {
+      createContextMenuButton("Rename", async () => {
         openRenameModal(node);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Odswiez drzewo", async () => {
+      createContextMenuButton("Refresh tree", async () => {
         await loadTree();
       }, "muted"),
     );
@@ -1517,7 +2081,7 @@ if (shell) {
     const isConfirming = contextMenuState.deleteConfirm === true;
     treeContextMenu.appendChild(
       createContextMenuButton(
-        isConfirming ? "Kliknij ponownie aby potwierdzic" : "Usun",
+        isConfirming ? "Click again to confirm" : "Delete",
         async () => {
           if (isConfirming) {
             contextMenuState.deleteConfirm = false;
@@ -1551,7 +2115,7 @@ if (shell) {
     if (!payload.directories.length) {
       const empty = document.createElement("div");
       empty.className = "directory-browser-empty muted";
-      empty.textContent = "Brak podkatalogow w tej lokalizacji.";
+      empty.textContent = t("no_subdirs");
       directoryBrowserList.appendChild(empty);
       return;
     }
@@ -1630,12 +2194,12 @@ if (shell) {
 
   async function openDirectoryBrowser() {
     try {
-      setStatus("Wczytuje katalogi...");
+      setStatus(t("st_loading_dirs"));
       openDirectoryBrowserModal();
       const startPath = contentRootInput.value.trim();
       await loadDirectoryBrowser(startPath);
       toggleDirectoryCreate(false);
-      setStatus("Mozesz wybrac katalog.");
+      setStatus(t("st_choose_dir"));
     } catch (error) {
       closeDirectoryBrowserModal();
       setStatus(error.message, true);
@@ -1648,13 +2212,13 @@ if (shell) {
       return;
     }
     if (!name) {
-      setStatus("Podaj nazwe nowego folderu.", true);
+      setStatus(t("st_folder_name_required"), true);
       directoryBrowserCreateInput?.focus();
       return;
     }
 
     try {
-      setStatus("Tworze nowy folder...");
+      setStatus(t("st_creating_folder"));
       const payload = await requestJson(config.createDirectoryUrl, {
         method: "POST",
         body: JSON.stringify({
@@ -1664,7 +2228,7 @@ if (shell) {
       });
       renderDirectoryBrowser(payload);
       toggleDirectoryCreate(false);
-      setStatus(`Utworzono folder: ${name}.`);
+      setStatus(`${t("st_folder_created")}: ${name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -1676,7 +2240,7 @@ if (shell) {
     }
     contentRootInput.value = directoryBrowserState.current_path;
     closeDirectoryBrowserModal();
-    setStatus("Katalog wybrany. Zapisz ustawienia, aby go zastosowac.");
+    setStatus(t("st_dir_selected"));
     contentRootInput.focus();
     contentRootInput.setSelectionRange(contentRootInput.value.length, contentRootInput.value.length);
   }
@@ -1949,11 +2513,11 @@ if (shell) {
       upButton.type = "button";
       upButton.className = "tree-scope-up";
       upButton.textContent = "..";
-      upButton.title = "Poziom wyzej";
+      upButton.title = "Go up";
       upButton.addEventListener("click", () => {
         const parentPath = getParentPath(visibleNode.path);
         setScopedRoot(parentPath);
-        setStatus(parentPath ? "Pokazuje katalog nadrzedny." : "Wrocono do pelnego drzewa.");
+        setStatus(parentPath ? t("st_showing_parent") : t("st_back_full_tree"));
       });
       scopeBar.appendChild(upButton);
 
@@ -1973,14 +2537,14 @@ if (shell) {
 
   async function loadTree({ autoSelect = false } = {}) {
     closeTreeContextMenu();
-    setStatus("Odswiezam drzewo plikow...");
+    setStatus(t("st_refreshing_tree"));
     treeData = await requestJson(config.treeUrl, { method: "GET" });
     if (scopedRootPath && !findDirectoryNode(treeData, scopedRootPath)) {
       scopedRootPath = "";
       applyTreeScopeState();
     }
     renderTree(treeData);
-    setStatus("Drzewo plikow gotowe.");
+    setStatus(t("st_tree_ready"));
 
     if (autoSelect && !selectedPath) {
       const firstEditable = findFirstEditable(treeData);
@@ -1992,7 +2556,7 @@ if (shell) {
 
   async function loadFile(path) {
     try {
-      setStatus("Wczytuje plik...");
+      setStatus(t("st_loading_file"));
       const file = await requestJson(`${config.fileUrl}?path=${encodeURIComponent(path)}`, {
         method: "GET",
       });
@@ -2010,17 +2574,17 @@ if (shell) {
         editor.setMarkdown(file.content || "", false);
         setTimeout(renderWysiwygDiagrams, 200);
         toggleOverlay({ empty: false, unsupported: false });
-        setStatus("Plik gotowy do edycji.");
+        setStatus(t("st_file_ready"));
       } else if (file.previewable) {
         showPreviewMode(file);
         editor.setMarkdown("", false);
         toggleOverlay({ empty: false, unsupported: false });
-        setStatus(file.preview_kind === "pdf" ? "Podglad PDF gotowy." : "Podglad obrazu gotowy.");
+        setStatus(file.preview_kind === "pdf" ? t("st_pdf_preview") : t("st_image_preview"));
       } else {
         showUnsupportedMode();
         editor.setMarkdown("", false);
         toggleOverlay({ empty: false, unsupported: true });
-        setStatus(file.message || "Tego pliku nie mozna edytowac.");
+        setStatus(file.message || t("st_file_not_editable"));
       }
 
       renderTree(treeData);
@@ -2035,7 +2599,7 @@ if (shell) {
     }
 
     try {
-      setStatus("Zapisuje plik...");
+      setStatus(t("st_saving"));
       await requestJson(config.saveUrl, {
         method: "PUT",
         body: JSON.stringify({
@@ -2044,7 +2608,7 @@ if (shell) {
         }),
       });
       toggleOverlay({ empty: false, unsupported: false });
-      setStatus("Zmiany zapisane.");
+      setStatus(t("st_saved"));
       await loadTree();
     } catch (error) {
       setStatus(error.message, true);
@@ -2053,11 +2617,11 @@ if (shell) {
 
   async function saveSettings() {
     try {
-      setStatus("Zapisuje ustawienia...");
+      setStatus(t("st_saving_settings"));
       await persistPreferences();
       closeSettingsModal();
       await resetWorkspaceAfterPreferencesChange();
-      setStatus("Ustawienia zapisane.");
+      setStatus(t("st_settings_saved"));
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -2066,9 +2630,9 @@ if (shell) {
   async function adjustEditorFontSize(delta) {
     const nextSize = clampFontSize((preferences?.editor_font_size || 16) + delta);
     try {
-      setStatus("Aktualizuje rozmiar czcionki...");
+      setStatus(t("st_updating_font"));
       await persistPreferences({ editor_font_size: nextSize });
-      setStatus("Rozmiar czcionki zapisany.");
+      setStatus(t("st_font_saved"));
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -2078,13 +2642,13 @@ if (shell) {
     const parentPath = createParentPathOverride ?? getCurrentParentPath();
     const name = createNameInput.value.trim();
     if (!name) {
-      setStatus("Podaj nazwe nowego elementu.", true);
+      setStatus(t("st_name_required"), true);
       createNameInput.focus();
       return;
     }
 
     try {
-      setStatus("Tworze nowy element...");
+      setStatus(t("st_creating"));
       const created = await requestJson(config.createUrl, {
         method: "POST",
         body: JSON.stringify({
@@ -2105,7 +2669,7 @@ if (shell) {
       } else {
         expandedDirectories.add(created.path);
         renderTree(treeData);
-        setStatus("Katalog utworzony.");
+        setStatus(t("st_dir_created_msg"));
       }
     } catch (error) {
       setStatus(error.message, true);
@@ -2116,12 +2680,12 @@ if (shell) {
     const node = renameTargetNode;
     const newName = createNameInput.value.trim();
     if (!newName) {
-      setStatus("Podaj nowa nazwe.", true);
+      setStatus(t("st_new_name_required"), true);
       createNameInput.focus();
       return;
     }
     try {
-      setStatus("Zmieniam nazwe...");
+      setStatus(t("st_renaming"));
       const renamed = await requestJson(config.renameUrl, {
         method: "POST",
         body: JSON.stringify({ path: node.path, new_name: newName }),
@@ -2133,7 +2697,7 @@ if (shell) {
       }
       closeCreateModal();
       await loadTree();
-      setStatus(`Zmieniono nazwe na: ${renamed.name}.`);
+      setStatus(`${t("st_renamed")}: ${renamed.name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -2158,12 +2722,12 @@ if (shell) {
 
   async function submitUpload() {
     if (!pendingUploadFiles.length) {
-      setStatus("Najpierw wybierz pliki do uploadu.", true);
+      setStatus(t("st_no_files_upload"), true);
       return;
     }
 
     try {
-      setStatus("Wysylam pliki...");
+      setStatus(t("st_uploading"));
       const formData = new FormData();
       formData.append("parent_path", uploadTargetPath);
       pendingUploadFiles.forEach((file) => {
@@ -2182,10 +2746,10 @@ if (shell) {
       resetUploadState();
 
       if (skippedCount) {
-        const firstMessage = result.skipped_items[0]?.message || "Czesc plikow nie zostala dodana.";
-        setStatus(`Dodano ${createdCount} plikow, pominieto ${skippedCount}. ${firstMessage}`, true);
+        const firstMessage = result.skipped_items[0]?.message || "";
+        setStatus(`${t("st_files_added")} ${createdCount}, ${t("st_files_skipped")} ${skippedCount}.${firstMessage ? " " + firstMessage : ""}`, true);
       } else {
-        setStatus(`Dodano ${createdCount} plikow.`);
+        setStatus(`${t("st_files_added")} ${createdCount}.`);
       }
     } catch (error) {
       setStatus(error.message, true);
@@ -2198,7 +2762,7 @@ if (shell) {
     }
 
     try {
-      setStatus("Przenosze element...");
+      setStatus(t("st_moving"));
       const moved = await requestJson(config.moveUrl, {
         method: "PUT",
         body: JSON.stringify({
@@ -2217,7 +2781,7 @@ if (shell) {
         await loadFile(moved.path);
       } else {
         renderTree(treeData);
-        setStatus("Element przeniesiony.");
+        setStatus(t("st_moved"));
       }
     } catch (error) {
       setStatus(error.message, true);
@@ -2241,7 +2805,7 @@ if (shell) {
     orderedPaths.splice(targetIndex, 0, moved);
 
     try {
-      setStatus("Aktualizuje manualny order...");
+      setStatus(t("st_updating_order"));
       preferences = await requestJson(config.orderUrl, {
         method: "PUT",
         body: JSON.stringify({
@@ -2250,7 +2814,7 @@ if (shell) {
         }),
       });
       await loadTree();
-      setStatus("Order zapisany.");
+      setStatus(t("st_order_saved"));
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -2261,13 +2825,13 @@ if (shell) {
   });
   resetTreeRootButton.addEventListener("click", () => {
     setScopedRoot("");
-    setStatus("Wrocono do pelnego drzewa.");
+    setStatus(t("st_back_full_tree"));
   });
   toggleHiddenFilesButton.addEventListener("click", () => {
     showHiddenFiles = !showHiddenFiles;
     applyHiddenFilesToggleState();
     renderTree(treeData);
-    setStatus(showHiddenFiles ? "Ukryte pliki sa widoczne." : "Ukryte pliki sa ukryte.");
+    setStatus(showHiddenFiles ? t("st_showing_hidden") : t("st_hiding_hidden"));
   });
 
   treeRoot.addEventListener("dragover", (event) => {
@@ -2450,6 +3014,7 @@ if (shell) {
 
   applyTheme(shell.dataset.themeMode || "light");
   applyEditorFontSize(shell.dataset.editorFontSize || "16");
+  applyLanguage(shell.dataset.language || "pl");
   applyHiddenFilesToggleState();
   applyTreeScopeState();
   renderUploadFileList();

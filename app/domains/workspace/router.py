@@ -298,6 +298,7 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
         gdrive_folder_id=payload.gdrive_folder_id,
         image_upload_mode=payload.image_upload_mode,
         image_upload_subdir=payload.image_upload_subdir,
+        language=payload.language,
     )
 
 
@@ -335,6 +336,7 @@ async def workspace_save_preference_profile_api(request: Request, payload: SaveP
             gdrive_credentials=payload.gdrive_credentials,
             image_upload_mode=payload.image_upload_mode,
             image_upload_subdir=payload.image_upload_subdir,
+            language=payload.language,
         )
     except PreferenceProfileConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -369,6 +371,7 @@ async def workspace_update_preference_profile_api(
             gdrive_credentials=payload.gdrive_credentials,
             image_upload_mode=payload.image_upload_mode,
             image_upload_subdir=payload.image_upload_subdir,
+            language=payload.language,
         )
     except PreferenceProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
