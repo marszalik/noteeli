@@ -7,3 +7,5 @@ To jest przykladowa notatka startowa dla Noteeli.
 * Zmien tresc i zapisz plik.
 
 Ala ma kota
+
+![favicon-ankiety.png](./assets/favicon-ankiety.png)
