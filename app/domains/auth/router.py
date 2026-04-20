@@ -1,7 +1,7 @@
 import json
 
 from authlib.integrations.base_client.errors import OAuthError
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
@@ -14,17 +14,21 @@ _settings = get_settings()
 auth_service = AuthService(_settings)
 
 
-@router.get("/login", name="login_page")
-async def login_page(request: Request):
-    if auth_service.get_current_user(request):
-        return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
-
+def _login_template(request: Request, error_message: str | None = None):
     return render_template(
         "domains/auth/views/login.mako",
         request,
         google_configured=auth_service.google_is_configured(),
-        error_message=None,
+        password_configured=auth_service.password_login_configured(),
+        error_message=error_message,
     )
+
+
+@router.get("/login", name="login_page")
+async def login_page(request: Request):
+    if auth_service.get_current_user(request):
+        return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
+    return _login_template(request)
 
 
 @router.get("/auth/google", name="auth_google_login")
@@ -52,21 +56,39 @@ async def auth_google_callback(request: Request):
         if not userinfo:
             userinfo = await client.parse_id_token(request, token)
     except OAuthError as exc:
-        return render_template(
-            "domains/auth/views/login.mako",
-            request,
-            google_configured=True,
-            error_message=f"Logowanie nie powiodlo sie: {exc.error}",
-        )
+        return _login_template(request, error_message=f"Login failed: {exc.error}")
+
+    email = userinfo.get("email", "")
+    if not auth_service.google_email_is_allowed(email):
+        return _login_template(request, error_message=f"Access denied for {email}.")
 
     request.session["user"] = {
         "sub": userinfo.get("sub"),
-        "email": userinfo.get("email"),
+        "email": email,
         "name": userinfo.get("name"),
         "picture": userinfo.get("picture"),
         "is_local": False,
     }
     return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
+
+
+@router.post("/auth/password", name="auth_password_login")
+async def auth_password_login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    if auth_service.check_password(username, password):
+        request.session["user"] = {
+            "sub": f"local:{username}",
+            "email": username,
+            "name": username,
+            "picture": None,
+            "is_local": False,
+        }
+        return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
+
+    return _login_template(request, error_message="Invalid username or password.")
 
 
 @router.post("/logout", name="logout_action")

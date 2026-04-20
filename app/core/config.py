@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     session_secret: str = "change-me-in-production"
     google_client_id: str = ""
     google_client_secret: str = ""
+    # Comma-separated list of Google account e-mails allowed to log in.
+    # Leave empty to allow any Google account that completes OAuth.
+    allowed_google_emails: str = ""
+    # Credentials for the built-in password login (optional).
+    local_username: str = ""
+    local_password: str = ""
     content_root: Path = PROJECT_ROOT / "content"
     data_dir: Path = PROJECT_ROOT / ".noteeli"
     allowed_markdown_extensions: tuple[str, ...] = (".md", ".markdown")

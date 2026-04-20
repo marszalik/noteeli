@@ -248,6 +248,101 @@ body[data-theme="dark"] .button-secondary:hover {
   color: rgba(255, 255, 255, 0.15);
 }
 
+/* ── Password login ─────────────────────────────── */
+.login-password-details {
+  width: 100%;
+}
+
+.login-password-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.login-password-summary::-webkit-details-marker { display: none; }
+
+.login-password-summary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.login-password-summary svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.login-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.login-field span {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.login-field input {
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 0.9375rem;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.login-field input:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.login-submit-btn {
+  margin-top: 0.25rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.login-submit-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .muted {
   color: var(--muted);
 }

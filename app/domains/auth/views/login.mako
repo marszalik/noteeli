@@ -25,6 +25,28 @@
         % else:
           <span class="login-unconfigured">—</span>
         % endif
+
+        % if password_configured:
+          <details class="login-password-details" ${'open' if error_message else ''}>
+            <summary class="login-password-summary">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+              </svg>
+              Login with password
+            </summary>
+            <form class="login-password-form" method="post" action="${request.url_for('auth_password_login')}">
+              <label class="login-field">
+                <span>Username</span>
+                <input type="text" name="username" autocomplete="username" required />
+              </label>
+              <label class="login-field">
+                <span>Password</span>
+                <input type="password" name="password" autocomplete="current-password" required />
+              </label>
+              <button class="login-submit-btn" type="submit">Sign in</button>
+            </form>
+          </details>
+        % endif
       </div>
     </div>
   </main>

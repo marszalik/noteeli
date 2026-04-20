@@ -55,5 +55,27 @@ class AuthService:
     def google_is_configured(self) -> bool:
         return bool(self.settings.google_client_id and self.settings.google_client_secret)
 
+    def google_email_is_allowed(self, email: str) -> bool:
+        """Return True if the email is permitted to log in via Google.
+
+        If NOTEELI_ALLOWED_GOOGLE_EMAILS is empty, any email is allowed.
+        """
+        raw = self.settings.allowed_google_emails.strip()
+        if not raw:
+            return True
+        allowed = {e.strip().lower() for e in raw.split(",") if e.strip()}
+        return email.strip().lower() in allowed
+
+    def password_login_configured(self) -> bool:
+        return bool(self.settings.local_username and self.settings.local_password)
+
+    def check_password(self, username: str, password: str) -> bool:
+        if not self.password_login_configured():
+            return False
+        return (
+            username == self.settings.local_username
+            and password == self.settings.local_password
+        )
+
     def get_google_client(self):
         return get_oauth().create_client("google")
