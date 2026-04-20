@@ -874,6 +874,77 @@ body[data-theme="dark"] .editor-stage {
   height: 100%;
 }
 
+/* ── JSON Editor panel ──────────────────────────────────────── */
+.json-editor-panel {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Override jsoneditor default colours to match our themes */
+.jsoneditor,
+.jsoneditor-menu {
+  border-color: var(--line) !important;
+}
+
+.jsoneditor-menu {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+.jsoneditor-menu button,
+.jsoneditor-menu .jsoneditor-separator {
+  color: var(--text) !important;
+}
+
+.jsoneditor-tree,
+.jsoneditor .ace_editor,
+.jsoneditor-text {
+  background-color: var(--panel-strong) !important;
+  color: var(--text) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.jsoneditor-field,
+.jsoneditor-value {
+  color: var(--text) !important;
+}
+
+.jsoneditor-value.jsoneditor-string  { color: #059669 !important; }
+.jsoneditor-value.jsoneditor-number  { color: #0369a1 !important; }
+.jsoneditor-value.jsoneditor-boolean { color: #7c3aed !important; }
+.jsoneditor-value.jsoneditor-null    { color: var(--muted) !important; }
+
+/* dark + obsidian tweaks */
+body[data-theme="dark"] .jsoneditor-value.jsoneditor-string,
+body[data-theme="obsidian"] .jsoneditor-value.jsoneditor-string  { color: #34d399 !important; }
+body[data-theme="dark"] .jsoneditor-value.jsoneditor-number,
+body[data-theme="obsidian"] .jsoneditor-value.jsoneditor-number  { color: #60a5fa !important; }
+body[data-theme="dark"] .jsoneditor-value.jsoneditor-boolean,
+body[data-theme="obsidian"] .jsoneditor-value.jsoneditor-boolean { color: #a78bfa !important; }
+
+.jsoneditor-navigation-bar {
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+  border-bottom-color: var(--line) !important;
+}
+
+.jsoneditor-statusbar {
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+  border-top-color: var(--line) !important;
+}
+
+.jsoneditor-search input {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+
+.jsoneditor tr:hover > .jsoneditor-tree td {
+  background: var(--accent-soft) !important;
+}
+
 .file-preview {
   height: 100%;
   width: 100%;

@@ -70,6 +70,7 @@ if (shell) {
   const currentFilePath = document.getElementById("current-file-path");
   const statusMessage = document.getElementById("status-message");
   const editorContainer = document.getElementById("editor");
+  const jsonEditorContainer = document.getElementById("json-editor");
   const previewStage = document.getElementById("preview-stage");
   const imagePreview = document.getElementById("image-preview");
   const pdfPreview = document.getElementById("pdf-preview");
@@ -93,6 +94,7 @@ if (shell) {
   let profileFormGdriveCredentials = "";
   let selectedPath = null;
   let selectedEditable = false;
+  let selectedFileType = "markdown"; // "markdown" | "json"
   let selectedTreePath = "";
   let selectedTreeKind = "directory";
   let dragState = null;
@@ -351,6 +353,38 @@ if (shell) {
     }
     // Everything else (md, pdf, txt, …) — plain markdown link
     return `[${name}](${ref})`;
+  }
+
+  // ── JSON Editor (jsoneditor by josdejong) ─────────────────────────────────
+  let jsonEditor = null;
+
+  function initJsonEditor() {
+    if (jsonEditor) return;
+    jsonEditor = new JSONEditor(jsonEditorContainer, {
+      mode: "tree",
+      modes: ["tree", "form", "code", "preview"],
+      mainMenuBar: true,
+      navigationBar: true,
+      statusBar: true,
+      onError(err) {
+        setStatus(err.toString(), true);
+      },
+    });
+  }
+
+  function showJsonEditorMode() {
+    initJsonEditor();
+    editorContainer.classList.add("hidden");
+    jsonEditorContainer.classList.remove("hidden");
+    hidePreview();
+    hideUploadStage();
+    // hide the WYSIWYG/Markdown toggle — not relevant for JSON
+    if (editorModeToggle) editorModeToggle.classList.add("hidden");
+  }
+
+  function hideJsonEditorMode() {
+    jsonEditorContainer.classList.add("hidden");
+    if (editorModeToggle) editorModeToggle.classList.remove("hidden");
   }
 
   const editorStage = editorContainer.closest(".editor-stage") || editorContainer;
@@ -746,6 +780,7 @@ if (shell) {
       st_file_not_editable: "Tego pliku nie można edytować.",
       st_saving: "Zapisuję plik...",
       st_saved: "Zmiany zapisane.",
+      st_json_invalid_saving_raw: "Niepoprawny JSON — zapisano jako tekst.",
       st_saving_settings: "Zapisuję ustawienia...",
       st_settings_saved: "Ustawienia zapisane.",
       st_updating_font: "Aktualizuję rozmiar czcionki...",
@@ -851,6 +886,7 @@ if (shell) {
       st_file_not_editable: "This file cannot be edited.",
       st_saving: "Saving file...",
       st_saved: "Changes saved.",
+      st_json_invalid_saving_raw: "Invalid JSON — saved as raw text.",
       st_saving_settings: "Saving settings...",
       st_settings_saved: "Settings saved.",
       st_updating_font: "Updating font size...",
@@ -956,6 +992,7 @@ if (shell) {
       st_file_not_editable: "Este archivo no se puede editar.",
       st_saving: "Guardando archivo...",
       st_saved: "Cambios guardados.",
+      st_json_invalid_saving_raw: "JSON inválido — guardado como texto.",
       st_saving_settings: "Guardando ajustes...",
       st_settings_saved: "Ajustes guardados.",
       st_updating_font: "Actualizando tamaño de fuente...",
@@ -1061,6 +1098,7 @@ if (shell) {
       st_file_not_editable: "Diese Datei kann nicht bearbeitet werden.",
       st_saving: "Datei wird gespeichert...",
       st_saved: "Änderungen gespeichert.",
+      st_json_invalid_saving_raw: "Ungültiges JSON — als Text gespeichert.",
       st_saving_settings: "Einstellungen werden gespeichert...",
       st_settings_saved: "Einstellungen gespeichert.",
       st_updating_font: "Schriftgröße wird aktualisiert...",
@@ -1166,6 +1204,7 @@ if (shell) {
       st_file_not_editable: "Этот файл нельзя редактировать.",
       st_saving: "Сохранение файла...",
       st_saved: "Изменения сохранены.",
+      st_json_invalid_saving_raw: "Неверный JSON — сохранено как текст.",
       st_saving_settings: "Сохранение настроек...",
       st_settings_saved: "Настройки сохранены.",
       st_updating_font: "Обновление размера шрифта...",
@@ -1461,12 +1500,15 @@ if (shell) {
 
   function showEditorMode() {
     editorContainer.classList.remove("hidden");
+    hideJsonEditorMode();
     hidePreview();
     hideUploadStage();
+    if (editorModeToggle) editorModeToggle.classList.remove("hidden");
   }
 
   function showPreviewMode(file) {
     editorContainer.classList.add("hidden");
+    hideJsonEditorMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
     imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
@@ -1486,6 +1528,7 @@ if (shell) {
 
   function showUnsupportedMode() {
     editorContainer.classList.add("hidden");
+    hideJsonEditorMode();
     hidePreview();
     hideUploadStage();
   }
@@ -2563,13 +2606,25 @@ if (shell) {
 
       selectedPath = file.path;
       selectedEditable = file.editable;
+      selectedFileType = file.file_type || "markdown";
       selectedTreePath = file.path;
       selectedTreeKind = "file";
       openParentDirectories(file.path);
       updateHeader(file.name, file.path);
       saveButton.disabled = !file.editable;
 
-      if (file.editable) {
+      if (file.editable && selectedFileType === "json") {
+        showJsonEditorMode();
+        try {
+          jsonEditor.set(JSON.parse(file.content || "{}"));
+        } catch {
+          // invalid JSON on disk — fall back to text mode so user can fix it
+          jsonEditor.setText(file.content || "");
+          jsonEditor.setMode("code");
+        }
+        toggleOverlay({ empty: false, unsupported: false });
+        setStatus(t("st_file_ready"));
+      } else if (file.editable) {
         showEditorMode();
         editor.setMarkdown(file.content || "", false);
         setTimeout(renderWysiwygDiagrams, 200);
@@ -2600,12 +2655,24 @@ if (shell) {
 
     try {
       setStatus(t("st_saving"));
+
+      let content;
+      if (selectedFileType === "json") {
+        // JSONEditor serialises to a pretty-printed string
+        try {
+          content = JSON.stringify(jsonEditor.get(), null, 2);
+        } catch {
+          // code-mode with invalid JSON — save raw text and warn
+          content = jsonEditor.getText();
+          setStatus(t("st_json_invalid_saving_raw"), true);
+        }
+      } else {
+        content = cleanEmbeddedUrls(editor.getMarkdown());
+      }
+
       await requestJson(config.saveUrl, {
         method: "PUT",
-        body: JSON.stringify({
-          path: selectedPath,
-          content: cleanEmbeddedUrls(editor.getMarkdown()),
-        }),
+        body: JSON.stringify({ path: selectedPath, content }),
       });
       toggleOverlay({ empty: false, unsupported: false });
       setStatus(t("st_saved"));

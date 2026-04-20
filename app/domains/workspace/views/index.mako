@@ -4,6 +4,7 @@
 
 <%def name="head_extra()">
   <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.css" />
 </%def>
 
 <%def name="content()">
@@ -107,6 +108,7 @@
 
       <section class="editor-stage">
         <div id="editor"></div>
+        <div id="json-editor" class="json-editor-panel hidden"></div>
 
         <div id="preview-stage" class="file-preview hidden">
           <img id="image-preview" class="file-preview-image hidden" alt="" />
@@ -351,5 +353,6 @@
 <%def name="scripts_extra()">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.js"></script>
   <script defer src="${request.url_for('static', path='app.js')}"></script>
 </%def>
