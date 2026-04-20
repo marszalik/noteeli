@@ -1,6 +1,7 @@
 <%inherit file="/views/base.mako"/>
 
 <%def name="page_title()">Noteeli</%def>
+<%def name="initial_theme()">${preferences.theme_mode}</%def>
 
 <%def name="head_extra()">
   <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
@@ -17,8 +18,9 @@
   >
     <aside class="sidebar">
       <div class="brand-block">
-        <span class="eyebrow">FastAPI + Mako</span>
-        <h1>Noteeli</h1>
+        <a href="/" class="brand-logo-link" aria-label="Noteeli">
+          <img src="${request.url_for('static', path='logo.png')}" alt="Noteeli" class="brand-logo" />
+        </a>
         <p id="content-root-display" class="sidebar-path">${content_root}</p>
       </div>
 
@@ -250,6 +252,7 @@
 
         <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
         <select id="theme-mode-select" class="settings-input">
+          <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
           <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
           <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
           <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>

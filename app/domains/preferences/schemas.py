@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 SortMode = Literal["alphabetical", "manual"]
-ThemeMode = Literal["light", "dark", "obsidian"]
+ThemeMode = Literal["light", "dark", "obsidian", "noteeli"]
 SourceType = Literal["local", "sftp", "gdrive"]
 ImageUploadMode = Literal["same_dir", "subdir"]
 Language = Literal["pl", "en", "es", "de", "ru"]
@@ -21,7 +21,7 @@ class AppPreferences(BaseModel):
     gdrive_folder_id: str = "root"
     gdrive_credentials: str = ""
     sort_mode: SortMode = "alphabetical"
-    theme_mode: ThemeMode = "light"
+    theme_mode: ThemeMode = "noteeli"
     editor_font_size: int = Field(default=16, ge=12, le=28)
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
@@ -58,7 +58,7 @@ class SavedPreferencesProfile(BaseModel):
     gdrive_folder_id: str = "root"
     gdrive_credentials: str = ""
     sort_mode: SortMode = "alphabetical"
-    theme_mode: ThemeMode = "light"
+    theme_mode: ThemeMode = "noteeli"
     editor_font_size: int = Field(default=16, ge=12, le=28)
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
