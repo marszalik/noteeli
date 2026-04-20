@@ -77,6 +77,7 @@ class WorkspaceService:
         gdrive_credentials: str | None = None,
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
+        language: str = "pl",
     ) -> AppPreferences:
         invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
@@ -94,6 +95,7 @@ class WorkspaceService:
             gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
 
     def list_preference_profiles(self) -> list[SavedPreferencesProfile]:
@@ -117,6 +119,7 @@ class WorkspaceService:
         gdrive_credentials: str = "",
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
+        language: str = "pl",
     ) -> SavedPreferencesProfile:
         return self.preferences_service.create_profile(
             name=name,
@@ -134,6 +137,7 @@ class WorkspaceService:
             gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
 
     def update_preference_profile(
@@ -155,6 +159,7 @@ class WorkspaceService:
         gdrive_credentials: str = "",
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
+        language: str = "pl",
     ) -> SavedPreferencesProfile:
         return self.preferences_service.update_profile(
             profile_id,
@@ -173,6 +178,7 @@ class WorkspaceService:
             gdrive_credentials=gdrive_credentials,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
+            language=language,
         )
 
     def delete_preference_profile(self, profile_id: int) -> None:
@@ -211,7 +217,7 @@ class WorkspaceService:
                 content="",
                 previewable=True,
                 preview_kind=preview_kind,
-                message="Ten plik jest dostepny w trybie podgladu.",
+                message="This file is available in preview mode.",
             )
 
         return FileDocument(
@@ -221,7 +227,7 @@ class WorkspaceService:
             content="",
             previewable=False,
             preview_kind=None,
-            message="Ten typ pliku nie jest obslugiwany. Edytor zapisuje tylko Markdown.",
+            message="This file type is not supported. The editor saves Markdown only.",
         )
 
     def save_document(self, relative_path: str, content: str) -> FileDocument:
@@ -265,7 +271,7 @@ class WorkspaceService:
             parent_rel = ""
         dst_rel = f"{parent_rel}/{normalized}" if parent_rel else normalized
         if backend.exists(dst_rel):
-            raise ItemAlreadyExistsError(f"Element '{normalized}' juz istnieje.")
+            raise ItemAlreadyExistsError(f"Item '{normalized}' already exists.")
         backend.rename(src_rel, dst_rel)
         return self._build_item_response(dst_rel, backend)
 
@@ -314,7 +320,7 @@ class WorkspaceService:
             try:
                 normalized_name = self._normalize_uploaded_name(original_name)
             except InvalidPathError as exc:
-                skipped_items.append(UploadedItemError(name=original_name or "(brak nazwy)", message=str(exc)))
+                skipped_items.append(UploadedItemError(name=original_name or "(unnamed)", message=str(exc)))
                 continue
 
             if normalized_name in seen_names:
