@@ -1,35 +1,111 @@
 # Noteeli
 
-A Python web application built with FastAPI and Mako templates. It displays a tree of note folders, lets you browse Markdown files, and edit them in a WYSIWYG interface.
+Noteeli is a Markdown-first web workspace built around real folders, plain files, and storage you control.
 
-Project architecture and conventions are described in `ARCHITECTURE.md`.
+It is designed for people who want an Obsidian-like workflow in the browser without moving their notes into a proprietary format or storage model.
 
-## Features
+Website: [noteeli.com](https://noteeli.com)
+
+![Noteeli](https://noteeli.com/og-image.png)
+
+## What Noteeli is for
+
+Noteeli is built for workflows where plain files matter:
+
+- private Markdown notes available in the browser
+- folder-based knowledge bases
+- self-hosted note workflows
+- file-based content and lightweight documentation
+- browser access on machines where local note setups are not practical
+
+## Core ideas
+
+- Markdown first
+- real folder tree and sidebar
+- browser-based editing
+- storage under user control
+- low lock-in
+- self-hosted or hosted product direction
+
+## Why Noteeli
+
+Many note tools force a tradeoff between browser access and file ownership.
+
+Noteeli is built around a simpler model:
+
+- keep notes in plain Markdown files
+- keep real folders instead of abstract note containers
+- use storage you already control
+- access the workspace in the browser when local setups are inconvenient
+
+The goal is not to replace every notes app. The goal is to make browser-based Markdown workflows feel direct again.
+
+## Current capabilities
 
 - folder and file tree in the sidebar
-- Markdown preview and editing on the right side
-- Google login for traffic outside `127.0.0.1`, `localhost`, and `::1`
-- local auth bypass for development addresses
-- SQLite in `.noteeli/noteeli.sqlite3` for settings and manual tree ordering
-- UI-based configuration for notes root and sorting
+- Markdown preview and editing
+- Google login for non-local traffic
+- local auth bypass for development environments
+- SQLite-backed app preferences and manual tree ordering
+- UI-based configuration for content root and sorting
+- support for switching between different content sources and workflows
 
-## Running locally
+## Project status
 
-1. Copy `.env.example` to `.env` and fill in the values.
-2. Install dependencies:
+Noteeli is an actively evolving project.
+
+The current repository contains the core application built with:
+
+- FastAPI
+- Mako templates
+- SQLite for app preferences
+
+Project architecture and conventions are described in [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## License
+
+This project is licensed under `AGPL-3.0-or-later`.
+
+That license fits a web-based product that can be both self-hosted and used as a network service. See [LICENSE](./LICENSE) for the full text.
+
+## Contributing
+
+Issues, suggestions, and contributions are welcome.
+
+Before making larger changes, it is best to open an issue or start a discussion so the direction stays aligned with the product and architecture.
+
+## Installation
+
+### Requirements
+
+- Python 3.11+
+
+### Environment variables
+
+Copy `.env.example` to `.env` and configure the values you need.
+
+Main variables:
+
+- `NOTEELI_CONTENT_ROOT` - base directory for notes
+- `NOTEELI_DATA_DIR` - directory for SQLite and app data
+- `NOTEELI_SESSION_SECRET` - session secret
+- `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+
+### Install with venv
 
 ```bash
 python3 -m venv .venv
 ./.venv/bin/pip install -e ".[dev]"
 ```
 
-Or with PDM:
+### Install with PDM
 
 ```bash
 pdm install -d
 ```
 
-3. Start the server:
+### Run locally
 
 ```bash
 ./.venv/bin/uvicorn app.main:app --reload
@@ -41,18 +117,8 @@ Or with PDM:
 pdm run dev
 ```
 
-4. Open the app at `http://127.0.0.1:8000`.
+Then open:
 
-## Environment variables
-
-- `NOTEELI_CONTENT_ROOT` - base directory for notes
-- `NOTEELI_DATA_DIR` - directory for SQLite and app data
-- `NOTEELI_SESSION_SECRET` - session secret
-- `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
-- `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
-
-## License
-
-This project is licensed under `AGPL-3.0-or-later`.
-
-This license fits a web-based product that can be both self-hosted and used as a network service. See `LICENSE` for the full text.
+```text
+http://127.0.0.1:8000
+```
