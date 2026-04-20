@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Noteeli" />
     <link rel="apple-touch-icon" href="${request.url_for('static', path='icon-192.png')}" />
-    <link rel="stylesheet" href="${request.url_for('static', path='app.css')}" />
+    <link rel="stylesheet" href="${request.url_for('static', path='app.css')}?v=${static_version}" />
     ${self.head_extra()}
   </head>
   <body data-theme="${self.initial_theme()}">

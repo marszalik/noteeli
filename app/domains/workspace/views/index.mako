@@ -369,5 +369,5 @@
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.js"></script>
-  <script defer src="${request.url_for('static', path='app.js')}"></script>
+  <script defer src="${request.url_for('static', path='app.js')}?v=${static_version}"></script>
 </%def>

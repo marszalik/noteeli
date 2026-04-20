@@ -138,6 +138,29 @@ if (shell) {
   function applyBodySidebarMode(mode) {
     shell.classList.remove("sidebar-docked", "sidebar-collapsed", "sidebar-overlay");
     shell.classList.add(`sidebar-${mode}`);
+
+    // --sidebar-open-w is always the actual panel width for overlay/mobile display
+    shell.style.setProperty("--sidebar-open-w", sidebarWidth + "px");
+
+    // --sidebar-w controls the CSS grid column (instant change — no @property transition).
+    if (mode === "docked") {
+      shell.style.setProperty("--sidebar-w", sidebarWidth + "px");
+    } else {
+      shell.style.setProperty("--sidebar-w", "0px");
+    }
+
+    // Belt-and-suspenders: also set opacity/pointer-events via inline style
+    // so collapsed state works even if CSS class specificity is ever beaten.
+    if (sidebarEl) {
+      if (mode === "collapsed") {
+        sidebarEl.style.opacity = "0";
+        sidebarEl.style.pointerEvents = "none";
+      } else {
+        sidebarEl.style.opacity = "";
+        sidebarEl.style.pointerEvents = "";
+      }
+    }
+
     const isOpen = mode === "docked" || mode === "overlay";
     if (sidebarToggleBtn) {
       sidebarToggleBtn.setAttribute("aria-expanded", String(isOpen));
@@ -147,8 +170,12 @@ if (shell) {
 
   function setSidebarWidth(w) {
     sidebarWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, w));
-    shell.style.setProperty("--sidebar-w", sidebarWidth + "px");
     localStorage.setItem("sidebar-width", sidebarWidth);
+    // Update both variables; grid column only if docked
+    shell.style.setProperty("--sidebar-open-w", sidebarWidth + "px");
+    if (sidebarMode === "docked") {
+      shell.style.setProperty("--sidebar-w", sidebarWidth + "px");
+    }
   }
 
   function setSidebarMode(mode) {
@@ -189,7 +216,7 @@ if (shell) {
     // On mobile, never start docked
     if (isMobile() && sidebarMode === "docked") sidebarMode = "collapsed";
 
-    setSidebarWidth(sidebarWidth);
+    // applyBodySidebarMode sets --sidebar-w, --sidebar-open-w, classes, and aria
     applyBodySidebarMode(sidebarMode);
 
     // Hamburger toggle
@@ -228,6 +255,8 @@ if (shell) {
         document.removeEventListener("touchend", onUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        // Re-enable CSS transitions after drag
+        shell.style.transition = "";
       };
 
       sidebarResizeHandle.addEventListener("mousedown", (e) => {
@@ -237,15 +266,17 @@ if (shell) {
         sidebarResizeHandle.classList.add("is-dragging");
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
+        // Disable CSS transitions during drag for instant feedback
+        shell.style.transition = "none";
         document.addEventListener("mousemove", onMove);
         document.addEventListener("mouseup", onUp);
       });
     }
 
-    // Auto-collapse on resize to mobile
+    // Auto-collapse on resize to mobile (use setSidebarMode to keep state in sync)
     window.addEventListener("resize", () => {
       if (isMobile() && sidebarMode === "docked") {
-        applyBodySidebarMode("collapsed");
+        setSidebarMode("collapsed");
       }
     });
   }

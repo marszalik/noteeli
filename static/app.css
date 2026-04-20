@@ -430,7 +430,10 @@ body[data-theme="noteeli"] .alert-error {
 }
 
 .app-shell {
+  /* --sidebar-w: grid column width (0 when collapsed/overlay, sidebarWidth when docked) */
+  /* --sidebar-open-w: actual panel width when visible (used in overlay/mobile)          */
   --sidebar-w: 300px;
+  --sidebar-open-w: 300px;
   position: relative;
   height: 100vh;
   display: grid;
@@ -438,24 +441,26 @@ body[data-theme="noteeli"] .alert-error {
   gap: 1.2rem;
   padding: 1.2rem;
   overflow: hidden;
-  transition: grid-template-columns 0.25s ease;
+  /* gap animates when collapsing/docking */
+  transition: gap 0.25s ease;
 }
 
 /* ── Sidebar states ─────────────────────────────────────────── */
+/* Grid width (--sidebar-w) and opacity are now controlled directly by JS.
+   CSS classes only carry non-grid layout concerns.                        */
 
-/* collapsed: sidebar takes no grid space */
+/* collapsed: sidebar invisible, no grid space (JS sets --sidebar-w: 0)   */
 .app-shell.sidebar-collapsed {
-  grid-template-columns: 0 minmax(0, 1fr);
   gap: 0 1.2rem;
 }
+/* opacity/pointer-events also set by JS as belt-and-suspenders */
 .app-shell.sidebar-collapsed .sidebar {
   opacity: 0;
   pointer-events: none;
 }
 
-/* overlay: sidebar floats as a drawer over content */
+/* overlay: sidebar floats as a fixed drawer (JS sets --sidebar-w: 0)     */
 .app-shell.sidebar-overlay {
-  grid-template-columns: 0 minmax(0, 1fr);
   gap: 0 1.2rem;
 }
 .app-shell.sidebar-overlay .sidebar {
@@ -463,7 +468,7 @@ body[data-theme="noteeli"] .alert-error {
   left: 1.2rem;
   top: 1.2rem;
   bottom: 1.2rem;
-  width: var(--sidebar-w);
+  width: var(--sidebar-open-w);
   z-index: 200;
   transform: translateX(0);
   border-radius: var(--radius);
@@ -2266,7 +2271,7 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
     left: 1.2rem;
     top: 1.2rem;
     bottom: 1.2rem;
-    width: min(var(--sidebar-w), calc(100vw - 2.4rem));
+    width: min(var(--sidebar-open-w), calc(100vw - 2.4rem));
     z-index: 200;
     transform: translateX(calc(-100% - 2rem));
     transition: transform 0.25s ease;

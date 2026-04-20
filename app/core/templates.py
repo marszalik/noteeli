@@ -1,3 +1,5 @@
+import time
+
 from fastapi.responses import HTMLResponse
 from mako.lookup import TemplateLookup
 
@@ -12,8 +14,17 @@ template_lookup = TemplateLookup(
     filesystem_checks=True,
 )
 
+# Version stamp computed at server startup — used for cache-busting static assets.
+# Changes on every server restart (and on every hot-reload cycle in dev mode).
+STATIC_VERSION = int(time.time())
+
 
 def render_template(template_name: str, request, **context) -> HTMLResponse:
     template = template_lookup.get_template(template_name)
-    body = template.render(request=request, settings=get_settings(), **context)
+    body = template.render(
+        request=request,
+        settings=get_settings(),
+        static_version=STATIC_VERSION,
+        **context,
+    )
     return HTMLResponse(body)
