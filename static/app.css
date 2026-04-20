@@ -1067,10 +1067,24 @@ body[data-theme="dark"] .overlay-card {
 }
 
 /* Force scroll on the actual ProseMirror / CodeMirror wrapper.
-   Without this the wrapper grows with content and never scrolls. */
-.toastui-editor-ww-editor,
-.toastui-editor-md-editor {
+   .toastui-editor-main-container is position:absolute inside
+   .toastui-editor-main (position:relative); without height:100% it grows
+   to its content height and never creates a scroll container. */
+.toastui-editor-main-container {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.toastui-editor.ww-mode,
+.toastui-editor.md-mode {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.ProseMirror.toastui-editor-contents {
+  height: 100% !important;
   overflow-y: auto !important;
+  box-sizing: border-box !important;
 }
 
 .toastui-editor-toolbar,
