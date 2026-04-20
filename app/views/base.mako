@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${self.page_title()}</title>
+    <link rel="icon" type="image/svg+xml" href="${request.url_for('static', path='favicon.svg')}" />
     <link rel="stylesheet" href="${request.url_for('static', path='app.css')}" />
     ${self.head_extra()}
   </head>
