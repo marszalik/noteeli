@@ -430,12 +430,85 @@ body[data-theme="noteeli"] .alert-error {
 }
 
 .app-shell {
+  --sidebar-w: 300px;
+  position: relative;
   height: 100vh;
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   gap: 1.2rem;
   padding: 1.2rem;
   overflow: hidden;
+  transition: grid-template-columns 0.25s ease;
+}
+
+/* ── Sidebar states ─────────────────────────────────────────── */
+
+/* collapsed: sidebar takes no grid space */
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+  gap: 0 1.2rem;
+}
+.app-shell.sidebar-collapsed .sidebar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* overlay: sidebar floats as a drawer over content */
+.app-shell.sidebar-overlay {
+  grid-template-columns: 0 minmax(0, 1fr);
+  gap: 0 1.2rem;
+}
+.app-shell.sidebar-overlay .sidebar {
+  position: fixed;
+  left: 1.2rem;
+  top: 1.2rem;
+  bottom: 1.2rem;
+  width: var(--sidebar-w);
+  z-index: 200;
+  transform: translateX(0);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* backdrop when overlay is open */
+.app-shell.sidebar-overlay::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.sidebar {
+  transition: opacity 0.2s ease, transform 0.25s ease;
+}
+
+/* ── Resize handle ──────────────────────────────────────────── */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 1.2rem;
+  bottom: 1.2rem;
+  /* sits in the gap between sidebar and main */
+  left: calc(1.2rem + var(--sidebar-w) - 3px);
+  width: 6px;
+  z-index: 10;
+  cursor: col-resize;
+  border-radius: 3px;
+  transition: background 0.15s, opacity 0.15s;
+  opacity: 0;
+}
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.is-dragging {
+  opacity: 1;
+  background: var(--accent-soft);
+}
+.app-shell:hover .sidebar-resize-handle {
+  opacity: 0.5;
+}
+.app-shell.sidebar-collapsed .sidebar-resize-handle,
+.app-shell.sidebar-overlay .sidebar-resize-handle {
+  display: none;
 }
 
 .sidebar,
@@ -863,6 +936,39 @@ body[data-theme="noteeli"] .tree-row.is-drop-target {
   gap: 1rem;
   align-items: center;
   border-bottom: 1px solid var(--line);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.topbar-left > div {
+  min-width: 0;
+}
+
+/* hamburger + pin shared style */
+.sidebar-toggle-btn,
+.sidebar-pin-btn {
+  flex-shrink: 0;
+}
+
+/* pin button — only visible when sidebar is in overlay mode */
+.sidebar-pin-btn {
+  display: none;
+}
+.app-shell.sidebar-overlay .sidebar-pin-btn {
+  display: inline-flex;
+}
+
+/* brand row: logo + pin side by side */
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 body[data-theme="dark"] .workspace-topbar,
@@ -2146,27 +2252,54 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 768px) {
+  /* On mobile, sidebar is always overlay — never docked */
   .app-shell {
-    grid-template-columns: 1fr;
-    grid-template-rows: 320px minmax(0, 1fr);
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
+    grid-template-columns: 0 minmax(0, 1fr);
+    gap: 0 1.2rem;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app-shell .sidebar {
+    position: fixed;
+    left: 1.2rem;
+    top: 1.2rem;
+    bottom: 1.2rem;
+    width: min(var(--sidebar-w), calc(100vw - 2.4rem));
+    z-index: 200;
+    transform: translateX(calc(-100% - 2rem));
+    transition: transform 0.25s ease;
+    border-radius: var(--radius);
+  }
+
+  .app-shell.sidebar-overlay .sidebar,
+  .app-shell.sidebar-docked .sidebar {
+    transform: translateX(0);
+  }
+
+  /* always show pin on mobile */
+  .sidebar-pin-btn {
+    display: inline-flex !important;
+  }
+
+  /* hide resize handle on mobile */
+  .sidebar-resize-handle {
+    display: none !important;
   }
 
   .workspace-topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .topbar-actions {
-    width: 100%;
-    justify-content: flex-start;
+    gap: 0.5rem;
   }
 
   .sidebar-toolbar .button {
     flex-basis: calc(50% - 0.3rem);
+  }
+}
+
+@media (max-width: 980px) and (min-width: 769px) {
+  .workspace-topbar {
+    gap: 0.6rem;
   }
 }
 
@@ -2238,6 +2371,11 @@ body[data-theme="obsidian"] .app-shell {
   gap: 0;
   padding: 0;
   height: 100vh;
+}
+body[data-theme="obsidian"] .sidebar-resize-handle {
+  top: 0;
+  bottom: 0;
+  left: var(--sidebar-w);
 }
 
 body[data-theme="obsidian"] .sidebar,

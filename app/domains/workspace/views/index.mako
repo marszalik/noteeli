@@ -16,11 +16,16 @@
     data-editor-font-size="${preferences.editor_font_size}"
     data-language="${preferences.language}"
   >
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="brand-block">
-        <a href="/" class="brand-logo-link" aria-label="Noteeli">
-          <img src="${request.url_for('static', path='logo.png')}" alt="Noteeli" class="brand-logo" />
-        </a>
+        <div class="brand-row">
+          <a href="/" class="brand-logo-link" aria-label="Noteeli">
+            <img src="${request.url_for('static', path='logo.png')}" alt="Noteeli" class="brand-logo" />
+          </a>
+          <button id="sidebar-pin" class="icon-button icon-button-small sidebar-pin-btn" type="button" aria-label="Unpin sidebar" title="Unpin sidebar">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+        </div>
         <p id="content-root-display" class="sidebar-path">${content_root}</p>
       </div>
 
@@ -48,12 +53,19 @@
       <div id="tree-root" class="tree-root" aria-live="polite"></div>
     </aside>
 
+    <div class="sidebar-resize-handle" id="sidebar-resize-handle" aria-hidden="true"></div>
+
     <main class="workspace-panel">
       <header class="workspace-topbar">
-        <div>
-          <div class="label">Wybrany plik</div>
-          <h2 id="current-file-label">Wybierz notatke Markdown</h2>
-          <p id="current-file-path" class="muted">Brak zaznaczonego pliku.</p>
+        <div class="topbar-left">
+          <button id="sidebar-toggle" class="icon-button icon-button-small sidebar-toggle-btn" type="button" aria-label="Toggle sidebar" aria-expanded="true" title="Toggle sidebar">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          </button>
+          <div>
+            <div class="label">Wybrany plik</div>
+            <h2 id="current-file-label">Wybierz notatke Markdown</h2>
+            <p id="current-file-path" class="muted">Brak zaznaczonego pliku.</p>
+          </div>
         </div>
 
         <div class="topbar-actions">

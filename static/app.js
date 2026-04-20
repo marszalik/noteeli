@@ -65,6 +65,10 @@ if (shell) {
   const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
   const imageUploadSubdirInput = document.getElementById("image-upload-subdir-input");
   const imageUploadSubdirSection = document.getElementById("image-upload-subdir-section");
+  const sidebarEl = document.getElementById("sidebar");
+  const sidebarToggleBtn = document.getElementById("sidebar-toggle");
+  const sidebarPinBtn = document.getElementById("sidebar-pin");
+  const sidebarResizeHandle = document.getElementById("sidebar-resize-handle");
   const contentRootDisplay = document.getElementById("content-root-display");
   const currentFileLabel = document.getElementById("current-file-label");
   const currentFilePath = document.getElementById("current-file-path");
@@ -112,6 +116,141 @@ if (shell) {
   let diagramToolbarMenu = null;
   let diagramToolbarTrigger = null;
   let lastEditorSelection = null;
+
+  // ---------------------------------------------------------------------------
+  // Sidebar — collapse / overlay / resize
+  // ---------------------------------------------------------------------------
+
+  const SIDEBAR_DEFAULT_WIDTH = 300;
+  const SIDEBAR_MIN_WIDTH = 200;
+  const SIDEBAR_MAX_WIDTH = 520;
+  const MOBILE_BREAKPOINT = 768;
+
+  // Persisted state
+  let sidebarWidth = parseInt(localStorage.getItem("sidebar-width") || SIDEBAR_DEFAULT_WIDTH, 10);
+  // "docked" | "collapsed" | "overlay"
+  let sidebarMode = localStorage.getItem("sidebar-mode") || "docked";
+
+  function isMobile() {
+    return window.innerWidth <= MOBILE_BREAKPOINT;
+  }
+
+  function applyBodySidebarMode(mode) {
+    shell.classList.remove("sidebar-docked", "sidebar-collapsed", "sidebar-overlay");
+    shell.classList.add(`sidebar-${mode}`);
+    const isOpen = mode === "docked" || mode === "overlay";
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.setAttribute("aria-expanded", String(isOpen));
+      sidebarToggleBtn.title = isOpen ? "Collapse sidebar" : "Open sidebar";
+    }
+  }
+
+  function setSidebarWidth(w) {
+    sidebarWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, w));
+    shell.style.setProperty("--sidebar-w", sidebarWidth + "px");
+    localStorage.setItem("sidebar-width", sidebarWidth);
+  }
+
+  function setSidebarMode(mode) {
+    sidebarMode = mode;
+    applyBodySidebarMode(mode);
+    if (mode !== "overlay") {
+      localStorage.setItem("sidebar-mode", mode);
+    }
+  }
+
+  function toggleSidebar() {
+    if (isMobile()) {
+      // Mobile: toggle between overlay and collapsed only
+      setSidebarMode(sidebarMode === "overlay" ? "collapsed" : "overlay");
+      return;
+    }
+    if (sidebarMode === "docked") {
+      setSidebarMode("collapsed");
+    } else if (sidebarMode === "collapsed") {
+      setSidebarMode("overlay");
+    } else {
+      // overlay → collapsed
+      setSidebarMode("collapsed");
+    }
+  }
+
+  function pinSidebar() {
+    // Dock the sidebar (pin it into the layout) and persist
+    setSidebarMode("docked");
+    localStorage.setItem("sidebar-mode", "docked");
+  }
+
+  function closeSidebarOverlay() {
+    if (sidebarMode === "overlay") setSidebarMode("collapsed");
+  }
+
+  function initSidebar() {
+    // On mobile, never start docked
+    if (isMobile() && sidebarMode === "docked") sidebarMode = "collapsed";
+
+    setSidebarWidth(sidebarWidth);
+    applyBodySidebarMode(sidebarMode);
+
+    // Hamburger toggle
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.addEventListener("click", toggleSidebar);
+    }
+
+    // Pin button
+    if (sidebarPinBtn) {
+      sidebarPinBtn.addEventListener("click", pinSidebar);
+    }
+
+    // Click on backdrop closes overlay
+    shell.addEventListener("click", (e) => {
+      if (sidebarMode !== "overlay") return;
+      if (sidebarEl && !sidebarEl.contains(e.target) && e.target !== sidebarToggleBtn) {
+        closeSidebarOverlay();
+      }
+    });
+
+    // Drag to resize
+    if (sidebarResizeHandle) {
+      let startX = 0;
+      let startW = 0;
+
+      const onMove = (e) => {
+        const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+        setSidebarWidth(startW + dx);
+      };
+
+      const onUp = () => {
+        sidebarResizeHandle.classList.remove("is-dragging");
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        document.removeEventListener("touchmove", onMove);
+        document.removeEventListener("touchend", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      sidebarResizeHandle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startW = sidebarWidth;
+        sidebarResizeHandle.classList.add("is-dragging");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    }
+
+    // Auto-collapse on resize to mobile
+    window.addEventListener("resize", () => {
+      if (isMobile() && sidebarMode === "docked") {
+        applyBodySidebarMode("collapsed");
+      }
+    });
+  }
+
+  initSidebar();
 
   function computeInsertRef(sourceMdPath, uploadedPath) {
     const sourceParts = getParentPath(sourceMdPath).split("/").filter(Boolean);
