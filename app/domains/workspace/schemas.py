@@ -16,6 +16,7 @@ class FileDocument(BaseModel):
     name: str
     path: str
     editable: bool
+    file_type: Literal["markdown", "json"] = "markdown"
     content: str
     previewable: bool = False
     preview_kind: Literal["image", "pdf"] | None = None

@@ -41,6 +41,7 @@ class ItemAlreadyExistsError(WorkspaceError):
 class WorkspaceService:
     IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"}
     PDF_EXTENSIONS = {".pdf"}
+    JSON_EXTENSIONS = {".json"}
 
     def __init__(
         self,
@@ -205,6 +206,7 @@ class WorkspaceService:
                 name=name,
                 path=relative_path,
                 editable=True,
+                file_type="json" if self.is_json(rel) else "markdown",
                 content=backend.read_text(rel),
             )
 
@@ -234,7 +236,7 @@ class WorkspaceService:
         backend = self._get_backend()
         rel = self._get_file_path(relative_path, backend)
         if not self.is_editable(rel):
-            raise UnsupportedFileTypeError("Only Markdown files can be saved.")
+            raise UnsupportedFileTypeError("Only Markdown and JSON files can be saved.")
         backend.write_text(rel, content)
         return self.read_document(relative_path)
 
@@ -467,7 +469,14 @@ class WorkspaceService:
         raise DocumentNotFoundError("Embedded asset does not exist.")
 
     def is_editable(self, path: str) -> bool:
-        return Path(path).suffix.lower() in self.settings.allowed_markdown_extensions
+        suffix = Path(path).suffix.lower()
+        return (
+            suffix in self.settings.allowed_markdown_extensions
+            or suffix in self.JSON_EXTENSIONS
+        )
+
+    def is_json(self, path: str) -> bool:
+        return Path(path).suffix.lower() in self.JSON_EXTENSIONS
 
     def get_preview_kind(self, path: str) -> str | None:
         suffix = Path(path).suffix.lower()
@@ -592,9 +601,9 @@ class WorkspaceService:
             raise InvalidPathError("A name is required.")
         if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
             raise InvalidPathError("The item name contains unsupported path separators.")
+        known_extensions = set(self.settings.allowed_markdown_extensions) | self.JSON_EXTENSIONS
         if kind == "file" and not any(
-            candidate.lower().endswith(extension)
-            for extension in self.settings.allowed_markdown_extensions
+            candidate.lower().endswith(ext) for ext in known_extensions
         ):
             candidate = f"{candidate}.md"
         return candidate
