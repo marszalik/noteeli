@@ -5,13 +5,27 @@
       <stop offset="100%" stop-color="#0b1220"/>
     </linearGradient>
   </defs>
+  <!-- rounded app background -->
   <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)"/>
-  <path d="M20 14 h18 l10 10 v26 a4 4 0 0 1 -4 4 H20 a4 4 0 0 1 -4 -4 V18 a4 4 0 0 1 4 -4 z"
-        fill="#f4efe4"/>
-  <path d="M38 14 v8 a2 2 0 0 0 2 2 h8 z" fill="#0b1220" opacity="0.35"/>
-  <g stroke="#0f766e" stroke-width="2.4" stroke-linecap="round">
-    <line x1="22" y1="32" x2="42" y2="32"/>
-    <line x1="22" y1="39" x2="42" y2="39"/>
-    <line x1="22" y1="46" x2="36" y2="46"/>
+
+  <!-- notebook body -->
+  <rect x="14" y="10" width="38" height="46" rx="4" fill="#f4efe4"/>
+  <!-- left binding strip -->
+  <rect x="14" y="10" width="8" height="46" fill="#e2d9c4"/>
+  <!-- spiral rings -->
+  <g fill="none" stroke="#0b1220" stroke-width="1.6" stroke-linecap="round">
+    <path d="M18 14 v4"/>
+    <path d="M18 23 v4"/>
+    <path d="M18 32 v4"/>
+    <path d="M18 41 v4"/>
+    <path d="M18 50 v4"/>
   </g>
+
+  <!-- letter E -->
+  <text x="37" y="43"
+        font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif"
+        font-size="28"
+        font-weight="700"
+        text-anchor="middle"
+        fill="#0f766e">E</text>
 </svg>
