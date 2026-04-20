@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -22,6 +23,25 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(workspace_router)
+
+    # PWA: service worker must be served from the root scope so it can
+    # intercept all same-origin requests (scope = /).
+    @app.get("/service-worker.js", include_in_schema=False)
+    async def service_worker():
+        return FileResponse(
+            settings.static_dir / "service-worker.js",
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"},
+        )
+
+    # PWA: web app manifest
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    async def web_manifest():
+        return FileResponse(
+            settings.static_dir / "manifest.webmanifest",
+            media_type="application/manifest+json",
+        )
+
     return app
 
 

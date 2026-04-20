@@ -3026,3 +3026,31 @@ if (shell) {
     .then(() => loadTree({ autoSelect: true }))
     .catch((error) => setStatus(error.message, true));
 }
+
+// ---------------------------------------------------------------------------
+// PWA — service worker registration
+// ---------------------------------------------------------------------------
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/service-worker.js", { scope: "/" })
+      .then((registration) => {
+        // When a new SW is waiting, reload once it activates so caches refresh
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (
+              newWorker.state === "activated" &&
+              navigator.serviceWorker.controller
+            ) {
+              // A new version is live — reload to pick up fresh assets
+              window.location.reload();
+            }
+          });
+        });
+      })
+      .catch((err) => console.warn("Service worker registration failed:", err));
+  });
+}
