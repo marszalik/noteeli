@@ -1,52 +1,58 @@
 # Noteeli
 
-Webowa aplikacja w Pythonie oparta o FastAPI i szablony Mako. Wyświetla strukturę katalogu z notatkami, pozwala przeglądać pliki Markdown i edytować je w trybie WYSIWYG.
+A Python web application built with FastAPI and Mako templates. It displays a tree of note folders, lets you browse Markdown files, and edit them in a WYSIWYG interface.
 
-Opis architektury i konwencji projektu jest w `ARCHITECTURE.md`.
+Project architecture and conventions are described in `ARCHITECTURE.md`.
 
-## Funkcje
+## Features
 
-- drzewo katalogów i plików w sidebarze
-- podgląd i edycja plików Markdown po prawej stronie
-- logowanie Google dla ruchu spoza `127.0.0.1`, `localhost` i `::1`
-- lokalny bypass logowania dla adresów developerskich
-- SQLite w `.noteeli/noteeli.sqlite3` na ustawienia i manualny order drzewa
-- konfiguracja katalogu z notatkami i sortowania z poziomu UI
+- folder and file tree in the sidebar
+- Markdown preview and editing on the right side
+- Google login for traffic outside `127.0.0.1`, `localhost`, and `::1`
+- local auth bypass for development addresses
+- SQLite in `.noteeli/noteeli.sqlite3` for settings and manual tree ordering
+- UI-based configuration for notes root and sorting
 
-## Uruchomienie
+## Running locally
 
-1. Skopiuj `.env.example` do `.env` i uzupełnij wartości.
-2. Zainstaluj zależności:
+1. Copy `.env.example` to `.env` and fill in the values.
+2. Install dependencies:
 
 ```bash
 python3 -m venv .venv
 ./.venv/bin/pip install -e ".[dev]"
 ```
 
-Albo przez PDM:
+Or with PDM:
 
 ```bash
 pdm install -d
 ```
 
-3. Uruchom serwer:
+3. Start the server:
 
 ```bash
 ./.venv/bin/uvicorn app.main:app --reload
 ```
 
-Albo przez PDM:
+Or with PDM:
 
 ```bash
 pdm run dev
 ```
 
-4. Otwórz aplikację pod adresem `http://127.0.0.1:8000`.
+4. Open the app at `http://127.0.0.1:8000`.
 
-## Zmienne środowiskowe
+## Environment variables
 
-- `NOTEELI_CONTENT_ROOT` - katalog bazowy z notatkami
-- `NOTEELI_DATA_DIR` - katalog na bazę SQLite i dane aplikacji
-- `NOTEELI_SESSION_SECRET` - sekret sesji
-- `NOTEELI_GOOGLE_CLIENT_ID` - identyfikator klienta OAuth Google
-- `NOTEELI_GOOGLE_CLIENT_SECRET` - sekret klienta OAuth Google
+- `NOTEELI_CONTENT_ROOT` - base directory for notes
+- `NOTEELI_DATA_DIR` - directory for SQLite and app data
+- `NOTEELI_SESSION_SECRET` - session secret
+- `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+
+## License
+
+This project is licensed under `AGPL-3.0-or-later`.
+
+This license fits a web-based product that can be both self-hosted and used as a network service. See `LICENSE` for the full text.
