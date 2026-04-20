@@ -19,6 +19,7 @@ def _login_template(request: Request, error_message: str | None = None):
         "domains/auth/views/login.mako",
         request,
         google_configured=auth_service.google_is_configured(),
+        google_emails_configured=auth_service.google_emails_configured(),
         password_configured=auth_service.password_login_configured(),
         error_message=error_message,
     )

@@ -55,14 +55,19 @@ class AuthService:
     def google_is_configured(self) -> bool:
         return bool(self.settings.google_client_id and self.settings.google_client_secret)
 
-    def google_email_is_allowed(self, email: str) -> bool:
-        """Return True if the email is permitted to log in via Google.
+    def google_emails_configured(self) -> bool:
+        """Return True if at least one allowed email is set in .env."""
+        return bool(self.settings.allowed_google_emails.strip())
 
-        If NOTEELI_ALLOWED_GOOGLE_EMAILS is empty, any email is allowed.
+    def google_email_is_allowed(self, email: str) -> bool:
+        """Return True only if the email is on the explicit allowlist.
+
+        If NOTEELI_ALLOWED_GOOGLE_EMAILS is empty, nobody is allowed —
+        the login page shows a hint to edit .env.
         """
         raw = self.settings.allowed_google_emails.strip()
         if not raw:
-            return True
+            return False
         allowed = {e.strip().lower() for e in raw.split(",") if e.strip()}
         return email.strip().lower() in allowed
 
