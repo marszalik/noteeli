@@ -1,31 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#152338"/>
-      <stop offset="100%" stop-color="#0b1220"/>
-    </linearGradient>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 500 500"
+   width="100%"
+   height="100%"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="ico-svg.svg"
+   inkscape:version="1.4.3 (1:1.4.3+202512261035+0d15f75042)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.2699638"
+     inkscape:cx="355.12824"
+     inkscape:cy="254.73167"
+     inkscape:window-width="1294"
+     inkscape:window-height="699"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
+  <defs
+     id="defs1">
+    <style
+       id="style1">
+      .bg { fill: #152638; }
+      .white-stroke { fill: none; stroke: #ffffff; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
+      .white-fill { fill: #ffffff; }
+      .orange-fill { fill: #f9a01b; }
+    </style>
   </defs>
-  <!-- full-bleed background (safe for maskable icons) -->
-  <rect width="512" height="512" fill="url(#bg)"/>
-
-  <!-- notebook body — sits within the ~80% safe zone -->
-  <rect x="130" y="96" width="268" height="320" rx="22" fill="#f4efe4"/>
-  <!-- left binding strip -->
-  <rect x="130" y="96" width="56" height="320" fill="#e2d9c4"/>
-  <!-- spiral rings -->
-  <g fill="none" stroke="#0b1220" stroke-width="11" stroke-linecap="round">
-    <path d="M158 128 v30"/>
-    <path d="M158 192 v30"/>
-    <path d="M158 256 v30"/>
-    <path d="M158 320 v30"/>
-    <path d="M158 384 v20"/>
+  <rect
+     class="bg"
+     width="500"
+     height="500"
+     rx="80"
+     id="rect1" />
+  <path
+     class="white-stroke"
+     d="m 406.29939,111.57485 v 280"
+     id="path1"
+     style="stroke-width:14;stroke-dasharray:none" />
+  <rect
+     class="white-stroke"
+     x="118.11222"
+     y="80.383934"
+     width="261.50385"
+     height="339.23212"
+     rx="27.239985"
+     id="rect2"
+     style="stroke-width:22.9;stroke-dasharray:none" />
+  <g
+     class="white-stroke"
+     id="g6"
+     transform="matrix(0.58998281,0,0,1.0135418,33.527952,-21.473651)">
+    <path
+       d="m 140,120 h -40 a 20,20 0 0 0 0,40 h 40"
+       id="path2" />
+    <path
+       d="m 140,185 h -40 a 20,20 0 0 0 0,40 h 40"
+       id="path3" />
+    <path
+       d="m 140,250 h -40 a 20,20 0 0 0 0,40 h 40"
+       id="path4" />
+    <path
+       d="m 140,315 h -40 a 20,20 0 0 0 0,40 h 40"
+       id="path5" />
+    <path
+       d="m 140,380 h -40 a 20,20 0 0 0 0,40 h 40"
+       id="path6" />
   </g>
-
-  <!-- letter E -->
-  <text x="290" y="316"
-        font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif"
-        font-size="200"
-        font-weight="700"
-        text-anchor="middle"
-        fill="#0f766e">E</text>
+  <path
+     class="white-fill"
+     fill-rule="evenodd"
+     d="m 245.53369,164.59317 c -44.84859,1.05217 -79.83119,37.92753 -78.59882,87.47377 1.23238,49.54624 38.02651,82.08003 82.85614,83.68599 31.50777,1.12872 50.68937,-4.2984 74.34734,-12.73103 6.5532,-2.33581 5.48808,-14.02083 3.15774,-18.8756 -2.15149,-4.48217 -2.62414,-16.39718 -12.95065,-12.75194 -34.74918,12.2664 -37.96898,13.82151 -61.2779,13.84125 -31.43627,0.0267 -41.63793,-17.15412 -46.795,-44.07412 l 122.34136,-3.87391 c -1.34441,-54.05046 -33.74674,-93.85178 -83.08021,-92.69441 z m -37.9145,69.15602 c 6.41544,-33.52297 25.53495,-38.55931 40.15439,-38.55825 15.54319,10e-4 33.47267,5.785 38.74178,37.20921 z"
+     id="path7"
+     sodipodi:nodetypes="sssssssccscscc"
+     style="stroke-width:0.899167" />
+  <path
+     class="orange-fill"
+     d="m 234.4318,342.0478 c 28.62426,13.32962 78.23326,17.03023 96.7301,0 18.55635,-15.55679 36.84956,10 18.42478,30 -27.63717,25 -55.8089,11.29351 -83.44607,-3.70649 -23.03098,-15 -31.70881,-26.29351 -31.70881,-26.29351 z"
+     id="path8"
+     style="stroke-width:0.959812"
+     sodipodi:nodetypes="ccccc" />
 </svg>
