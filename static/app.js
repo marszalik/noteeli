@@ -213,8 +213,11 @@ if (shell) {
   }
 
   function initSidebar() {
-    // On mobile, never start docked
-    if (isMobile() && sidebarMode === "docked") sidebarMode = "collapsed";
+    // On mobile, never start docked.
+    // On medium-width viewports, also collapse if sidebar is wider than available space.
+    if (sidebarMode === "docked" && (isMobile() || window.innerWidth - sidebarWidth < 420)) {
+      sidebarMode = "collapsed";
+    }
 
     // applyBodySidebarMode sets --sidebar-w, --sidebar-open-w, classes, and aria
     applyBodySidebarMode(sidebarMode);
@@ -273,9 +276,12 @@ if (shell) {
       });
     }
 
-    // Auto-collapse on resize to mobile (use setSidebarMode to keep state in sync)
+    // Auto-collapse on resize:
+    //   • always on mobile (≤768 px)
+    //   • on wider viewports when sidebar would leave < 420 px for the workspace
     window.addEventListener("resize", () => {
-      if (isMobile() && sidebarMode === "docked") {
+      if (sidebarMode !== "docked") return;
+      if (isMobile() || window.innerWidth - sidebarWidth < 420) {
         setSidebarMode("collapsed");
       }
     });
