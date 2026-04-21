@@ -2348,12 +2348,25 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
     gap: 0.6rem;
   }
 
-  /* On medium viewports, cap the sidebar grid column so the workspace never
-     shrinks below ~55 % of the viewport regardless of the saved sidebar width.
-     min(var(--sidebar-w), 40vw) is still respected by JS for overlay/collapsed
-     because JS sets --sidebar-w: 0 for those states.                          */
+  /* Cap sidebar to 30 vw on medium viewports so workspace always gets ≥ 70 %.
+     Works for both docked (--sidebar-w = Npx) and collapsed/overlay (0px).   */
   .app-shell {
-    grid-template-columns: min(var(--sidebar-w), 40vw) minmax(0, 1fr);
+    grid-template-columns: min(var(--sidebar-w), 30vw) minmax(0, 1fr);
+  }
+}
+
+/* ── Pure-CSS sidebar collapse safety net ──────────────────────
+   When the docked sidebar would leave < 420 px for the workspace,
+   hide it in the grid (the JS listener fires too but may lag).
+   Covers the gap between the 768px mobile breakpoint and ~1200px. */
+@media (max-width: 1200px) {
+  .app-shell.sidebar-docked {
+    /* Force sidebar column to 0 when viewport is tight enough that
+       sidebarWidth (stored as --sidebar-open-w) > viewport - 420px.
+       We can't read localStorage from CSS, so use a conservative cap:
+       at 1200px the sidebar gets at most 780px for workspace which is fine;
+       the JS auto-collapse handles cases below (viewport - sidebarWidth < 420). */
+    grid-template-columns: min(var(--sidebar-w), calc(100vw - 520px)) minmax(0, 1fr);
   }
 }
 

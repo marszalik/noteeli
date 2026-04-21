@@ -2325,6 +2325,42 @@ if (shell) {
     positionTreeContextMenu(event.clientX, event.clientY);
   }
 
+  /**
+   * Add touch long-press to trigger the context menu (tablet support).
+   * A press held for ≥ 500 ms without moving fires the menu at the touch point.
+   * Moving the finger or lifting it early cancels the timer.
+   */
+  function addLongPressContextMenu(element, node) {
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+
+    element.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      timer = setTimeout(() => {
+        timer = null;
+        // Prevent the subsequent click / contextmenu from firing twice
+        element.addEventListener("touchend", (te) => te.preventDefault(), { once: true });
+        openTreeContextMenu(
+          { preventDefault() {}, clientX: startX, clientY: startY },
+          node,
+        );
+      }, 500);
+    }, { passive: true });
+
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    element.addEventListener("touchend",    cancel, { passive: true });
+    element.addEventListener("touchcancel", cancel, { passive: true });
+    element.addEventListener("touchmove", (e) => {
+      // Cancel if finger moved more than 10 px (user is scrolling)
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) cancel();
+    }, { passive: true });
+  }
+
   function renderDirectoryBrowser(payload) {
     directoryBrowserState = payload;
     renderDirectoryBrowserPath(payload.current_path);
@@ -2670,6 +2706,7 @@ if (shell) {
       });
       row.appendChild(label);
       row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
+      addLongPressContextMenu(row, node);
       enableDragAndDrop(row, node);
       listItem.appendChild(row);
 
@@ -2709,6 +2746,7 @@ if (shell) {
     });
     row.appendChild(fileButton);
     row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
+    addLongPressContextMenu(row, node);
     enableDragAndDrop(row, node);
     listItem.appendChild(row);
 

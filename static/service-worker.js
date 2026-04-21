@@ -12,7 +12,7 @@
  *    and auth stay correct
  */
 
-const VERSION = "noteeli-pwa-v1";
+const VERSION = "noteeli-pwa-v3";
 const APP_SHELL = [
   "/",
   "/static/app.js",
