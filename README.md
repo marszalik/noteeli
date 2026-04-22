@@ -92,26 +92,40 @@ Main variables:
 - `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
 
-### Install with venv
+### clone
+Clone repo to your folder
+
+```bash
+git clone https://github.com/marszalik/noteeli.git
+```
+
+### Install venv
 
 ```bash
 python3 -m venv .venv
-./.venv/bin/pip install -e ".[dev]"
+source .venv/bin/activate
 ```
 
 ### Install with PDM
 
 ```bash
-pdm install -d
+pdm install
 ```
 
-### Run locally
+
+### set credencials
+
+its enough to set some login and password
 
 ```bash
-./.venv/bin/uvicorn app.main:app --reload
+cp .env.example .env
+
+nano .env
 ```
 
-Or with PDM:
+
+
+### run with PDM
 
 ```bash
 pdm run dev
