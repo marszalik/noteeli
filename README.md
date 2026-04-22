@@ -92,11 +92,11 @@ Main variables:
 - `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
 
-### clone
-Clone repo to your folder
+### Clone
 
 ```bash
 git clone https://github.com/marszalik/noteeli.git
+cd noteeli
 ```
 
 ### Install venv
@@ -104,6 +104,7 @@ git clone https://github.com/marszalik/noteeli.git
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+./.venv/bin/pip install -e ".[dev]"
 ```
 
 ### Install with PDM
@@ -112,20 +113,14 @@ source .venv/bin/activate
 pdm install
 ```
 
-
-### set credencials
-
-its enough to set some login and password
+### Set credentials
 
 ```bash
 cp .env.example .env
-
 nano .env
 ```
 
-
-
-### run with PDM
+### Run with PDM
 
 ```bash
 pdm run dev
