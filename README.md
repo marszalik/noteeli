@@ -99,7 +99,7 @@ Clone repo to your folder
 git clone https://github.com/marszalik/noteeli.git
 ```
 
-### Install with venv
+### Install venv
 
 ```bash
 python3 -m venv .venv
@@ -109,8 +109,22 @@ source .venv/bin/activate
 ### Install with PDM
 
 ```bash
-pdm install -d
+pdm install
 ```
+
+
+### set credencials
+
+its enough to set some login and password
+
+```bash
+cp .env.example .env
+
+nano .env
+```
+
+
+
 ### run with PDM
 
 ```bash
