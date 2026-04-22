@@ -122,3 +122,17 @@ Then open:
 ```text
 http://127.0.0.1:8000
 ```
+
+`pdm run dev` starts with `reload` enabled and picks the first free port starting from `8000`.
+
+Production mode with PDM:
+
+```bash
+pdm run prod
+```
+
+Or on a specific port:
+
+```bash
+pdm run prod --port 9000
+```

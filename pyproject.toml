@@ -34,7 +34,8 @@ build-backend = "setuptools.build_meta"
 distribution = false
 
 [tool.pdm.scripts]
-dev = "uvicorn app.main:app --reload"
+dev = "python -m app.run dev"
+prod = "python -m app.run prod"
 test = "pytest tests/test_workspace_service.py"
 
 [tool.setuptools.packages.find]
