@@ -59,6 +59,7 @@ if (shell) {
   const themeModeSelect = document.getElementById("theme-mode-select");
   const languageSelect = document.getElementById("language-select");
   const editorFontSizeInput = document.getElementById("editor-font-size-input");
+  const autosaveEnabledInput = document.getElementById("autosave-enabled-input");
   const profileNameInput = document.getElementById("profile-name-input");
   const profileEditorTitle = document.getElementById("profile-editor-title");
   const settingsProfileList = document.getElementById("settings-profile-list");
@@ -116,6 +117,13 @@ if (shell) {
   let diagramToolbarMenu = null;
   let diagramToolbarTrigger = null;
   let lastEditorSelection = null;
+  let editorDirty = false;
+  let isApplyingDocument = false;
+  let autosaveTimer = null;
+  let autosaveInFlight = false;
+  let autosaveQueued = false;
+
+  const AUTOSAVE_DELAY_MS = 1200;
 
   // ---------------------------------------------------------------------------
   // Sidebar — collapse / overlay / resize
@@ -509,6 +517,7 @@ if (shell) {
   editor.on("addImageBlobHook", handleImageBlob);
   editor.on("change", () => {
     rememberEditorSelection();
+    markEditorDirty();
     scheduleMermaidPreviewRender();
     scheduleWysiwygDiagramRender();
   });
@@ -546,6 +555,9 @@ if (shell) {
       mainMenuBar: true,
       navigationBar: true,
       statusBar: true,
+      onChange() {
+        markEditorDirty();
+      },
       onError(err) {
         setStatus(err.toString(), true);
       },
@@ -860,13 +872,17 @@ if (shell) {
   }
 
   // ── Mode switch button in topbar ──────────────────────────
-  editorModeToggle.addEventListener("click", () => {
-    currentEditorMode = currentEditorMode === "wysiwyg" ? "markdown" : "wysiwyg";
+  function setEditorMode(mode) {
+    currentEditorMode = mode;
     editor.changeMode(currentEditorMode);
     editorModeToggle.textContent = t(currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode");
     editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
     if (currentEditorMode === "wysiwyg") scheduleWysiwygDiagramRender();
     else scheduleMermaidPreviewRender();
+  }
+
+  editorModeToggle.addEventListener("click", () => {
+    setEditorMode(currentEditorMode === "wysiwyg" ? "markdown" : "wysiwyg");
   });
 
   function clampFontSize(value) {
@@ -900,6 +916,8 @@ if (shell) {
       label_language: "Język interfejsu",
       label_theme: "Motyw", theme_light: "Jasny", theme_dark: "Ciemny",
       label_font_size: "Rozmiar czcionki edytora",
+      label_autosave: "Automatyczny zapis",
+      autosave_hint: "Zapisuje zmiany po krótkiej pauzie w pisaniu.",
       label_image_upload: "Wstawianie obrazków",
       img_same_dir: "Ten sam katalog co plik MD",
       img_subdir: "Podkatalog o nazwie",
@@ -958,6 +976,9 @@ if (shell) {
       st_pdf_preview: "Podgląd PDF gotowy.",
       st_image_preview: "Podgląd obrazu gotowy.",
       st_file_not_editable: "Tego pliku nie można edytować.",
+      st_autosave_pending: "Oczekiwanie na automatyczny zapis...",
+      st_autosaving: "Zapisywanie automatyczne...",
+      st_autosaved: "Zapisano automatycznie.",
       st_saving: "Zapisuję plik...",
       st_saved: "Zmiany zapisane.",
       st_json_invalid_saving_raw: "Niepoprawny JSON — zapisano jako tekst.",
@@ -1006,6 +1027,8 @@ if (shell) {
       label_language: "Interface language",
       label_theme: "Theme", theme_light: "Light", theme_dark: "Dark",
       label_font_size: "Editor font size",
+      label_autosave: "Automatic save",
+      autosave_hint: "Saves changes after a short pause while typing.",
       label_image_upload: "Image insertion",
       img_same_dir: "Same directory as MD file",
       img_subdir: "Subdirectory named",
@@ -1064,6 +1087,9 @@ if (shell) {
       st_pdf_preview: "PDF preview ready.",
       st_image_preview: "Image preview ready.",
       st_file_not_editable: "This file cannot be edited.",
+      st_autosave_pending: "Waiting to autosave...",
+      st_autosaving: "Autosaving...",
+      st_autosaved: "Autosaved.",
       st_saving: "Saving file...",
       st_saved: "Changes saved.",
       st_json_invalid_saving_raw: "Invalid JSON — saved as raw text.",
@@ -1112,6 +1138,8 @@ if (shell) {
       label_language: "Idioma de la interfaz",
       label_theme: "Tema", theme_light: "Claro", theme_dark: "Oscuro",
       label_font_size: "Tamaño de fuente del editor",
+      label_autosave: "Guardado automático",
+      autosave_hint: "Guarda los cambios tras una breve pausa al escribir.",
       label_image_upload: "Inserción de imágenes",
       img_same_dir: "Mismo directorio que el archivo MD",
       img_subdir: "Subdirectorio llamado",
@@ -1170,6 +1198,9 @@ if (shell) {
       st_pdf_preview: "Vista previa PDF lista.",
       st_image_preview: "Vista previa de imagen lista.",
       st_file_not_editable: "Este archivo no se puede editar.",
+      st_autosave_pending: "Esperando para guardar automáticamente...",
+      st_autosaving: "Guardando automáticamente...",
+      st_autosaved: "Guardado automáticamente.",
       st_saving: "Guardando archivo...",
       st_saved: "Cambios guardados.",
       st_json_invalid_saving_raw: "JSON inválido — guardado como texto.",
@@ -1218,6 +1249,8 @@ if (shell) {
       label_language: "Oberflächensprache",
       label_theme: "Design", theme_light: "Hell", theme_dark: "Dunkel",
       label_font_size: "Editorschriftgröße",
+      label_autosave: "Automatisch speichern",
+      autosave_hint: "Speichert Änderungen nach einer kurzen Schreibpause.",
       label_image_upload: "Bildeinfügung",
       img_same_dir: "Gleiches Verzeichnis wie MD-Datei",
       img_subdir: "Unterverzeichnis namens",
@@ -1276,6 +1309,9 @@ if (shell) {
       st_pdf_preview: "PDF-Vorschau bereit.",
       st_image_preview: "Bildvorschau bereit.",
       st_file_not_editable: "Diese Datei kann nicht bearbeitet werden.",
+      st_autosave_pending: "Warten auf automatisches Speichern...",
+      st_autosaving: "Automatisches Speichern...",
+      st_autosaved: "Automatisch gespeichert.",
       st_saving: "Datei wird gespeichert...",
       st_saved: "Änderungen gespeichert.",
       st_json_invalid_saving_raw: "Ungültiges JSON — als Text gespeichert.",
@@ -1324,6 +1360,8 @@ if (shell) {
       label_language: "Язык интерфейса",
       label_theme: "Тема", theme_light: "Светлая", theme_dark: "Тёмная",
       label_font_size: "Размер шрифта редактора",
+      label_autosave: "Автосохранение",
+      autosave_hint: "Сохраняет изменения после короткой паузы при вводе.",
       label_image_upload: "Вставка изображений",
       img_same_dir: "Тот же каталог, что и MD-файл",
       img_subdir: "Подкаталог с именем",
@@ -1382,6 +1420,9 @@ if (shell) {
       st_pdf_preview: "Предпросмотр PDF готов.",
       st_image_preview: "Предпросмотр изображения готов.",
       st_file_not_editable: "Этот файл нельзя редактировать.",
+      st_autosave_pending: "Ожидание автосохранения...",
+      st_autosaving: "Автосохранение...",
+      st_autosaved: "Автоматически сохранено.",
       st_saving: "Сохранение файла...",
       st_saved: "Изменения сохранены.",
       st_json_invalid_saving_raw: "Неверный JSON — сохранено как текст.",
@@ -1563,9 +1604,10 @@ if (shell) {
     confirmCreateButton.textContent = t("create_button");
   }
 
-  function setStatus(message, isError = false) {
+  function setStatus(message, isError = false, kind = "") {
     statusMessage.textContent = message;
     statusMessage.style.color = isError ? "#9a3412" : "";
+    statusMessage.classList.toggle("status-autosaving", kind === "autosaving");
   }
 
   function toggleOverlay({ empty = false, unsupported = false }) {
@@ -1890,6 +1932,7 @@ if (shell) {
       sort_mode: sortModeSelect.value,
       theme_mode: themeModeSelect.value,
       editor_font_size: clampFontSize(editorFontSizeInput.value),
+      autosave_enabled: Boolean(autosaveEnabledInput?.checked),
       image_upload_mode: imageUploadModeSelect?.value || "same_dir",
       image_upload_subdir: imageUploadSubdirInput?.value?.trim() || "assets",
       language: languageSelect?.value || "pl",
@@ -1909,6 +1952,7 @@ if (shell) {
     sortModeSelect.value = nextPreferences.sort_mode;
     themeModeSelect.value = nextPreferences.theme_mode;
     editorFontSizeInput.value = String(nextPreferences.editor_font_size);
+    if (autosaveEnabledInput) autosaveEnabledInput.checked = Boolean(nextPreferences.autosave_enabled);
     if (imageUploadModeSelect) imageUploadModeSelect.value = nextPreferences.image_upload_mode || "same_dir";
     if (imageUploadSubdirInput) imageUploadSubdirInput.value = nextPreferences.image_upload_subdir || "assets";
     if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", nextPreferences.image_upload_mode !== "subdir");
@@ -2126,6 +2170,8 @@ if (shell) {
   }
 
   async function resetWorkspaceAfterPreferencesChange() {
+    clearAutosaveTimer();
+    editorDirty = false;
     selectedPath = null;
     selectedEditable = false;
     saveButton.disabled = true;
@@ -2817,11 +2863,15 @@ if (shell) {
 
   async function loadFile(path) {
     try {
+      if (selectedPath && selectedPath !== path) {
+        await flushAutosave();
+      }
       setStatus(t("st_loading_file"));
       const file = await requestJson(`${config.fileUrl}?path=${encodeURIComponent(path)}`, {
         method: "GET",
       });
 
+      isApplyingDocument = true;
       selectedPath = file.path;
       selectedEditable = file.editable;
       selectedFileType = file.file_type || "markdown";
@@ -2844,6 +2894,9 @@ if (shell) {
         setStatus(t("st_file_ready"));
       } else if (file.editable) {
         showEditorMode();
+        if (selectedFileType === "text" && currentEditorMode !== "markdown") {
+          setEditorMode("markdown");
+        }
         editor.setMarkdown(file.content || "", false);
         setTimeout(renderWysiwygDiagrams, 200);
         toggleOverlay({ empty: false, unsupported: false });
@@ -2860,43 +2913,111 @@ if (shell) {
         setStatus(file.message || t("st_file_not_editable"));
       }
 
+      editorDirty = false;
+      clearAutosaveTimer();
+      isApplyingDocument = false;
       renderTree(treeData);
     } catch (error) {
+      isApplyingDocument = false;
       setStatus(error.message, true);
     }
   }
 
-  async function saveFile() {
+  function isAutosaveEnabled() {
+    return Boolean(preferences?.autosave_enabled);
+  }
+
+  function clearAutosaveTimer() {
+    if (!autosaveTimer) return;
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+
+  function markEditorDirty() {
+    if (isApplyingDocument || !selectedPath || !selectedEditable) return;
+    editorDirty = true;
+    scheduleAutosave();
+  }
+
+  function getCurrentEditorContent() {
+    if (selectedFileType === "json") {
+      try {
+        return JSON.stringify(jsonEditor.get(), null, 2);
+      } catch {
+        return jsonEditor.getText();
+      }
+    }
+    if (selectedFileType === "text") {
+      return editor.getMarkdown();
+    }
+    return cleanEmbeddedUrls(editor.getMarkdown());
+  }
+
+  function scheduleAutosave() {
+    clearAutosaveTimer();
+    if (!isAutosaveEnabled() || !selectedPath || !selectedEditable || !editorDirty) return;
+    setStatus(t("st_autosave_pending"), false, "autosaving");
+    const scheduledPath = selectedPath;
+    autosaveTimer = setTimeout(() => {
+      autosaveTimer = null;
+      if (selectedPath !== scheduledPath || !editorDirty) return;
+      saveFile({ automatic: true });
+    }, AUTOSAVE_DELAY_MS);
+  }
+
+  async function flushAutosave() {
+    if (!isAutosaveEnabled() || !editorDirty || !selectedPath || !selectedEditable) return;
+    clearAutosaveTimer();
+    await saveFile({ automatic: true });
+  }
+
+  async function saveFile({ automatic = false } = {}) {
     if (!selectedPath || !selectedEditable) {
       return;
     }
 
-    try {
-      setStatus(t("st_saving"));
+    if (automatic && autosaveInFlight) {
+      autosaveQueued = true;
+      return;
+    }
 
-      let content;
+    try {
+      clearAutosaveTimer();
+      autosaveInFlight = automatic;
+      setStatus(automatic ? t("st_autosaving") : t("st_saving"), false, automatic ? "autosaving" : "");
+
+      const savedPath = selectedPath;
+      const content = getCurrentEditorContent();
       if (selectedFileType === "json") {
-        // JSONEditor serialises to a pretty-printed string
         try {
-          content = JSON.stringify(jsonEditor.get(), null, 2);
+          JSON.parse(content);
         } catch {
-          // code-mode with invalid JSON — save raw text and warn
-          content = jsonEditor.getText();
           setStatus(t("st_json_invalid_saving_raw"), true);
         }
-      } else {
-        content = cleanEmbeddedUrls(editor.getMarkdown());
       }
 
       await requestJson(config.saveUrl, {
         method: "PUT",
-        body: JSON.stringify({ path: selectedPath, content }),
+        body: JSON.stringify({ path: savedPath, content }),
       });
+      if (selectedPath === savedPath) {
+        editorDirty = getCurrentEditorContent() !== content;
+      }
       toggleOverlay({ empty: false, unsupported: false });
-      setStatus(t("st_saved"));
-      await loadTree();
+      setStatus(automatic ? t("st_autosaved") : t("st_saved"));
+      if (!automatic) {
+        await loadTree();
+      }
     } catch (error) {
       setStatus(error.message, true);
+    } finally {
+      if (automatic) {
+        autosaveInFlight = false;
+        if (autosaveQueued) {
+          autosaveQueued = false;
+          scheduleAutosave();
+        }
+      }
     }
   }
 

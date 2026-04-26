@@ -768,8 +768,44 @@ body[data-theme="noteeli"] .context-menu-item-muted {
   white-space: nowrap;
 }
 
+.settings-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.78rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.14rem;
+  accent-color: var(--accent);
+}
+
+.settings-toggle span {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.settings-toggle strong {
+  font-size: 0.9rem;
+}
+
+.settings-toggle small {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 body[data-theme="dark"] .settings-input,
-body[data-theme="noteeli"] .settings-input {
+body[data-theme="dark"] .settings-toggle,
+body[data-theme="noteeli"] .settings-input,
+body[data-theme="noteeli"] .settings-toggle {
   background: rgba(17, 24, 39, 0.78);
   border-color: rgba(148, 163, 184, 0.28);
 }
@@ -1437,6 +1473,29 @@ body[data-theme="noteeli"] .overlay-card {
 .statusbar {
   border-top: 1px solid var(--line);
   color: var(--muted);
+}
+
+#status-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+#status-message.status-autosaving::before {
+  content: "";
+  width: 0.62rem;
+  height: 0.62rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  opacity: 0.78;
+  animation: autosave-spin 0.75s linear infinite;
+}
+
+@keyframes autosave-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .toastui-editor-defaultUI {

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#152338"/>
+      <stop offset="100%" stop-color="#0b1220"/>
+    </linearGradient>
+  </defs>
+  <!-- rounded app background -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)"/>
+
+  <!-- notebook body -->
+  <rect x="14" y="10" width="38" height="46" rx="4" fill="#f4efe4"/>
+  <!-- left binding strip -->
+  <rect x="14" y="10" width="8" height="46" fill="#e2d9c4"/>
+  <!-- spiral rings -->
+  <g fill="none" stroke="#0b1220" stroke-width="1.6" stroke-linecap="round">
+    <path d="M18 14 v4"/>
+    <path d="M18 23 v4"/>
+    <path d="M18 32 v4"/>
+    <path d="M18 41 v4"/>
+    <path d="M18 50 v4"/>
+  </g>
+
+  <!-- letter E -->
+  <text x="37" y="43"
+        font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif"
+        font-size="28"
+        font-weight="700"
+        text-anchor="middle"
+        fill="#0f766e">E</text>
+</svg>

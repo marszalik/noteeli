@@ -36,6 +36,7 @@ class PreferencesRepository:
             ("sort_mode", "alphabetical"),
             ("theme_mode", "light"),
             ("editor_font_size", "16"),
+            ("autosave_enabled", "false"),
             ("image_upload_mode", "same_dir"),
             ("image_upload_subdir", "assets"),
             ("language", "pl"),
@@ -100,6 +101,7 @@ class PreferencesRepository:
         sort_mode: SortMode | None = None,
         theme_mode: ThemeMode | None = None,
         editor_font_size: int | None = None,
+        autosave_enabled: bool | None = None,
         image_upload_mode: ImageUploadMode | None = None,
         image_upload_subdir: str | None = None,
         language: Language | None = None,
@@ -129,6 +131,8 @@ class PreferencesRepository:
             updates.append(("theme_mode", theme_mode))
         if editor_font_size is not None:
             updates.append(("editor_font_size", str(editor_font_size)))
+        if autosave_enabled is not None:
+            updates.append(("autosave_enabled", "true" if autosave_enabled else "false"))
         if image_upload_mode is not None:
             updates.append(("image_upload_mode", image_upload_mode))
         if image_upload_subdir is not None:
@@ -281,6 +285,7 @@ class PreferencesRepository:
             sort_mode=values.get("sort_mode", "alphabetical"),
             theme_mode=values.get("theme_mode", "light"),
             editor_font_size=int(values.get("editor_font_size", "16")),
+            autosave_enabled=self._coerce_bool(values.get("autosave_enabled", False)),
             image_upload_mode=values.get("image_upload_mode", "same_dir"),
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
             language=values.get("language", "pl"),
@@ -304,7 +309,17 @@ class PreferencesRepository:
             sort_mode=preferences.sort_mode,
             theme_mode=preferences.theme_mode,
             editor_font_size=preferences.editor_font_size,
+            autosave_enabled=preferences.autosave_enabled,
             image_upload_mode=preferences.image_upload_mode,
             image_upload_subdir=preferences.image_upload_subdir,
             language=preferences.language,
         )
+
+    def _coerce_bool(self, value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        return False

@@ -71,12 +71,29 @@ def test_non_markdown_file_cannot_be_saved(tmp_path: Path):
     notes = tmp_path / "vault"
     notes.mkdir()
     binary = notes / "archive.zip"
-    binary.write_bytes(b"data")
+    binary.write_bytes(b"PK\x00\x01")
 
     service = build_service(notes)
 
     with pytest.raises(UnsupportedFileTypeError):
         service.save_document("archive.zip", "nope")
+
+
+def test_unknown_text_file_opens_and_saves_as_plain_text(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "config.env"
+    target.write_text("A=1\n", encoding="utf-8")
+
+    service = build_service(notes)
+    document = service.read_document("config.env")
+
+    assert document.editable is True
+    assert document.file_type == "text"
+    assert document.content == "A=1\n"
+
+    service.save_document("config.env", "A=2\n")
+    assert target.read_text(encoding="utf-8") == "A=2\n"
 
 
 def test_create_directory_and_markdown_file(tmp_path: Path):

@@ -281,6 +281,14 @@
           value="${preferences.editor_font_size}"
         />
 
+        <label class="settings-toggle">
+          <input id="autosave-enabled-input" type="checkbox" ${'checked' if preferences.autosave_enabled else ''} />
+          <span>
+            <strong data-i18n="label_autosave">Automatyczny zapis</strong>
+            <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
+          </span>
+        </label>
+
         <label class="settings-label" data-i18n="label_image_upload" for="image-upload-mode-select">Wstawianie obrazkow</label>
         <select id="image-upload-mode-select" class="settings-input">
           <option value="same_dir" data-i18n-opt="img_same_dir" ${'selected' if preferences.image_upload_mode == 'same_dir' else ''}>Ten sam katalog co plik MD</option>

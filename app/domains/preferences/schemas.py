@@ -23,6 +23,7 @@ class AppPreferences(BaseModel):
     sort_mode: SortMode = "alphabetical"
     theme_mode: ThemeMode = "noteeli"
     editor_font_size: int = Field(default=16, ge=12, le=28)
+    autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "pl"
@@ -40,6 +41,7 @@ class UpdatePreferencesRequest(BaseModel):
     sort_mode: SortMode
     theme_mode: ThemeMode
     editor_font_size: int = Field(ge=12, le=28)
+    autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "pl"
@@ -60,6 +62,7 @@ class SavedPreferencesProfile(BaseModel):
     sort_mode: SortMode = "alphabetical"
     theme_mode: ThemeMode = "noteeli"
     editor_font_size: int = Field(default=16, ge=12, le=28)
+    autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "pl"

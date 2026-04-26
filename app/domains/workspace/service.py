@@ -42,6 +42,7 @@ class WorkspaceService:
     IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"}
     PDF_EXTENSIONS = {".pdf"}
     JSON_EXTENSIONS = {".json"}
+    MAX_TEXT_FILE_BYTES = 1024 * 1024
 
     def __init__(
         self,
@@ -76,6 +77,7 @@ class WorkspaceService:
         sftp_path: str = "/",
         gdrive_folder_id: str = "root",
         gdrive_credentials: str | None = None,
+        autosave_enabled: bool = False,
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
@@ -94,6 +96,7 @@ class WorkspaceService:
             sftp_path=sftp_path,
             gdrive_folder_id=gdrive_folder_id,
             gdrive_credentials=gdrive_credentials,
+            autosave_enabled=autosave_enabled,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
@@ -118,6 +121,7 @@ class WorkspaceService:
         sftp_path: str = "/",
         gdrive_folder_id: str = "root",
         gdrive_credentials: str = "",
+        autosave_enabled: bool = False,
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
@@ -136,6 +140,7 @@ class WorkspaceService:
             sftp_path=sftp_path,
             gdrive_folder_id=gdrive_folder_id,
             gdrive_credentials=gdrive_credentials,
+            autosave_enabled=autosave_enabled,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
@@ -158,6 +163,7 @@ class WorkspaceService:
         sftp_path: str = "/",
         gdrive_folder_id: str = "root",
         gdrive_credentials: str = "",
+        autosave_enabled: bool = False,
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
@@ -177,6 +183,7 @@ class WorkspaceService:
             sftp_path=sftp_path,
             gdrive_folder_id=gdrive_folder_id,
             gdrive_credentials=gdrive_credentials,
+            autosave_enabled=autosave_enabled,
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
@@ -206,7 +213,7 @@ class WorkspaceService:
                 name=name,
                 path=relative_path,
                 editable=True,
-                file_type="json" if self.is_json(rel) else "markdown",
+                file_type=self.get_editor_file_type(rel),
                 content=backend.read_text(rel),
             )
 
@@ -222,6 +229,17 @@ class WorkspaceService:
                 message="This file is available in preview mode.",
             )
 
+        text_content = self._read_small_text_file(rel, backend)
+        if text_content is not None:
+            return FileDocument(
+                name=name,
+                path=relative_path,
+                editable=True,
+                file_type="text",
+                content=text_content,
+                message="This file is opened as plain text.",
+            )
+
         return FileDocument(
             name=name,
             path=relative_path,
@@ -229,14 +247,16 @@ class WorkspaceService:
             content="",
             previewable=False,
             preview_kind=None,
-            message="This file type is not supported. The editor saves Markdown only.",
+            message="This file is too large, binary, or not supported for editing.",
         )
 
     def save_document(self, relative_path: str, content: str) -> FileDocument:
         backend = self._get_backend()
         rel = self._get_file_path(relative_path, backend)
-        if not self.is_editable(rel):
-            raise UnsupportedFileTypeError("Only Markdown and JSON files can be saved.")
+        if not self.is_editable(rel) and self.get_preview_kind(rel) is not None:
+            raise UnsupportedFileTypeError("Preview-only files cannot be saved from the editor.")
+        if not self.is_editable(rel) and self._read_small_text_file(rel, backend) is None:
+            raise UnsupportedFileTypeError("Only Markdown, JSON, and small text files can be saved.")
         backend.write_text(rel, content)
         return self.read_document(relative_path)
 
@@ -475,6 +495,16 @@ class WorkspaceService:
             or suffix in self.JSON_EXTENSIONS
         )
 
+    def is_openable_from_tree(self, path: str) -> bool:
+        return self.is_editable(path) or self.get_preview_kind(path) is None
+
+    def get_editor_file_type(self, path: str) -> str:
+        if self.is_json(path):
+            return "json"
+        if Path(path).suffix.lower() in self.settings.allowed_markdown_extensions:
+            return "markdown"
+        return "text"
+
     def is_json(self, path: str) -> bool:
         return Path(path).suffix.lower() in self.JSON_EXTENSIONS
 
@@ -485,6 +515,21 @@ class WorkspaceService:
         if suffix in self.PDF_EXTENSIONS:
             return "pdf"
         return None
+
+    def is_small_text_file(self, path: str, backend: StorageBackend) -> bool:
+        return self._read_small_text_file(path, backend) is not None
+
+    def _read_small_text_file(self, path: str, backend: StorageBackend) -> str | None:
+        try:
+            content = backend.read_bytes(path)
+        except Exception:
+            return None
+        if len(content) > self.MAX_TEXT_FILE_BYTES or b"\x00" in content:
+            return None
+        try:
+            return content.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -558,7 +603,7 @@ class WorkspaceService:
                     name=entry.name,
                     path=entry.relative_path,
                     kind="file",
-                    editable=self.is_editable(entry.name),
+                    editable=self.is_openable_from_tree(entry.relative_path),
                     symlink=entry.is_symlink,
                 ))
 
@@ -569,7 +614,7 @@ class WorkspaceService:
             name=Path(relative_path).name,
             path=relative_path,
             kind="directory" if backend.is_dir(relative_path) else "file",
-            editable=backend.is_file(relative_path) and self.is_editable(relative_path),
+            editable=backend.is_file(relative_path) and self.is_openable_from_tree(relative_path),
         )
 
     def _sort_entries(

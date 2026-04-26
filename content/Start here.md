@@ -6,6 +6,8 @@ To jest przykladowa notatka startowa dla Noteeli.
 * Przelacz sie na tryb WYSIWYG w edytorze.
 * Zmien tresc i zapisz plik.
 
-Ala ma kota
+Ala ma kota 2
 
+<br>
+test
 ![favicon-ankiety.png](./assets/favicon-ankiety.png)
