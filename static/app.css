@@ -86,6 +86,7 @@ body {
 
 body {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -201,6 +202,7 @@ body[data-theme="noteeli"] .button-secondary:hover {
 
 .login-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   background: #18181a;
@@ -436,6 +438,7 @@ body[data-theme="noteeli"] .alert-error {
   --sidebar-open-w: 300px;
   position: relative;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   gap: 1.2rem;
@@ -562,6 +565,9 @@ body[data-theme="noteeli"] .workspace-panel {
 .workspace-topbar h2 {
   margin: 0;
   font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-topbar .label {
@@ -571,6 +577,9 @@ body[data-theme="noteeli"] .workspace-panel {
 #current-file-path {
   margin: 0;
   font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body[data-theme="dark"] .brand-block h1,
@@ -2260,12 +2269,24 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
 }
 
 @media (max-width: 768px) {
-  /* On mobile, sidebar is always overlay — never docked */
-  .app-shell {
-    grid-template-columns: 0 minmax(0, 1fr);
-    gap: 0;        /* no gap: sidebar column is 0, workspace fills the whole row */
+  /* On mobile, sidebar is always overlay — never docked.
+     Specificity boosted (body .app-shell + !important on grid-template-columns)
+     so this ALWAYS beats the .app-shell.sidebar-docked rule from the 1200px
+     media query, regardless of source order or class state. */
+  /* On mobile the sidebar is position:fixed (see rule below), so it's OUT of
+     grid flow. If we leave 2 columns here, auto-placement drops .workspace-panel
+     into the FIRST column — which, being 0px, gives main a 0-width track and
+     the whole UI collapses into the top-left corner. Use a single-column grid
+     so main always fills the row. */
+  body .app-shell,
+  body .app-shell.sidebar-docked,
+  body .app-shell.sidebar-collapsed,
+  body .app-shell.sidebar-overlay {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0;        /* no gap: single column row */
     padding: 0;    /* no outer padding: workspace goes edge-to-edge */
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
   }
 
@@ -2438,6 +2459,7 @@ body[data-theme="obsidian"] .app-shell {
   gap: 0;
   padding: 0;
   height: 100vh;
+  height: 100dvh;
 }
 body[data-theme="obsidian"] .sidebar-resize-handle {
   top: 0;

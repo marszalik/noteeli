@@ -235,7 +235,11 @@ if (shell) {
     // Click on backdrop closes overlay
     shell.addEventListener("click", (e) => {
       if (sidebarMode !== "overlay") return;
-      if (sidebarEl && !sidebarEl.contains(e.target) && e.target !== sidebarToggleBtn) {
+      if (
+        sidebarEl &&
+        !sidebarEl.contains(e.target) &&
+        !(sidebarToggleBtn && sidebarToggleBtn.contains(e.target))
+      ) {
         closeSidebarOverlay();
       }
     });
@@ -3312,26 +3316,33 @@ if (shell) {
 // PWA — service worker registration
 // ---------------------------------------------------------------------------
 
+// PWA temporarily DISABLED for debugging layout issues.
+// Actively unregister any previously-installed SW and purge its caches so that
+// the browser stops serving stale assets. Once unregistered, the next reload
+// goes straight to the network — no manual DevTools dance needed.
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js", { scope: "/" })
-      .then((registration) => {
-        // When a new SW is waiting, reload once it activates so caches refresh
-        registration.addEventListener("updatefound", () => {
-          const newWorker = registration.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener("statechange", () => {
-            if (
-              newWorker.state === "activated" &&
-              navigator.serviceWorker.controller
-            ) {
-              // A new version is live — reload to pick up fresh assets
-              window.location.reload();
-            }
-          });
-        });
-      })
-      .catch((err) => console.warn("Service worker registration failed:", err));
+  window.addEventListener("load", async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      let hadAny = false;
+      for (const reg of regs) {
+        hadAny = true;
+        await reg.unregister();
+      }
+      if (window.caches && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (hadAny) {
+        console.warn("Service worker unregistered + caches cleared — reloading once.");
+        // one-shot reload so the now-uncontrolled page fetches fresh assets
+        if (!sessionStorage.getItem("sw-nuked")) {
+          sessionStorage.setItem("sw-nuked", "1");
+          window.location.reload();
+        }
+      }
+    } catch (err) {
+      console.warn("SW cleanup failed:", err);
+    }
   });
 }
