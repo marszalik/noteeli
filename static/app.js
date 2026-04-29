@@ -2972,11 +2972,11 @@ if (shell) {
       selectedFileType = file.file_type || "markdown";
       selectedCodeMode = null;
       if (selectedFileType === "text") {
+        // All non-md/non-json text content goes through CodeMirror so we never
+        // accidentally render markdown preview for plain config / code files.
         const codeInfo = detectCodeLanguage(file.path);
-        if (codeInfo) {
-          selectedFileType = "code";
-          selectedCodeMode = codeInfo.mode;
-        }
+        selectedFileType = "code";
+        selectedCodeMode = codeInfo ? codeInfo.mode : null;
       }
       selectedTreePath = file.path;
       selectedTreeKind = "file";
@@ -3010,17 +3010,11 @@ if (shell) {
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
       } else if (file.editable) {
+        // Markdown files: restore persisted mode, default to wysiwyg
         showEditorMode();
-        if (selectedFileType === "text") {
-          // Text files: lock to source view, hide the WYSIWYG toggle
-          if (editorModeToggle) editorModeToggle.classList.add("hidden");
-          setEditorMode("markdown", { persist: false });
-        } else {
-          // Markdown files: restore persisted mode, default to wysiwyg
-          if (editorModeToggle) editorModeToggle.classList.remove("hidden");
-          const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
-          setEditorMode(savedMode, { persist: false });
-        }
+        if (editorModeToggle) editorModeToggle.classList.remove("hidden");
+        const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
+        setEditorMode(savedMode, { persist: false });
         editor.setMarkdown(file.content || "", false);
         setTimeout(renderWysiwygDiagrams, 200);
         toggleOverlay({ empty: false, unsupported: false });
@@ -3073,9 +3067,6 @@ if (shell) {
     }
     if (selectedFileType === "code") {
       return codeEditor.getValue();
-    }
-    if (selectedFileType === "text") {
-      return editor.getMarkdown();
     }
     return cleanEmbeddedUrls(editor.getMarkdown());
   }
