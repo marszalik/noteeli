@@ -872,13 +872,14 @@ if (shell) {
   }
 
   // ── Mode switch button in topbar ──────────────────────────
-  function setEditorMode(mode) {
+  function setEditorMode(mode, { persist = true } = {}) {
     currentEditorMode = mode;
     editor.changeMode(currentEditorMode);
     editorModeToggle.textContent = t(currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode");
     editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
     if (currentEditorMode === "wysiwyg") scheduleWysiwygDiagramRender();
     else scheduleMermaidPreviewRender();
+    if (persist) localStorage.setItem("markdown-editor-mode", mode);
   }
 
   editorModeToggle.addEventListener("click", () => {
@@ -1902,6 +1903,19 @@ if (shell) {
     return null;
   }
 
+  function findFileNode(node, targetPath) {
+    if (node.kind === "file" && node.path === targetPath) {
+      return node;
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        const result = findFileNode(child, targetPath);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+
   function applySourceTypeVisibility(sourceType) {
     if (!localSourceSection) return;
     localSourceSection.classList.toggle("hidden", sourceType !== "local");
@@ -1968,6 +1982,7 @@ if (shell) {
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
     applyLanguage(preferences.language || "pl");
+    if (saveButton) saveButton.classList.toggle("hidden", Boolean(preferences.autosave_enabled));
   }
 
   async function loadPreferences() {
@@ -2854,9 +2869,11 @@ if (shell) {
     setStatus(t("st_tree_ready"));
 
     if (autoSelect && !selectedPath) {
-      const firstEditable = findFirstEditable(treeData);
-      if (firstEditable) {
-        await loadFile(firstEditable);
+      const lastFile = localStorage.getItem("last-opened-file");
+      const restorable = lastFile && findFileNode(treeData, lastFile);
+      const pathToOpen = restorable ? lastFile : findFirstEditable(treeData);
+      if (pathToOpen) {
+        await loadFile(pathToOpen);
       }
     }
   }
@@ -2880,6 +2897,7 @@ if (shell) {
       openParentDirectories(file.path);
       updateHeader(file.name, file.path);
       saveButton.disabled = !file.editable;
+      localStorage.setItem("last-opened-file", file.path);
 
       if (file.editable && selectedFileType === "json") {
         showJsonEditorMode();
@@ -2894,8 +2912,15 @@ if (shell) {
         setStatus(t("st_file_ready"));
       } else if (file.editable) {
         showEditorMode();
-        if (selectedFileType === "text" && currentEditorMode !== "markdown") {
-          setEditorMode("markdown");
+        if (selectedFileType === "text") {
+          // Text files: lock to source view, hide the WYSIWYG toggle
+          if (editorModeToggle) editorModeToggle.classList.add("hidden");
+          setEditorMode("markdown", { persist: false });
+        } else {
+          // Markdown files: restore persisted mode, default to wysiwyg
+          if (editorModeToggle) editorModeToggle.classList.remove("hidden");
+          const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
+          setEditorMode(savedMode, { persist: false });
         }
         editor.setMarkdown(file.content || "", false);
         setTimeout(renderWysiwygDiagrams, 200);
