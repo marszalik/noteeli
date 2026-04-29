@@ -199,20 +199,21 @@
           <div id="settings-profile-list" class="settings-profile-list"></div>
         </div>
 
-        <label class="settings-label" data-i18n="label_source" for="source-type-select">Zrodlo notatek</label>
-        <select id="source-type-select" class="settings-input">
-          <option value="local" data-i18n-opt="source_local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
-          <option value="sftp" ${'selected' if preferences.source_type == 'sftp' else ''}>SFTP / SSH</option>
-          <option value="gdrive" ${'selected' if preferences.source_type == 'gdrive' else ''}>Google Drive</option>
-        </select>
+        <div class="settings-group">
+          <h4 class="settings-group-title" data-i18n="group_source">Zrodlo notatek</h4>
+          <select id="source-type-select" class="settings-input">
+            <option value="local" data-i18n-opt="source_local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
+            <option value="sftp" ${'selected' if preferences.source_type == 'sftp' else ''}>SFTP / SSH</option>
+            <option value="gdrive" ${'selected' if preferences.source_type == 'gdrive' else ''}>Google Drive</option>
+          </select>
 
-        <div id="local-source-section" ${'class="hidden"' if preferences.source_type != 'local' else '' | n}>
-          <label class="settings-label" data-i18n="label_notes_dir" for="content-root-input">Katalog notatek</label>
-          <div class="settings-path-row">
-            <input id="content-root-input" class="settings-input" type="text" value="${preferences.content_root}" />
-            <button id="browse-content-root" class="button button-secondary settings-browse-button" type="button" data-i18n="browse">Przegladaj</button>
+          <div id="local-source-section" ${'class="hidden"' if preferences.source_type != 'local' else '' | n}>
+            <label class="settings-label" data-i18n="label_notes_dir" for="content-root-input">Katalog notatek</label>
+            <div class="settings-path-row">
+              <input id="content-root-input" class="settings-input" type="text" value="${preferences.content_root}" />
+              <button id="browse-content-root" class="button button-secondary settings-browse-button" type="button" data-i18n="browse">Przegladaj</button>
+            </div>
           </div>
-        </div>
 
         <div id="sftp-source-section" ${'class="hidden"' if preferences.source_type != 'sftp' else '' | n}>
           <label class="settings-label" for="sftp-host-input">Host SFTP</label>
@@ -248,57 +249,67 @@
           <label class="settings-label" data-i18n="label_folder_id" for="gdrive-folder-id-input">ID folderu (opcjonalne)</label>
           <input id="gdrive-folder-id-input" class="settings-input" type="text" value="${preferences.gdrive_folder_id}" placeholder="root = caly Drive" />
           <p class="muted small-note" data-i18n="gdrive_folder_hint">Skopiuj ID folderu z URL w Google Drive lub zostaw 'root'.</p>
+          </div>
         </div>
 
-        <label class="settings-label" data-i18n="label_sort" for="sort-mode-select">Sortowanie</label>
-        <select id="sort-mode-select" class="settings-input">
-          <option value="alphabetical" data-i18n-opt="sort_alpha" ${'selected' if preferences.sort_mode == 'alphabetical' else ''}>Alfabetyczne</option>
-          <option value="manual" data-i18n-opt="sort_manual" ${'selected' if preferences.sort_mode == 'manual' else ''}>Manualne</option>
-        </select>
+        <div class="settings-group">
+          <h4 class="settings-group-title" data-i18n="group_appearance">Wyglad</h4>
+          <label class="settings-label" data-i18n="label_language" for="language-select">Jezyk interfejsu</label>
+          <select id="language-select" class="settings-input">
+            <option value="pl" ${'selected' if preferences.language == 'pl' else ''}>Polski</option>
+            <option value="en" ${'selected' if preferences.language == 'en' else ''}>English</option>
+            <option value="es" ${'selected' if preferences.language == 'es' else ''}>Español</option>
+            <option value="de" ${'selected' if preferences.language == 'de' else ''}>Deutsch</option>
+            <option value="ru" ${'selected' if preferences.language == 'ru' else ''}>Русский</option>
+          </select>
 
-        <label class="settings-label" data-i18n="label_language" for="language-select">Jezyk interfejsu</label>
-        <select id="language-select" class="settings-input">
-          <option value="pl" ${'selected' if preferences.language == 'pl' else ''}>Polski</option>
-          <option value="en" ${'selected' if preferences.language == 'en' else ''}>English</option>
-          <option value="es" ${'selected' if preferences.language == 'es' else ''}>Español</option>
-          <option value="de" ${'selected' if preferences.language == 'de' else ''}>Deutsch</option>
-          <option value="ru" ${'selected' if preferences.language == 'ru' else ''}>Русский</option>
-        </select>
+          <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
+          <select id="theme-mode-select" class="settings-input">
+            <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
+            <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
+            <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
+            <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>
+          </select>
 
-        <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
-        <select id="theme-mode-select" class="settings-input">
-          <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
-          <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
-          <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
-          <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>
-        </select>
+          <label class="settings-label" data-i18n="label_font_size" for="editor-font-size-input">Rozmiar czcionki edytora</label>
+          <input
+            id="editor-font-size-input"
+            class="settings-input"
+            type="number"
+            min="12"
+            max="28"
+            step="1"
+            value="${preferences.editor_font_size}"
+          />
+        </div>
 
-        <label class="settings-label" data-i18n="label_font_size" for="editor-font-size-input">Rozmiar czcionki edytora</label>
-        <input
-          id="editor-font-size-input"
-          class="settings-input"
-          type="number"
-          min="12"
-          max="28"
-          step="1"
-          value="${preferences.editor_font_size}"
-        />
+        <div class="settings-group">
+          <h4 class="settings-group-title" data-i18n="group_editor">Edytor</h4>
+          <label class="settings-label" data-i18n="label_sort" for="sort-mode-select">Sortowanie</label>
+          <select id="sort-mode-select" class="settings-input">
+            <option value="alphabetical" data-i18n-opt="sort_alpha" ${'selected' if preferences.sort_mode == 'alphabetical' else ''}>Alfabetyczne</option>
+            <option value="manual" data-i18n-opt="sort_manual" ${'selected' if preferences.sort_mode == 'manual' else ''}>Manualne</option>
+          </select>
 
-        <label class="settings-toggle">
-          <input id="autosave-enabled-input" type="checkbox" ${'checked' if preferences.autosave_enabled else ''} />
-          <span>
-            <strong data-i18n="label_autosave">Automatyczny zapis</strong>
-            <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
-          </span>
-        </label>
+          <label class="settings-toggle">
+            <input id="autosave-enabled-input" type="checkbox" ${'checked' if preferences.autosave_enabled else ''} />
+            <span>
+              <strong data-i18n="label_autosave">Automatyczny zapis</strong>
+              <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
+            </span>
+          </label>
+        </div>
 
-        <label class="settings-label" data-i18n="label_image_upload" for="image-upload-mode-select">Wstawianie obrazkow</label>
-        <select id="image-upload-mode-select" class="settings-input">
-          <option value="same_dir" data-i18n-opt="img_same_dir" ${'selected' if preferences.image_upload_mode == 'same_dir' else ''}>Ten sam katalog co plik MD</option>
-          <option value="subdir" data-i18n-opt="img_subdir" ${'selected' if preferences.image_upload_mode == 'subdir' else ''}>Podkatalog o nazwie</option>
-        </select>
-        <div id="image-upload-subdir-section" ${'class="hidden"' if preferences.image_upload_mode != 'subdir' else '' | n}>
-          <input id="image-upload-subdir-input" class="settings-input" type="text" value="${preferences.image_upload_subdir}" placeholder="np. assets" />
+        <div class="settings-group">
+          <h4 class="settings-group-title" data-i18n="group_images">Obrazki</h4>
+          <label class="settings-label" data-i18n="label_image_upload" for="image-upload-mode-select">Wstawianie obrazkow</label>
+          <select id="image-upload-mode-select" class="settings-input">
+            <option value="same_dir" data-i18n-opt="img_same_dir" ${'selected' if preferences.image_upload_mode == 'same_dir' else ''}>Ten sam katalog co plik MD</option>
+            <option value="subdir" data-i18n-opt="img_subdir" ${'selected' if preferences.image_upload_mode == 'subdir' else ''}>Podkatalog o nazwie</option>
+          </select>
+          <div id="image-upload-subdir-section" ${'class="hidden"' if preferences.image_upload_mode != 'subdir' else '' | n}>
+            <input id="image-upload-subdir-input" class="settings-input" type="text" value="${preferences.image_upload_subdir}" placeholder="np. assets" />
+          </div>
         </div>
 
         <p class="muted small-note" data-i18n="db_path_label">Baza SQLite: ${database_path}</p>
