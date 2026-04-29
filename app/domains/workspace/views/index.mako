@@ -6,6 +6,8 @@
 <%def name="head_extra()">
   <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
 </%def>
 
 <%def name="content()">
@@ -123,6 +125,7 @@
       <section class="editor-stage">
         <div id="editor"></div>
         <div id="json-editor" class="json-editor-panel hidden"></div>
+        <div id="code-editor" class="code-editor-panel hidden"></div>
 
         <div id="preview-stage" class="file-preview hidden">
           <img id="image-preview" class="file-preview-image hidden" alt="" />
@@ -377,5 +380,8 @@
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/meta.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/loadmode.min.js"></script>
   <script defer src="${request.url_for('static', path='app.js')}?v=${static_version}"></script>
 </%def>

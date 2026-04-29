@@ -76,6 +76,7 @@ if (shell) {
   const statusMessage = document.getElementById("status-message");
   const editorContainer = document.getElementById("editor");
   const jsonEditorContainer = document.getElementById("json-editor");
+  const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
   const imagePreview = document.getElementById("image-preview");
   const pdfPreview = document.getElementById("pdf-preview");
@@ -546,6 +547,46 @@ if (shell) {
 
   // ── JSON Editor (jsoneditor by josdejong) ─────────────────────────────────
   let jsonEditor = null;
+  let codeEditor = null;
+  let selectedCodeMode = null;
+
+  const CODEMIRROR_VERSION = "5.65.16";
+
+  function getCodeMirrorTheme() {
+    const theme = preferences?.theme_mode || shell.dataset.themeMode || "light";
+    return theme === "light" ? "default" : "dracula";
+  }
+
+  function detectCodeLanguage(path) {
+    if (!window.CodeMirror?.findModeByFileName) return null;
+    const filename = path.split("/").pop();
+    const info = CodeMirror.findModeByFileName(filename);
+    if (!info || !info.mode || info.mode === "null") return null;
+    // markdown / json have their own dedicated editors
+    if (info.mode === "markdown" || info.mode === "javascript" && filename.endsWith(".json")) return null;
+    return info;
+  }
+
+  function initCodeEditor() {
+    if (codeEditor) return;
+    CodeMirror.modeURL = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CODEMIRROR_VERSION}/mode/%N/%N.min.js`;
+    codeEditor = CodeMirror(codeEditorContainer, {
+      value: "",
+      lineNumbers: true,
+      indentUnit: 2,
+      tabSize: 2,
+      lineWrapping: false,
+      theme: getCodeMirrorTheme(),
+    });
+    codeEditor.on("change", () => {
+      markEditorDirty();
+    });
+  }
+
+  function applyCodeEditorTheme() {
+    if (!codeEditor) return;
+    codeEditor.setOption("theme", getCodeMirrorTheme());
+  }
 
   function initJsonEditor() {
     if (jsonEditor) return;
@@ -568,6 +609,7 @@ if (shell) {
     initJsonEditor();
     editorContainer.classList.add("hidden");
     jsonEditorContainer.classList.remove("hidden");
+    codeEditorContainer.classList.add("hidden");
     hidePreview();
     hideUploadStage();
     // hide the WYSIWYG/Markdown toggle — not relevant for JSON
@@ -577,6 +619,22 @@ if (shell) {
   function hideJsonEditorMode() {
     jsonEditorContainer.classList.add("hidden");
     if (editorModeToggle) editorModeToggle.classList.remove("hidden");
+  }
+
+  function showCodeEditorMode() {
+    initCodeEditor();
+    editorContainer.classList.add("hidden");
+    jsonEditorContainer.classList.add("hidden");
+    codeEditorContainer.classList.remove("hidden");
+    hidePreview();
+    hideUploadStage();
+    if (editorModeToggle) editorModeToggle.classList.add("hidden");
+    // CodeMirror needs a refresh once its container becomes visible
+    setTimeout(() => codeEditor?.refresh(), 0);
+  }
+
+  function hideCodeEditorMode() {
+    codeEditorContainer.classList.add("hidden");
   }
 
   const editorStage = editorContainer.closest(".editor-stage") || editorContainer;
@@ -1493,6 +1551,7 @@ if (shell) {
     document.body.dataset.theme = themeMode;
     shell.dataset.themeMode = themeMode;
     mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
+    applyCodeEditorTheme();
     if (currentEditorMode === "wysiwyg") {
       editorContainer.querySelectorAll(".ww-diagram-out").forEach((node) => {
         node.removeAttribute("data-code");
@@ -1512,6 +1571,7 @@ if (shell) {
     shell.dataset.editorFontSize = String(normalized);
     fontSizeLabel.textContent = `${normalized}px`;
     editorFontSizeInput.value = String(normalized);
+    codeEditor?.refresh();
   }
 
   function openSettingsModal() {
@@ -1729,6 +1789,7 @@ if (shell) {
   function showEditorMode() {
     editorContainer.classList.remove("hidden");
     hideJsonEditorMode();
+    hideCodeEditorMode();
     hidePreview();
     hideUploadStage();
     if (editorModeToggle) editorModeToggle.classList.remove("hidden");
@@ -1737,6 +1798,7 @@ if (shell) {
   function showPreviewMode(file) {
     editorContainer.classList.add("hidden");
     hideJsonEditorMode();
+    hideCodeEditorMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
     imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
@@ -1757,6 +1819,7 @@ if (shell) {
   function showUnsupportedMode() {
     editorContainer.classList.add("hidden");
     hideJsonEditorMode();
+    hideCodeEditorMode();
     hidePreview();
     hideUploadStage();
   }
@@ -2897,6 +2960,14 @@ if (shell) {
       selectedPath = file.path;
       selectedEditable = file.editable;
       selectedFileType = file.file_type || "markdown";
+      selectedCodeMode = null;
+      if (selectedFileType === "text") {
+        const codeInfo = detectCodeLanguage(file.path);
+        if (codeInfo) {
+          selectedFileType = "code";
+          selectedCodeMode = codeInfo.mode;
+        }
+      }
       selectedTreePath = file.path;
       selectedTreeKind = "file";
       openParentDirectories(file.path);
@@ -2914,6 +2985,17 @@ if (shell) {
           // invalid JSON on disk — fall back to code mode so user can fix it
           jsonEditor.setText(file.content || "");
           jsonEditor.setMode("code");
+        }
+        toggleOverlay({ empty: false, unsupported: false });
+        setStatus(t("st_file_ready"));
+      } else if (file.editable && selectedFileType === "code") {
+        showCodeEditorMode();
+        codeEditor.setOption("mode", null);
+        codeEditor.setValue(file.content || "");
+        codeEditor.clearHistory();
+        if (selectedCodeMode) {
+          codeEditor.setOption("mode", selectedCodeMode);
+          CodeMirror.autoLoadMode(codeEditor, selectedCodeMode);
         }
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
@@ -2978,6 +3060,9 @@ if (shell) {
       } catch {
         return jsonEditor.getText();
       }
+    }
+    if (selectedFileType === "code") {
+      return codeEditor.getValue();
     }
     if (selectedFileType === "text") {
       return editor.getMarkdown();

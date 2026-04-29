@@ -1231,6 +1231,19 @@ body[data-theme="noteeli"] .editor-stage {
   overflow: hidden;
 }
 
+/* ── Code Editor panel (CodeMirror) ─────────────────────────── */
+.code-editor-panel {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.code-editor-panel .CodeMirror {
+  height: 100%;
+  font-size: var(--editor-font-size, 16px);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
 /* Override jsoneditor default colours to match our themes */
 .jsoneditor,
 .jsoneditor-menu {
