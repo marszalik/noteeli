@@ -98,7 +98,7 @@
           </div>
           <button
             id="editor-mode-toggle"
-            class="button button-secondary editor-mode-toggle"
+            class="button button-secondary button-sm editor-mode-toggle"
             type="button"
             aria-label="Przelacz tryb edycji"
             title="Przelacz tryb: WYSIWYG <-> Markdown"
@@ -109,14 +109,14 @@
             </svg>
           </button>
           % if user.get("is_local"):
-            <span class="user-chip">Tryb lokalny</span>
+            <span class="user-chip" data-i18n="local_mode_chip">Tryb lokalny</span>
           % else:
             <span class="user-chip">${user.get("email")}</span>
             <form method="post" action="${request.url_for('logout_action')}">
-              <button class="button button-secondary" type="submit">Wyloguj</button>
+              <button class="button button-secondary button-sm" type="submit" data-i18n="logout_button">Wyloguj</button>
             </form>
           % endif
-          <button id="save-button" class="button button-primary" type="button" disabled>Zapisz</button>
+          <button id="save-button" class="button button-primary button-sm" type="button" data-i18n="save_button" disabled>Zapisz</button>
         </div>
       </header>
 
