@@ -550,7 +550,7 @@ if (shell) {
   function initJsonEditor() {
     if (jsonEditor) return;
     jsonEditor = new JSONEditor(jsonEditorContainer, {
-      mode: "tree",
+      mode: "form",
       modes: ["tree", "form", "code", "preview"],
       mainMenuBar: true,
       navigationBar: true,
@@ -2907,9 +2907,11 @@ if (shell) {
       if (file.editable && selectedFileType === "json") {
         showJsonEditorMode();
         try {
+          jsonEditor.setMode("form");
           jsonEditor.set(JSON.parse(file.content || "{}"));
+          jsonEditor.expandAll?.();
         } catch {
-          // invalid JSON on disk — fall back to text mode so user can fix it
+          // invalid JSON on disk — fall back to code mode so user can fix it
           jsonEditor.setText(file.content || "");
           jsonEditor.setMode("code");
         }
