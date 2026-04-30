@@ -96,6 +96,47 @@ body[data-theme="webnote"] {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
+/* ── Themed scrollbars ───────────────────────────────────────
+   Pulls colours from per-theme CSS variables so the scrollbar tones
+   itself to the active palette instead of using the bright system
+   default. Covers Firefox (scrollbar-width/color) and Chromium/Safari
+   (::-webkit-scrollbar). Applies broadly via `*` so editors
+   (Toast UI, CodeMirror, JSONEditor) and modal scroll areas all pick
+   it up without per-component selectors. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted, #888) 45%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted, #888) 40%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 32px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted, #888) 70%, transparent);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 /* Webnote typography: serif for headings, mono for navigation/labels —
    matches the IBM Plex stack used on the marketing site. */
 body[data-theme="webnote"] h1,
