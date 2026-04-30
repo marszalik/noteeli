@@ -3649,7 +3649,8 @@ if (shell) {
       closeUploadMode();
     }
     if (event.key === "Enter" && document.activeElement === createNameInput && !createModal.classList.contains("hidden")) {
-      createItem();
+      if (modalAction === "rename") renameItem();
+      else createItem();
     }
     if (event.key === "Enter" && document.activeElement === directoryBrowserCreateInput && directoryBrowserCreateOpen) {
       createDirectoryFromBrowser();

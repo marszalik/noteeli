@@ -287,13 +287,27 @@ class WorkspaceService:
         backend = self._get_backend()
         src_rel = self._resolve_path(path, backend)
         kind = "directory" if backend.is_dir(src_rel) else "file"
-        normalized = self._normalize_item_name(new_name, kind)
+
+        candidate = new_name.strip()
+        if not candidate:
+            raise InvalidPathError("A name is required.")
+        if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
+            raise InvalidPathError("The item name contains unsupported path separators.")
+
+        # Rename should preserve the existing extension when the user typed
+        # just a bare name. _normalize_item_name (used by create) blindly
+        # appends .md, which corrupts non-markdown files like images.
+        if kind == "file":
+            original_suffix = Path(src_rel).suffix
+            if "." not in candidate and original_suffix:
+                candidate = f"{candidate}{original_suffix}"
+
         parent_rel = str(Path(src_rel).parent)
         if parent_rel == ".":
             parent_rel = ""
-        dst_rel = f"{parent_rel}/{normalized}" if parent_rel else normalized
+        dst_rel = f"{parent_rel}/{candidate}" if parent_rel else candidate
         if backend.exists(dst_rel):
-            raise ItemAlreadyExistsError(f"Item '{normalized}' already exists.")
+            raise ItemAlreadyExistsError(f"Item '{candidate}' already exists.")
         backend.rename(src_rel, dst_rel)
         return self._build_item_response(dst_rel, backend)
 
