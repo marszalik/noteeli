@@ -94,6 +94,7 @@ body[data-theme="webnote"] {
     linear-gradient(120deg, rgba(242, 176, 29, 0.12), transparent 34%),
     linear-gradient(180deg, #08111a 0%, #09131d 42%, #070e15 100%);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-size: 14px;
 }
 
 /* ── Themed scrollbars ───────────────────────────────────────
@@ -2704,10 +2705,16 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
   justify-content: center;
 }
 
-.tree-icon-folder { color: #c8974a; }
-.tree-icon-md     { color: #6b9fd4; }
-.tree-icon-image  { color: #6aaf76; }
-.tree-icon-pdf    { color: #c96b6b; }
+.tree-icon-folder  { color: #c8974a; }
+.tree-icon-md      { color: #6b9fd4; }
+.tree-icon-image   { color: #6aaf76; }
+.tree-icon-pdf     { color: #c96b6b; }
+.tree-icon-json    { color: #d4a55a; }
+.tree-icon-code    { color: #b884e0; }
+.tree-icon-archive { color: #a89472; }
+.tree-icon-audio   { color: #5fb8a8; }
+.tree-icon-video   { color: #d878a8; }
+.tree-icon-text    { color: #98a2b3; }
 .tree-icon-generic { color: var(--muted); }
 
 /* ── Brand logo ──────────────────────────────────────────── */
@@ -3321,8 +3328,14 @@ body[data-theme="obsidian"] .alert-error {
   border-color: rgba(242, 135, 121, 0.3);
 }
 
-body[data-theme="obsidian"] .tree-icon-folder { color: #d4a73a; }
-body[data-theme="obsidian"] .tree-icon-md     { color: #6b9fd4; }
-body[data-theme="obsidian"] .tree-icon-image  { color: #6aaf76; }
-body[data-theme="obsidian"] .tree-icon-pdf    { color: #c96b6b; }
+body[data-theme="obsidian"] .tree-icon-folder  { color: #d4a73a; }
+body[data-theme="obsidian"] .tree-icon-md      { color: #6b9fd4; }
+body[data-theme="obsidian"] .tree-icon-image   { color: #6aaf76; }
+body[data-theme="obsidian"] .tree-icon-pdf     { color: #c96b6b; }
+body[data-theme="obsidian"] .tree-icon-json    { color: #d4a55a; }
+body[data-theme="obsidian"] .tree-icon-code    { color: #b884e0; }
+body[data-theme="obsidian"] .tree-icon-archive { color: #a89472; }
+body[data-theme="obsidian"] .tree-icon-audio   { color: #5fb8a8; }
+body[data-theme="obsidian"] .tree-icon-video   { color: #d878a8; }
+body[data-theme="obsidian"] .tree-icon-text    { color: #98a2b3; }
 body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }

@@ -2840,8 +2840,30 @@ if (shell) {
     fileMd: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5-5H9v-2h4v2zm2-4H9v-2h6v2z",
     fileImage: "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
     filePdf: "M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z",
+    fileCode: "M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z",
+    fileJson: "M5 3a2 2 0 0 0-2 2v3c0 1-.5 2-1.5 2 1 0 1.5 1 1.5 2v3a2 2 0 0 0 2 2h2v-2H6a1 1 0 0 1-1-1v-2c0-1-.5-2-1.5-2 1 0 1.5-1 1.5-2V6a1 1 0 0 1 1-1h1V3H5zm14 0h-2v2h1a1 1 0 0 1 1 1v2c0 1 .5 2 1.5 2-1 0-1.5 1-1.5 2v2a1 1 0 0 1-1 1h-1v2h2a2 2 0 0 0 2-2v-3c0-1 .5-2 1.5-2-1 0-1.5-1-1.5-2V5a2 2 0 0 0-2-2zm-7 6.5a1.5 1.5 0 0 0-1.5 1.5v2a1.5 1.5 0 0 0 3 0v-2a1.5 1.5 0 0 0-1.5-1.5z",
+    fileArchive: "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7 5h-2v2h2v2h-2v2h-2v-2h2v-2h-2v-2h2V9h-2V7h2v2h2v2z",
+    fileAudio: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 18c-1.66 0-3-1.34-3-3s1.34-3 3-3c.35 0 .69.07 1 .17V8h3v2h-2v7c0 1.66-1.34 3-3 3z",
+    fileVideo: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-4 16v-7l5 3.5-5 3.5z",
+    fileText: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
     fileGeneric: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z",
   };
+
+  // Extension → category mapping. Keep in sync with the CSS colours below
+  // (.tree-icon-code / -json / -archive / -audio / -video / -text).
+  const CODE_EXT = new Set([
+    "py", "js", "mjs", "cjs", "jsx", "ts", "tsx", "php", "rb", "go", "rs",
+    "java", "c", "cpp", "cc", "cxx", "h", "hpp", "cs", "swift", "kt", "kts",
+    "lua", "sh", "bash", "zsh", "fish", "sql", "css", "scss", "sass", "less",
+    "html", "htm", "xml", "vue", "svelte", "yaml", "yml", "toml",
+    "dart", "scala", "clj", "ex", "exs", "erl", "hs", "elm", "ml", "r", "pl",
+  ]);
+  const ARCHIVE_EXT = new Set([
+    "zip", "tar", "gz", "tgz", "rar", "7z", "bz2", "xz", "z", "lz", "lzma",
+  ]);
+  const AUDIO_EXT = new Set(["mp3", "wav", "ogg", "flac", "m4a", "aac", "opus"]);
+  const VIDEO_EXT = new Set(["mp4", "mov", "avi", "mkv", "webm", "m4v", "wmv", "flv"]);
+  const TEXT_EXT = new Set(["txt", "log", "conf", "ini", "env", "cfg", "rst", "tex"]);
 
   function getFileIconInfo(name) {
     const ext = (name.split(".").pop() || "").toLowerCase();
@@ -2851,6 +2873,18 @@ if (shell) {
       return { d: TREE_ICONS.filePdf, cls: "tree-icon-pdf" };
     if (ext === "md" || ext === "markdown")
       return { d: TREE_ICONS.fileMd, cls: "tree-icon-md" };
+    if (ext === "json" || ext === "json5" || ext === "jsonc")
+      return { d: TREE_ICONS.fileJson, cls: "tree-icon-json" };
+    if (CODE_EXT.has(ext))
+      return { d: TREE_ICONS.fileCode, cls: "tree-icon-code" };
+    if (ARCHIVE_EXT.has(ext))
+      return { d: TREE_ICONS.fileArchive, cls: "tree-icon-archive" };
+    if (AUDIO_EXT.has(ext))
+      return { d: TREE_ICONS.fileAudio, cls: "tree-icon-audio" };
+    if (VIDEO_EXT.has(ext))
+      return { d: TREE_ICONS.fileVideo, cls: "tree-icon-video" };
+    if (TEXT_EXT.has(ext))
+      return { d: TREE_ICONS.fileText, cls: "tree-icon-text" };
     return { d: TREE_ICONS.fileGeneric, cls: "tree-icon-generic" };
   }
 
