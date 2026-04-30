@@ -298,6 +298,22 @@
               <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
             </span>
           </label>
+
+          <label class="settings-label" data-i18n="label_code_theme" for="code-theme-select">Motyw kolorowania kodu</label>
+          <select id="code-theme-select" class="settings-input">
+            <option value="auto" data-i18n-opt="code_theme_auto">Automatyczny</option>
+            <option value="default">Default (jasny)</option>
+            <option value="material-darker">Material Darker (VS Code-like)</option>
+            <option value="darcula">Darcula (JetBrains)</option>
+            <option value="monokai">Monokai</option>
+            <option value="dracula">Dracula</option>
+            <option value="nord">Nord</option>
+            <option value="ayu-dark">Ayu Dark</option>
+            <option value="tomorrow-night-eighties">Tomorrow Night</option>
+            <option value="eclipse">Eclipse (jasny)</option>
+            <option value="idea">IntelliJ IDEA (jasny)</option>
+            <option value="solarized">Solarized</option>
+          </select>
         </div>
 
         <div class="settings-group">

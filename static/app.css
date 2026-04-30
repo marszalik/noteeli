@@ -1246,6 +1246,15 @@ body[data-theme="noteeli"] .editor-stage {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
+/* Tame the default theme — keywords, atoms etc. ship with bold weight which
+   makes everything look shouty. Drop bold/italic across the board so any
+   theme reads as a calm token-coloured surface. */
+.code-editor-panel .CodeMirror,
+.code-editor-panel .CodeMirror span {
+  font-weight: 400 !important;
+  font-style: normal !important;
+}
+
 /* Override jsoneditor default colours to match our themes */
 .jsoneditor,
 .jsoneditor-menu {

@@ -63,6 +63,7 @@ if (shell) {
   const profileNameInput = document.getElementById("profile-name-input");
   const profileEditorTitle = document.getElementById("profile-editor-title");
   const settingsProfileList = document.getElementById("settings-profile-list");
+  const codeThemeSelect = document.getElementById("code-theme-select");
   const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
   const imageUploadSubdirInput = document.getElementById("image-upload-subdir-input");
   const imageUploadSubdirSection = document.getElementById("image-upload-subdir-section");
@@ -552,9 +553,24 @@ if (shell) {
 
   const CODEMIRROR_VERSION = "5.65.16";
 
+  // Set of CodeMirror theme stylesheets we have already injected.
+  // "default" is built into codemirror.css, so it never needs loading.
+  const loadedCodeThemes = new Set(["default"]);
+
+  function ensureCodeThemeLoaded(theme) {
+    if (!theme || theme === "default" || loadedCodeThemes.has(theme)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CODEMIRROR_VERSION}/theme/${theme}.min.css`;
+    document.head.appendChild(link);
+    loadedCodeThemes.add(theme);
+  }
+
   function getCodeMirrorTheme() {
+    const stored = localStorage.getItem("code-theme");
+    if (stored && stored !== "auto") return stored;
     const theme = preferences?.theme_mode || shell.dataset.themeMode || "light";
-    return theme === "light" ? "default" : "dracula";
+    return theme === "light" ? "default" : "material-darker";
   }
 
   function detectCodeLanguage(path) {
@@ -585,7 +601,9 @@ if (shell) {
 
   function applyCodeEditorTheme() {
     if (!codeEditor) return;
-    codeEditor.setOption("theme", getCodeMirrorTheme());
+    const theme = getCodeMirrorTheme();
+    ensureCodeThemeLoaded(theme);
+    codeEditor.setOption("theme", theme);
   }
 
   function initJsonEditor() {
@@ -985,6 +1003,7 @@ if (shell) {
       save_button: "Zapisz", logout_button: "Wyloguj", local_mode_chip: "Tryb lokalny",
       group_source: "Źródło notatek", group_appearance: "Wygląd",
       group_editor: "Edytor", group_images: "Obrazki",
+      label_code_theme: "Motyw kolorowania kodu", code_theme_auto: "Automatyczny",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
       selected_file_label: "Wybrany plik",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1099,6 +1118,7 @@ if (shell) {
       save_button: "Save", logout_button: "Sign out", local_mode_chip: "Local mode",
       group_source: "Notes source", group_appearance: "Appearance",
       group_editor: "Editor", group_images: "Images",
+      label_code_theme: "Code highlighting theme", code_theme_auto: "Automatic",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
       selected_file_label: "Selected file",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1213,6 +1233,7 @@ if (shell) {
       save_button: "Guardar", logout_button: "Cerrar sesión", local_mode_chip: "Modo local",
       group_source: "Fuente de notas", group_appearance: "Apariencia",
       group_editor: "Editor", group_images: "Imágenes",
+      label_code_theme: "Tema de resaltado de código", code_theme_auto: "Automático",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
       selected_file_label: "Archivo seleccionado",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1327,6 +1348,7 @@ if (shell) {
       save_button: "Speichern", logout_button: "Abmelden", local_mode_chip: "Lokaler Modus",
       group_source: "Notizenquelle", group_appearance: "Darstellung",
       group_editor: "Editor", group_images: "Bilder",
+      label_code_theme: "Syntaxhervorhebungs-Theme", code_theme_auto: "Automatisch",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
       selected_file_label: "Ausgewählte Datei",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1441,6 +1463,7 @@ if (shell) {
       save_button: "Сохранить", logout_button: "Выйти", local_mode_chip: "Локальный режим",
       group_source: "Источник заметок", group_appearance: "Оформление",
       group_editor: "Редактор", group_images: "Изображения",
+      label_code_theme: "Тема подсветки кода", code_theme_auto: "Автоматически",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
       selected_file_label: "Выбранный файл",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -2008,6 +2031,16 @@ if (shell) {
   if (imageUploadModeSelect) {
     imageUploadModeSelect.addEventListener("change", () => {
       imageUploadSubdirSection?.classList.toggle("hidden", imageUploadModeSelect.value !== "subdir");
+    });
+  }
+
+  if (codeThemeSelect) {
+    codeThemeSelect.value = localStorage.getItem("code-theme") || "auto";
+    codeThemeSelect.addEventListener("change", () => {
+      const value = codeThemeSelect.value;
+      if (value === "auto") localStorage.removeItem("code-theme");
+      else localStorage.setItem("code-theme", value);
+      applyCodeEditorTheme();
     });
   }
 
