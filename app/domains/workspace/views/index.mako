@@ -173,7 +173,7 @@
   <div id="tree-context-menu" class="context-menu hidden" aria-hidden="true"></div>
 
   <div id="settings-modal" class="modal-backdrop hidden" aria-hidden="true">
-    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section class="modal-card modal-card-settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <header class="modal-header">
         <div>
           <div class="label" data-i18n="label_config">Konfiguracja</div>
@@ -182,154 +182,161 @@
         <button id="close-settings" class="icon-button" type="button" aria-label="Zamknij ustawienia">X</button>
       </header>
 
-      <div class="modal-content">
-        <div class="settings-profile-panel">
-          <div class="settings-profile-panel-header">
-            <div>
-              <div class="label" data-i18n="label_profiles">Profile</div>
-              <strong id="profile-editor-title" data-i18n="profile_new">Nowy profil</strong>
+      <div class="settings-body">
+        <nav class="settings-tabs" role="tablist">
+          <button class="settings-tab is-active" type="button" data-tab="source" role="tab" data-i18n="group_source">Zrodlo</button>
+          <button class="settings-tab" type="button" data-tab="appearance" role="tab" data-i18n="group_appearance">Wyglad</button>
+          <button class="settings-tab" type="button" data-tab="editor" role="tab" data-i18n="group_editor">Edytor</button>
+          <button class="settings-tab" type="button" data-tab="images" role="tab" data-i18n="group_images">Obrazki</button>
+          <button class="settings-tab" type="button" data-tab="profiles" role="tab" data-i18n="group_profiles">Profile</button>
+        </nav>
+
+        <div class="settings-tab-content">
+          <section class="settings-tab-panel" data-panel="source" role="tabpanel">
+            <label class="settings-label" data-i18n="label_source" for="source-type-select">Zrodlo notatek</label>
+            <select id="source-type-select" class="settings-input">
+              <option value="local" data-i18n-opt="source_local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
+              <option value="sftp" ${'selected' if preferences.source_type == 'sftp' else ''}>SFTP / SSH</option>
+              <option value="gdrive" ${'selected' if preferences.source_type == 'gdrive' else ''}>Google Drive</option>
+            </select>
+
+            <div id="local-source-section" ${'class="hidden"' if preferences.source_type != 'local' else '' | n}>
+              <label class="settings-label" data-i18n="label_notes_dir" for="content-root-input">Katalog notatek</label>
+              <div class="settings-path-row">
+                <input id="content-root-input" class="settings-input" type="text" value="${preferences.content_root}" />
+                <button id="browse-content-root" class="button button-secondary settings-browse-button" type="button" data-i18n="browse">Przegladaj</button>
+              </div>
             </div>
-            <button id="cancel-profile-edit" class="button button-secondary hidden" type="button" data-i18n="cancel_edit">Anuluj edycje</button>
-          </div>
-          <div class="settings-path-row">
-            <input id="profile-name-input" class="settings-input" type="text" placeholder="np. SFTP firmowy albo Projekty lokalne" />
-            <button id="save-profile" class="button button-secondary settings-browse-button" type="button" data-i18n="save_profile">Zapamietaj</button>
-          </div>
-          <p class="muted small-note" data-i18n="profile_hint">Zapisuje aktualne pola formularza jako profil do szybkiego przelaczania z gornego menu.</p>
-          <div id="settings-profile-list" class="settings-profile-list"></div>
-        </div>
 
-        <div class="settings-group">
-          <h4 class="settings-group-title" data-i18n="group_source">Zrodlo notatek</h4>
-          <select id="source-type-select" class="settings-input">
-            <option value="local" data-i18n-opt="source_local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
-            <option value="sftp" ${'selected' if preferences.source_type == 'sftp' else ''}>SFTP / SSH</option>
-            <option value="gdrive" ${'selected' if preferences.source_type == 'gdrive' else ''}>Google Drive</option>
-          </select>
+            <div id="sftp-source-section" ${'class="hidden"' if preferences.source_type != 'sftp' else '' | n}>
+              <label class="settings-label" for="sftp-host-input">Host SFTP</label>
+              <input id="sftp-host-input" class="settings-input" type="text" value="${preferences.sftp_host}" placeholder="np. 192.168.1.10 lub moj-serwer.pl" />
 
-          <div id="local-source-section" ${'class="hidden"' if preferences.source_type != 'local' else '' | n}>
-            <label class="settings-label" data-i18n="label_notes_dir" for="content-root-input">Katalog notatek</label>
+              <label class="settings-label" data-i18n="label_port" for="sftp-port-input">Port</label>
+              <input id="sftp-port-input" class="settings-input" type="number" min="1" max="65535" value="${preferences.sftp_port}" />
+
+              <label class="settings-label" data-i18n="label_user" for="sftp-username-input">Uzytkownik</label>
+              <input id="sftp-username-input" class="settings-input" type="text" value="${preferences.sftp_username}" placeholder="np. eli" />
+
+              <label class="settings-label" data-i18n="label_password" for="sftp-password-input">Haslo</label>
+              <input id="sftp-password-input" class="settings-input" type="password" value="${preferences.sftp_password}" autocomplete="new-password" />
+
+              <label class="settings-label" data-i18n="label_remote_path" for="sftp-path-input">Sciezka zdalna</label>
+              <input id="sftp-path-input" class="settings-input" type="text" value="${preferences.sftp_path}" placeholder="np. /home/eli/notatki" />
+              <p class="muted small-note" data-i18n="sftp_password_hint">Haslo przechowywane jest w lokalnej bazie SQLite.</p>
+            </div>
+
+            <div id="gdrive-source-section" ${'class="hidden"' if preferences.source_type != 'gdrive' else '' | n}>
+              <div class="settings-path-row">
+                % if preferences.gdrive_credentials:
+                  <span class="muted" data-i18n="gdrive_connected">Google Drive: polaczono</span>
+                  <a href="${request.url_for('auth_gdrive_start')}" class="button button-secondary settings-browse-button" data-i18n="gdrive_reconnect">Polacz ponownie</a>
+                % else:
+                  <span class="muted" data-i18n="gdrive_disconnected">Google Drive: brak autoryzacji</span>
+                  <a href="${request.url_for('auth_gdrive_start')}" class="button button-primary settings-browse-button" data-i18n="gdrive_authorize">Autoryzuj Drive</a>
+                % endif
+              </div>
+              <p class="muted small-note" data-i18n="gdrive_hint">Po kliknieciu zostaniesz przekierowana do Google. Wymagane scope: Drive (odczyt i zapis).</p>
+              <p class="muted small-note" data-i18n="gdrive_console_hint">Dodaj do Google Console: <strong>${request.url_for('auth_gdrive_callback')}</strong></p>
+
+              <label class="settings-label" data-i18n="label_folder_id" for="gdrive-folder-id-input">ID folderu (opcjonalne)</label>
+              <input id="gdrive-folder-id-input" class="settings-input" type="text" value="${preferences.gdrive_folder_id}" placeholder="root = caly Drive" />
+              <p class="muted small-note" data-i18n="gdrive_folder_hint">Skopiuj ID folderu z URL w Google Drive lub zostaw 'root'.</p>
+            </div>
+          </section>
+
+          <section class="settings-tab-panel hidden" data-panel="appearance" role="tabpanel">
+            <label class="settings-label" data-i18n="label_language" for="language-select">Jezyk interfejsu</label>
+            <select id="language-select" class="settings-input">
+              <option value="pl" ${'selected' if preferences.language == 'pl' else ''}>Polski</option>
+              <option value="en" ${'selected' if preferences.language == 'en' else ''}>English</option>
+              <option value="es" ${'selected' if preferences.language == 'es' else ''}>Español</option>
+              <option value="de" ${'selected' if preferences.language == 'de' else ''}>Deutsch</option>
+              <option value="ru" ${'selected' if preferences.language == 'ru' else ''}>Русский</option>
+            </select>
+
+            <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
+            <select id="theme-mode-select" class="settings-input">
+              <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
+              <option value="webnote" ${'selected' if preferences.theme_mode == 'webnote' else ''}>Webnote.li</option>
+              <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
+              <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
+              <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>
+            </select>
+
+            <label class="settings-label" data-i18n="label_font_size" for="editor-font-size-input">Rozmiar czcionki edytora</label>
+            <input
+              id="editor-font-size-input"
+              class="settings-input"
+              type="number"
+              min="12"
+              max="28"
+              step="1"
+              value="${preferences.editor_font_size}"
+            />
+          </section>
+
+          <section class="settings-tab-panel hidden" data-panel="editor" role="tabpanel">
+            <label class="settings-label" data-i18n="label_sort" for="sort-mode-select">Sortowanie</label>
+            <select id="sort-mode-select" class="settings-input">
+              <option value="alphabetical" data-i18n-opt="sort_alpha" ${'selected' if preferences.sort_mode == 'alphabetical' else ''}>Alfabetyczne</option>
+              <option value="manual" data-i18n-opt="sort_manual" ${'selected' if preferences.sort_mode == 'manual' else ''}>Manualne</option>
+            </select>
+
+            <label class="settings-toggle">
+              <input id="autosave-enabled-input" type="checkbox" ${'checked' if preferences.autosave_enabled else ''} />
+              <span>
+                <strong data-i18n="label_autosave">Automatyczny zapis</strong>
+                <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
+              </span>
+            </label>
+
+            <label class="settings-label" data-i18n="label_code_theme" for="code-theme-select">Motyw kolorowania kodu</label>
+            <select id="code-theme-select" class="settings-input">
+              <option value="auto" data-i18n-opt="code_theme_auto">Automatyczny</option>
+              <option value="default">Default (jasny)</option>
+              <option value="material-darker">Material Darker (VS Code-like)</option>
+              <option value="darcula">Darcula (JetBrains)</option>
+              <option value="monokai">Monokai</option>
+              <option value="dracula">Dracula</option>
+              <option value="nord">Nord</option>
+              <option value="ayu-dark">Ayu Dark</option>
+              <option value="tomorrow-night-eighties">Tomorrow Night</option>
+              <option value="eclipse">Eclipse (jasny)</option>
+              <option value="idea">IntelliJ IDEA (jasny)</option>
+              <option value="solarized">Solarized</option>
+            </select>
+
+            <p class="muted small-note" data-i18n="db_path_label">Baza SQLite: ${database_path}</p>
+          </section>
+
+          <section class="settings-tab-panel hidden" data-panel="images" role="tabpanel">
+            <label class="settings-label" data-i18n="label_image_upload" for="image-upload-mode-select">Wstawianie obrazkow</label>
+            <select id="image-upload-mode-select" class="settings-input">
+              <option value="same_dir" data-i18n-opt="img_same_dir" ${'selected' if preferences.image_upload_mode == 'same_dir' else ''}>Ten sam katalog co plik MD</option>
+              <option value="subdir" data-i18n-opt="img_subdir" ${'selected' if preferences.image_upload_mode == 'subdir' else ''}>Podkatalog o nazwie</option>
+            </select>
+            <div id="image-upload-subdir-section" ${'class="hidden"' if preferences.image_upload_mode != 'subdir' else '' | n}>
+              <input id="image-upload-subdir-input" class="settings-input" type="text" value="${preferences.image_upload_subdir}" placeholder="np. assets" />
+            </div>
+          </section>
+
+          <section class="settings-tab-panel hidden" data-panel="profiles" role="tabpanel">
+            <div class="settings-profile-panel-header">
+              <div>
+                <div class="label" data-i18n="label_profiles">Profile</div>
+                <strong id="profile-editor-title" data-i18n="profile_new">Nowy profil</strong>
+              </div>
+              <button id="cancel-profile-edit" class="button button-secondary hidden" type="button" data-i18n="cancel_edit">Anuluj edycje</button>
+            </div>
             <div class="settings-path-row">
-              <input id="content-root-input" class="settings-input" type="text" value="${preferences.content_root}" />
-              <button id="browse-content-root" class="button button-secondary settings-browse-button" type="button" data-i18n="browse">Przegladaj</button>
+              <input id="profile-name-input" class="settings-input" type="text" placeholder="np. SFTP firmowy albo Projekty lokalne" />
+              <button id="save-profile" class="button button-secondary settings-browse-button" type="button" data-i18n="save_profile">Zapamietaj</button>
             </div>
-          </div>
-
-        <div id="sftp-source-section" ${'class="hidden"' if preferences.source_type != 'sftp' else '' | n}>
-          <label class="settings-label" for="sftp-host-input">Host SFTP</label>
-          <input id="sftp-host-input" class="settings-input" type="text" value="${preferences.sftp_host}" placeholder="np. 192.168.1.10 lub moj-serwer.pl" />
-
-          <label class="settings-label" data-i18n="label_port" for="sftp-port-input">Port</label>
-          <input id="sftp-port-input" class="settings-input" type="number" min="1" max="65535" value="${preferences.sftp_port}" />
-
-          <label class="settings-label" data-i18n="label_user" for="sftp-username-input">Uzytkownik</label>
-          <input id="sftp-username-input" class="settings-input" type="text" value="${preferences.sftp_username}" placeholder="np. eli" />
-
-          <label class="settings-label" data-i18n="label_password" for="sftp-password-input">Haslo</label>
-          <input id="sftp-password-input" class="settings-input" type="password" value="${preferences.sftp_password}" autocomplete="new-password" />
-
-          <label class="settings-label" data-i18n="label_remote_path" for="sftp-path-input">Sciezka zdalna</label>
-          <input id="sftp-path-input" class="settings-input" type="text" value="${preferences.sftp_path}" placeholder="np. /home/eli/notatki" />
-          <p class="muted small-note" data-i18n="sftp_password_hint">Haslo przechowywane jest w lokalnej bazie SQLite.</p>
+            <p class="muted small-note" data-i18n="profile_hint">Zapisuje aktualne pola formularza jako profil do szybkiego przelaczania z gornego menu.</p>
+            <div id="settings-profile-list" class="settings-profile-list"></div>
+          </section>
         </div>
-
-        <div id="gdrive-source-section" ${'class="hidden"' if preferences.source_type != 'gdrive' else '' | n}>
-          <div class="settings-path-row">
-            % if preferences.gdrive_credentials:
-              <span class="muted" data-i18n="gdrive_connected">Google Drive: polaczono</span>
-              <a href="${request.url_for('auth_gdrive_start')}" class="button button-secondary settings-browse-button" data-i18n="gdrive_reconnect">Polacz ponownie</a>
-            % else:
-              <span class="muted" data-i18n="gdrive_disconnected">Google Drive: brak autoryzacji</span>
-              <a href="${request.url_for('auth_gdrive_start')}" class="button button-primary settings-browse-button" data-i18n="gdrive_authorize">Autoryzuj Drive</a>
-            % endif
-          </div>
-          <p class="muted small-note" data-i18n="gdrive_hint">Po kliknieciu zostaniesz przekierowana do Google. Wymagane scope: Drive (odczyt i zapis).</p>
-          <p class="muted small-note" data-i18n="gdrive_console_hint">Dodaj do Google Console: <strong>${request.url_for('auth_gdrive_callback')}</strong></p>
-
-          <label class="settings-label" data-i18n="label_folder_id" for="gdrive-folder-id-input">ID folderu (opcjonalne)</label>
-          <input id="gdrive-folder-id-input" class="settings-input" type="text" value="${preferences.gdrive_folder_id}" placeholder="root = caly Drive" />
-          <p class="muted small-note" data-i18n="gdrive_folder_hint">Skopiuj ID folderu z URL w Google Drive lub zostaw 'root'.</p>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <h4 class="settings-group-title" data-i18n="group_appearance">Wyglad</h4>
-          <label class="settings-label" data-i18n="label_language" for="language-select">Jezyk interfejsu</label>
-          <select id="language-select" class="settings-input">
-            <option value="pl" ${'selected' if preferences.language == 'pl' else ''}>Polski</option>
-            <option value="en" ${'selected' if preferences.language == 'en' else ''}>English</option>
-            <option value="es" ${'selected' if preferences.language == 'es' else ''}>Español</option>
-            <option value="de" ${'selected' if preferences.language == 'de' else ''}>Deutsch</option>
-            <option value="ru" ${'selected' if preferences.language == 'ru' else ''}>Русский</option>
-          </select>
-
-          <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
-          <select id="theme-mode-select" class="settings-input">
-            <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
-            <option value="webnote" ${'selected' if preferences.theme_mode == 'webnote' else ''}>Webnote.li</option>
-            <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
-            <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
-            <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>
-          </select>
-
-          <label class="settings-label" data-i18n="label_font_size" for="editor-font-size-input">Rozmiar czcionki edytora</label>
-          <input
-            id="editor-font-size-input"
-            class="settings-input"
-            type="number"
-            min="12"
-            max="28"
-            step="1"
-            value="${preferences.editor_font_size}"
-          />
-        </div>
-
-        <div class="settings-group">
-          <h4 class="settings-group-title" data-i18n="group_editor">Edytor</h4>
-          <label class="settings-label" data-i18n="label_sort" for="sort-mode-select">Sortowanie</label>
-          <select id="sort-mode-select" class="settings-input">
-            <option value="alphabetical" data-i18n-opt="sort_alpha" ${'selected' if preferences.sort_mode == 'alphabetical' else ''}>Alfabetyczne</option>
-            <option value="manual" data-i18n-opt="sort_manual" ${'selected' if preferences.sort_mode == 'manual' else ''}>Manualne</option>
-          </select>
-
-          <label class="settings-toggle">
-            <input id="autosave-enabled-input" type="checkbox" ${'checked' if preferences.autosave_enabled else ''} />
-            <span>
-              <strong data-i18n="label_autosave">Automatyczny zapis</strong>
-              <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
-            </span>
-          </label>
-
-          <label class="settings-label" data-i18n="label_code_theme" for="code-theme-select">Motyw kolorowania kodu</label>
-          <select id="code-theme-select" class="settings-input">
-            <option value="auto" data-i18n-opt="code_theme_auto">Automatyczny</option>
-            <option value="default">Default (jasny)</option>
-            <option value="material-darker">Material Darker (VS Code-like)</option>
-            <option value="darcula">Darcula (JetBrains)</option>
-            <option value="monokai">Monokai</option>
-            <option value="dracula">Dracula</option>
-            <option value="nord">Nord</option>
-            <option value="ayu-dark">Ayu Dark</option>
-            <option value="tomorrow-night-eighties">Tomorrow Night</option>
-            <option value="eclipse">Eclipse (jasny)</option>
-            <option value="idea">IntelliJ IDEA (jasny)</option>
-            <option value="solarized">Solarized</option>
-          </select>
-        </div>
-
-        <div class="settings-group">
-          <h4 class="settings-group-title" data-i18n="group_images">Obrazki</h4>
-          <label class="settings-label" data-i18n="label_image_upload" for="image-upload-mode-select">Wstawianie obrazkow</label>
-          <select id="image-upload-mode-select" class="settings-input">
-            <option value="same_dir" data-i18n-opt="img_same_dir" ${'selected' if preferences.image_upload_mode == 'same_dir' else ''}>Ten sam katalog co plik MD</option>
-            <option value="subdir" data-i18n-opt="img_subdir" ${'selected' if preferences.image_upload_mode == 'subdir' else ''}>Podkatalog o nazwie</option>
-          </select>
-          <div id="image-upload-subdir-section" ${'class="hidden"' if preferences.image_upload_mode != 'subdir' else '' | n}>
-            <input id="image-upload-subdir-input" class="settings-input" type="text" value="${preferences.image_upload_subdir}" placeholder="np. assets" />
-          </div>
-        </div>
-
-        <p class="muted small-note" data-i18n="db_path_label">Baza SQLite: ${database_path}</p>
       </div>
 
       <footer class="modal-actions">

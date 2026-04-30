@@ -2089,17 +2089,98 @@ body[data-theme="noteeli"] .modal-backdrop {
   width: min(100%, 760px);
 }
 
+.modal-card-settings {
+  width: min(100%, 880px);
+  max-height: calc(100vh - 2rem);
+}
+
+/* Settings layout: vertical tab strip on the left, panel content on the right */
+.settings-body {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem 0.55rem 0.85rem 0.85rem;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.025);
+}
+
+body[data-theme="dark"] .settings-tabs,
+body[data-theme="noteeli"] .settings-tabs {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.settings-tab {
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.86rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body[data-theme="dark"] .settings-tab:hover,
+body[data-theme="noteeli"] .settings-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-tab.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 500;
+}
+
+.settings-tab-content {
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.settings-tab-panel {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.settings-tab-panel.hidden {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .settings-body {
+    grid-template-columns: 1fr;
+  }
+  .settings-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 0.65rem;
+  }
+  .settings-tab {
+    flex: 0 0 auto;
+  }
+}
+
 body[data-theme="dark"] .modal-card,
 body[data-theme="noteeli"] .modal-card {
   background:
     linear-gradient(180deg, rgba(17, 28, 47, 0.98), rgba(15, 28, 52, 0.96));
   border-color: var(--line-strong);
-}
-
-body[data-theme="dark"] .settings-profile-panel,
-body[data-theme="noteeli"] .settings-profile-panel {
-  background: rgba(17, 24, 39, 0.68);
-  border-color: rgba(148, 163, 184, 0.18);
 }
 
 body[data-theme="dark"] .settings-profile-item,
@@ -2160,44 +2241,12 @@ body[data-theme="noteeli"] .directory-browser-item:hover {
 
 /* Smaller buttons inside any modal — keep the visual weight low */
 .modal-actions .button,
-.modal-content .button {
+.modal-content .button,
+.settings-tab-content .button {
   padding: 0.4rem 0.9rem;
   font-size: 0.84rem;
 }
 
-/* Visual grouping: each related cluster of settings sits in a card */
-.settings-group {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface);
-}
-
-.settings-group-title {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-body[data-theme="dark"] .settings-group,
-body[data-theme="noteeli"] .settings-group {
-  background: rgba(17, 24, 39, 0.55);
-  border-color: rgba(148, 163, 184, 0.18);
-}
-
-.settings-profile-panel {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem 0.85rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid var(--line);
-}
 
 .settings-profile-panel-header {
   display: flex;
@@ -2836,12 +2885,6 @@ body[data-theme="obsidian"] .profiles-dropdown-item {
 
 body[data-theme="obsidian"] .profiles-dropdown-item:hover {
   background: var(--accent-soft);
-}
-
-body[data-theme="obsidian"] .settings-profile-panel {
-  border-radius: 6px;
-  background: var(--surface);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 body[data-theme="obsidian"] .settings-profile-item {

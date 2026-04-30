@@ -1001,8 +1001,8 @@ if (shell) {
       db_path_label: "Baza SQLite:",
       cancel: "Anuluj", save_settings: "Zapisz ustawienia",
       save_button: "Zapisz", logout_button: "Wyloguj", local_mode_chip: "Tryb lokalny",
-      group_source: "Źródło notatek", group_appearance: "Wygląd",
-      group_editor: "Edytor", group_images: "Obrazki",
+      group_source: "Źródło", group_appearance: "Wygląd",
+      group_editor: "Edytor", group_images: "Obrazki", group_profiles: "Profile",
       label_code_theme: "Motyw kolorowania kodu", code_theme_auto: "Automatyczny",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
       selected_file_label: "Wybrany plik",
@@ -1116,8 +1116,8 @@ if (shell) {
       db_path_label: "SQLite database:",
       cancel: "Cancel", save_settings: "Save settings",
       save_button: "Save", logout_button: "Sign out", local_mode_chip: "Local mode",
-      group_source: "Notes source", group_appearance: "Appearance",
-      group_editor: "Editor", group_images: "Images",
+      group_source: "Source", group_appearance: "Appearance",
+      group_editor: "Editor", group_images: "Images", group_profiles: "Profiles",
       label_code_theme: "Code highlighting theme", code_theme_auto: "Automatic",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
       selected_file_label: "Selected file",
@@ -1231,8 +1231,8 @@ if (shell) {
       db_path_label: "Base de datos SQLite:",
       cancel: "Cancelar", save_settings: "Guardar configuración",
       save_button: "Guardar", logout_button: "Cerrar sesión", local_mode_chip: "Modo local",
-      group_source: "Fuente de notas", group_appearance: "Apariencia",
-      group_editor: "Editor", group_images: "Imágenes",
+      group_source: "Fuente", group_appearance: "Apariencia",
+      group_editor: "Editor", group_images: "Imágenes", group_profiles: "Perfiles",
       label_code_theme: "Tema de resaltado de código", code_theme_auto: "Automático",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
       selected_file_label: "Archivo seleccionado",
@@ -1346,8 +1346,8 @@ if (shell) {
       db_path_label: "SQLite-Datenbank:",
       cancel: "Abbrechen", save_settings: "Einstellungen speichern",
       save_button: "Speichern", logout_button: "Abmelden", local_mode_chip: "Lokaler Modus",
-      group_source: "Notizenquelle", group_appearance: "Darstellung",
-      group_editor: "Editor", group_images: "Bilder",
+      group_source: "Quelle", group_appearance: "Darstellung",
+      group_editor: "Editor", group_images: "Bilder", group_profiles: "Profile",
       label_code_theme: "Syntaxhervorhebungs-Theme", code_theme_auto: "Automatisch",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
       selected_file_label: "Ausgewählte Datei",
@@ -1461,8 +1461,8 @@ if (shell) {
       db_path_label: "База данных SQLite:",
       cancel: "Отмена", save_settings: "Сохранить настройки",
       save_button: "Сохранить", logout_button: "Выйти", local_mode_chip: "Локальный режим",
-      group_source: "Источник заметок", group_appearance: "Оформление",
-      group_editor: "Редактор", group_images: "Изображения",
+      group_source: "Источник", group_appearance: "Оформление",
+      group_editor: "Редактор", group_images: "Изображения", group_profiles: "Профили",
       label_code_theme: "Тема подсветки кода", code_theme_auto: "Автоматически",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
       selected_file_label: "Выбранный файл",
@@ -1611,6 +1611,8 @@ if (shell) {
     closePreferenceProfilesDropdown();
     settingsModal.classList.remove("hidden");
     settingsModal.setAttribute("aria-hidden", "false");
+    const lastTab = localStorage.getItem("settings-active-tab") || "source";
+    setActiveSettingsTab(lastTab);
   }
 
   function closeSettingsModal() {
@@ -2043,6 +2045,22 @@ if (shell) {
       applyCodeEditorTheme();
     });
   }
+
+  // Settings tab switching — vertical sidebar inside the settings modal.
+  const settingsTabButtons = document.querySelectorAll(".settings-tab");
+  const settingsTabPanels = document.querySelectorAll(".settings-tab-panel");
+
+  function setActiveSettingsTab(name) {
+    settingsTabButtons.forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === name));
+    settingsTabPanels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.panel !== name));
+    try {
+      localStorage.setItem("settings-active-tab", name);
+    } catch {}
+  }
+
+  settingsTabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => setActiveSettingsTab(btn.dataset.tab));
+  });
 
   function buildPreferencesPayload(overrides = {}) {
     return {
