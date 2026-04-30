@@ -2736,6 +2736,42 @@ body[data-theme="webnote"] .context-menu {
     inset 0 1px 0 rgba(216, 229, 242, 0.06);
 }
 
+/* ── Webnote: single-panel layout ────────────────────────────
+   Faithful to the marketing-site mockup, where the sidebar and
+   editor live inside one outlined panel separated by a 1 px seam,
+   not two floating rounded boxes. */
+body[data-theme="webnote"] .app-shell {
+  gap: 0;
+}
+
+body[data-theme="webnote"] .app-shell.sidebar-collapsed,
+body[data-theme="webnote"] .app-shell.sidebar-overlay {
+  gap: 0 1.2rem;
+}
+
+body[data-theme="webnote"] .sidebar {
+  border: 1px solid rgba(140, 188, 234, 0.18);
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  box-shadow: none;
+}
+
+body[data-theme="webnote"] .workspace-panel {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Restore full rounding when the sidebar is collapsed/floating so the
+   editor doesn't end up with one square corner. */
+body[data-theme="webnote"] .app-shell.sidebar-collapsed .workspace-panel,
+body[data-theme="webnote"] .app-shell.sidebar-overlay .workspace-panel {
+  border-radius: var(--radius);
+}
+
+body[data-theme="webnote"] .app-shell.sidebar-overlay .sidebar {
+  border-radius: var(--radius);
+  border-right: 1px solid rgba(140, 188, 234, 0.18);
+}
+
 body[data-theme="webnote"] .brand-block h1,
 body[data-theme="webnote"] .workspace-topbar h2,
 body[data-theme="webnote"] .modal-header h3,
