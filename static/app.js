@@ -3000,19 +3000,15 @@ if (shell) {
       return listItem;
     }
 
-    const spacer = document.createElement("span");
-    spacer.className = "tree-toggle tree-toggle-file";
     const fileIconInfo = getFileIconInfo(node.name);
+    const fileButton = document.createElement("button");
+    fileButton.type = "button";
+    fileButton.className = "tree-link tree-link-file";
     const fileIconSpan = document.createElement("span");
     fileIconSpan.className = `tree-icon ${fileIconInfo.cls}`;
     fileIconSpan.appendChild(makeSvgIcon(fileIconInfo.d));
-    spacer.appendChild(fileIconSpan);
-    row.appendChild(spacer);
-
-    const fileButton = document.createElement("button");
-    fileButton.type = "button";
-    fileButton.className = "tree-link";
-    fileButton.textContent = node.name;
+    fileButton.appendChild(fileIconSpan);
+    fileButton.appendChild(document.createTextNode(node.name));
     if (selectedTreePath === node.path) {
       fileButton.classList.add("is-active");
     }

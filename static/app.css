@@ -1005,7 +1005,9 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
 .tree-list {
   list-style: none;
   margin: 0;
-  padding-left: 0.85rem;
+  /* Indent matches toggle width + tree-row gap so a child's icon lands at
+     the same X as its parent's folder icon (rather than to the left of it). */
+  padding-left: 1.25rem;
 }
 
 .tree-list-root {
@@ -1019,7 +1021,7 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
 
 .tree-toggle,
@@ -1032,9 +1034,13 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
 }
 
 .tree-toggle {
-  width: 1.8rem;
+  width: 1.1rem;
+  padding: 0.28rem 0;
   color: var(--muted);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tree-link {
@@ -2694,15 +2700,10 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
   height: 14px;
 }
 
-.tree-link-dir {
+.tree-link-dir,
+.tree-link-file {
   display: inline-flex;
   align-items: center;
-}
-
-.tree-toggle-file {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tree-icon-folder  { color: #c8974a; }
