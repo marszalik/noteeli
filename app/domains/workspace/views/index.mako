@@ -266,6 +266,7 @@
           <label class="settings-label" data-i18n="label_theme" for="theme-mode-select">Motyw</label>
           <select id="theme-mode-select" class="settings-input">
             <option value="noteeli" ${'selected' if preferences.theme_mode == 'noteeli' else ''}>Noteeli</option>
+            <option value="webnote" ${'selected' if preferences.theme_mode == 'webnote' else ''}>Webnote.li</option>
             <option value="light" data-i18n-opt="theme_light" ${'selected' if preferences.theme_mode == 'light' else ''}>Jasny</option>
             <option value="dark" data-i18n-opt="theme_dark" ${'selected' if preferences.theme_mode == 'dark' else ''}>Ciemny</option>
             <option value="obsidian" ${'selected' if preferences.theme_mode == 'obsidian' else ''}>Obsidian</option>

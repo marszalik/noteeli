@@ -782,7 +782,7 @@ if (shell) {
 
   function getMermaidTheme() {
     const t = document.body.dataset.theme;
-    return t === "dark" || t === "obsidian" ? "dark" : "default";
+    return t === "dark" || t === "obsidian" || t === "webnote" ? "dark" : "default";
   }
 
   mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });

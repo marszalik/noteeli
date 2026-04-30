@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 SortMode = Literal["alphabetical", "manual"]
-ThemeMode = Literal["light", "dark", "obsidian", "noteeli"]
+ThemeMode = Literal["light", "dark", "obsidian", "noteeli", "webnote"]
 SourceType = Literal["local", "sftp", "gdrive"]
 ImageUploadMode = Literal["same_dir", "subdir"]
 Language = Literal["pl", "en", "es", "de", "ru"]
