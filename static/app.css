@@ -926,11 +926,69 @@ body[data-theme="noteeli"] .context-menu-item-muted {
   cursor: pointer;
 }
 
-.settings-toggle input {
+/* Custom checkbox painting — replace the bright white system checkbox so
+   it picks up the active theme's surface, line and accent colours. The
+   unchecked box uses the panel surface; the checked state fills with the
+   accent and draws a simple white tick via ::after. */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 1.05rem;
   height: 1.05rem;
+  border-radius: 5px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  margin: 0;
+  vertical-align: middle;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 0.32rem;
+  height: 0.58rem;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -55%) rotate(45deg);
+}
+
+/* Light-on-gold has poor contrast — use a dark tick on the warm-amber
+   themes (Noteeli / Webnote.li) instead of white. */
+body[data-theme="noteeli"] input[type="checkbox"]:checked::after,
+body[data-theme="webnote"] input[type="checkbox"]:checked::after {
+  border-color: #0e1520;
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-toggle input {
   margin-top: 0.14rem;
-  accent-color: var(--accent);
 }
 
 .settings-toggle span {
