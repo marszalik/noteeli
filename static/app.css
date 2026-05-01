@@ -977,6 +977,50 @@ body[data-theme="webnote"] input[type="checkbox"]:checked::after {
   border-color: #0e1520;
 }
 
+/* Toast UI renders task-list checkboxes (in WYSIWYG and Markdown preview)
+   as hard-coded base64 SVGs on a ::before pseudo-element, ignoring CSS
+   variables. Override that with a themed box + a CSS-drawn checkmark on
+   ::after so the checkbox follows the active palette like every other
+   input on the page. */
+.toastui-editor-contents .task-list-item::before,
+.toastui-editor-md-preview .task-list-item::before {
+  background-image: none !important;
+  background: var(--surface) !important;
+  border: 1.5px solid var(--line-strong) !important;
+  border-radius: 4px !important;
+  width: 16px !important;
+  height: 16px !important;
+  top: 4px !important;
+  cursor: pointer;
+}
+
+.toastui-editor-contents .task-list-item.checked::before,
+.toastui-editor-md-preview .task-list-item.checked::before {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.toastui-editor-contents .task-list-item.checked::after,
+.toastui-editor-md-preview .task-list-item.checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 7px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body[data-theme="noteeli"] .toastui-editor-contents .task-list-item.checked::after,
+body[data-theme="noteeli"] .toastui-editor-md-preview .task-list-item.checked::after,
+body[data-theme="webnote"] .toastui-editor-contents .task-list-item.checked::after,
+body[data-theme="webnote"] .toastui-editor-md-preview .task-list-item.checked::after {
+  border-color: #0e1520;
+}
+
 input[type="checkbox"]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
