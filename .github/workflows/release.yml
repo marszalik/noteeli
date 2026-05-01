@@ -1,0 +1,48 @@
+name: Release
+
+# Tag a commit on main with v<MAJOR>.<MINOR>.<PATCH> and push the tag —
+# this workflow turns it into a published GitHub Release with notes
+# auto-generated from PRs/commits since the previous tag.
+#
+# Example:
+#   git tag v1.0.1
+#   git push origin v1.0.1
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          # full history so the auto-generated notes can compare against
+          # the previous tag
+          fetch-depth: 0
+
+      - name: Verify tag matches pyproject.toml version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PROJECT_VERSION=$(grep -E '^version\s*=' pyproject.toml | head -1 | cut -d '"' -f 2)
+          if [ "$TAG" != "$PROJECT_VERSION" ]; then
+            echo "::error::Tag v$TAG does not match pyproject.toml version $PROJECT_VERSION"
+            exit 1
+          fi
+          echo "Tag and pyproject.toml agree on $PROJECT_VERSION"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag

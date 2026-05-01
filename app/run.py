@@ -5,6 +5,8 @@ import socket
 
 import uvicorn
 
+from app import __version__
+
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
@@ -26,6 +28,11 @@ def first_free_port(host: str, start_port: int) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Noteeli with uvicorn.")
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"noteeli {__version__}",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     dev_parser = subparsers.add_parser(

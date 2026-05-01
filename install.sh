@@ -9,14 +9,19 @@
 #   curl -fsSL https://raw.githubusercontent.com/marszalik/noteeli/main/install.sh | bash
 #
 # Env overrides:
-#   NOTEELI_DIR        Install directory     (default: ~/.noteeli)
-#   NOTEELI_NOTES_DIR  Notes content root    (default: ~/notes)
-#   NOTEELI_BRANCH     Git branch / tag      (default: main)
+#   NOTEELI_DIR        Install directory                 (default: ~/.noteeli)
+#   NOTEELI_NOTES_DIR  Notes content root                (default: ~/notes)
+#   NOTEELI_VERSION    Release tag to pin to, e.g. v1.0.0
+#   NOTEELI_BRANCH     Git branch (only used when NOTEELI_VERSION is unset;
+#                      default: main — i.e. latest development tip)
 #
 set -euo pipefail
 
 REPO_URL="https://github.com/marszalik/noteeli.git"
-BRANCH="${NOTEELI_BRANCH:-main}"
+# A pinned NOTEELI_VERSION (release tag) wins over NOTEELI_BRANCH so that
+# users who want a stable install can specify a tag, while leaving the
+# default behaviour (track main) unchanged.
+REF="${NOTEELI_VERSION:-${NOTEELI_BRANCH:-main}}"
 INSTALL_DIR="${NOTEELI_DIR:-$HOME/.noteeli}"
 NOTES_DIR="${NOTEELI_NOTES_DIR:-$HOME/notes}"
 LAUNCHER_DIR="$HOME/.local/bin"
@@ -74,15 +79,20 @@ ok "git:    $(git --version | awk '{print $3}')"
 step "Fetching source into $INSTALL_DIR"
 
 if [[ -d "$INSTALL_DIR/.git" ]]; then
-  ok "Existing checkout found, updating"
-  git -C "$INSTALL_DIR" fetch --quiet origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout --quiet "$BRANCH"
-  git -C "$INSTALL_DIR" pull --ff-only --quiet
+  ok "Existing checkout found, updating to $REF"
+  # fetch tags too so a pinned NOTEELI_VERSION (e.g. v1.0.1) resolves
+  git -C "$INSTALL_DIR" fetch --quiet --tags --force origin
+  git -C "$INSTALL_DIR" checkout --quiet "$REF"
+  # only fast-forward when the ref is a branch (a tag has no upstream)
+  if git -C "$INSTALL_DIR" symbolic-ref -q HEAD >/dev/null 2>&1; then
+    git -C "$INSTALL_DIR" pull --ff-only --quiet
+  fi
 else
   mkdir -p "$(dirname "$INSTALL_DIR")"
-  git clone --quiet --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+  git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  git -C "$INSTALL_DIR" checkout --quiet "$REF"
 fi
-ok "Source ready"
+ok "Source: $(git -C "$INSTALL_DIR" describe --tags --always)"
 
 cd "$INSTALL_DIR"
 

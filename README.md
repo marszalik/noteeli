@@ -30,6 +30,13 @@ Open <http://127.0.0.1:8000>. Notes live in `~/notes` by default. Re-running the
 installer fast-forwards to the latest version without touching your `.env` or
 notes.
 
+Pin to a release tag instead of `main`:
+
+```bash
+NOTEELI_VERSION=v1.0.0 \
+  bash -c 'curl -fsSL https://raw.githubusercontent.com/marszalik/noteeli/main/install.sh | bash'
+```
+
 Custom paths:
 
 ```bash
@@ -41,6 +48,36 @@ Requires Python 3.11+ and git. On Debian/Ubuntu also: `sudo apt install python3-
 
 The installer is plain shell — feel free to read it first:
 [install.sh](https://github.com/marszalik/noteeli/blob/main/install.sh).
+
+## Versioning & releases
+
+Noteeli follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+Each version is tagged in git as `vX.Y.Z` and published as a
+[GitHub Release](https://github.com/marszalik/noteeli/releases) with notes
+generated from the commits since the previous tag. The full human-readable log
+lives in [`CHANGELOG.md`](./CHANGELOG.md).
+
+The currently running version is shown as a small chip at the bottom of the
+sidebar — clicking it opens the release notes for that version. From the CLI:
+
+```bash
+noteeli --version
+```
+
+### Cutting a release (maintainers)
+
+1. Update `CHANGELOG.md` — move items from `[Unreleased]` to a new
+   `[X.Y.Z] - YYYY-MM-DD` section.
+2. Bump `version` in `pyproject.toml` to match.
+3. Commit (`Release vX.Y.Z`) and tag:
+
+   ```bash
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
+   ```
+
+The `release.yml` workflow verifies the tag matches `pyproject.toml`, then
+publishes a GitHub Release with auto-generated notes.
 
 ## What Noteeli is for
 

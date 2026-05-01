@@ -671,6 +671,26 @@ body[data-theme="noteeli"] .workspace-panel {
   min-height: 0;
 }
 
+.sidebar-version {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin: 0.4rem 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.sidebar-version:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+}
+
 .brand-block,
 .sidebar-actions {
   padding: 0.8rem 1rem;

@@ -56,6 +56,14 @@
       </div>
 
       <div id="tree-root" class="tree-root" aria-live="polite"></div>
+
+      <a
+        class="sidebar-version"
+        href="https://github.com/marszalik/noteeli/releases/tag/v${app_version}"
+        target="_blank"
+        rel="noopener"
+        title="Zobacz changelog tej wersji"
+      >v${app_version}</a>
     </aside>
 
     <div class="sidebar-resize-handle" id="sidebar-resize-handle" aria-hidden="true"></div>

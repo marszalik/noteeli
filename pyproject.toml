@@ -1,6 +1,6 @@
 [project]
 name = "noteeli"
-version = "0.1.0"
+version = "1.0.0"
 description = "Uproszczony webowy notatnik Markdown inspirowany Obsidianem."
 readme = "README.md"
 requires-python = ">=3.11"

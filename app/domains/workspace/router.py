@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
+from app import __version__ as app_version
 from app.core.config import get_settings
 from app.core.templates import render_template
 from app.domains.preferences.schemas import (
@@ -78,6 +79,7 @@ async def workspace_page(request: Request):
         content_root=workspace_service.root_display,
         preferences=preferences,
         database_path=str(settings.database_path),
+        app_version=app_version,
         frontend_config=frontend_config,
     )
 
