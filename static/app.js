@@ -3149,6 +3149,12 @@ if (shell) {
         const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
         setEditorMode(savedMode, { persist: false });
         editor.setMarkdown(file.content || "", false);
+        // Toast UI keeps the previous cursor position after setMarkdown, which
+        // points into the *old* document — toolbar buttons (Task, lists, …)
+        // then operate on stale, off-screen positions and look like they did
+        // nothing. Reset the cursor to the start of the new document so any
+        // toolbar action lands where the user expects.
+        try { editor.moveCursorToStart(); } catch {}
         setTimeout(renderWysiwygDiagrams, 200);
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
