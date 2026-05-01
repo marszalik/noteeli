@@ -8,6 +8,40 @@ Website: [noteeli.com](https://noteeli.com)
 
 ![Noteeli](https://noteeli.com/static/screenshots/noteeli-markdown-workspace.png)
 
+## Quick install
+
+One line, on Linux or macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/marszalik/noteeli/main/install.sh | bash
+```
+
+This clones Noteeli into `~/.noteeli`, sets up a Python virtualenv, generates a
+random session secret in `.env`, and installs a `noteeli` command in
+`~/.local/bin`. Then:
+
+```bash
+noteeli                  # dev mode, auto-reload
+noteeli prod             # production
+noteeli prod --port 9000 # specific port
+```
+
+Open <http://127.0.0.1:8000>. Notes live in `~/notes` by default. Re-running the
+installer fast-forwards to the latest version without touching your `.env` or
+notes.
+
+Custom paths:
+
+```bash
+NOTEELI_DIR=/opt/noteeli NOTEELI_NOTES_DIR=/data/notes \
+  bash -c 'curl -fsSL https://raw.githubusercontent.com/marszalik/noteeli/main/install.sh | bash'
+```
+
+Requires Python 3.11+ and git. On Debian/Ubuntu also: `sudo apt install python3-venv`.
+
+The installer is plain shell — feel free to read it first:
+[install.sh](https://github.com/marszalik/noteeli/blob/main/install.sh).
+
 ## What Noteeli is for
 
 Noteeli is built for workflows where plain files matter:
