@@ -43,6 +43,7 @@ class WorkspaceService:
     PDF_EXTENSIONS = {".pdf"}
     DOCX_EXTENSIONS = {".docx"}
     XLSX_EXTENSIONS = {".xlsx", ".xlsm"}
+    PPTX_EXTENSIONS = {".pptx"}
     JSON_EXTENSIONS = {".json"}
     MAX_TEXT_FILE_BYTES = 1024 * 1024
 
@@ -534,6 +535,8 @@ class WorkspaceService:
             return "docx"
         if suffix in self.XLSX_EXTENSIONS:
             return "xlsx"
+        if suffix in self.PPTX_EXTENSIONS:
+            return "pptx"
         return None
 
     def render_office_preview(self, path: str) -> str:
@@ -547,17 +550,32 @@ class WorkspaceService:
             return self._render_docx_html(data, Path(rel).name)
         if suffix in self.XLSX_EXTENSIONS:
             return self._render_xlsx_html(data, Path(rel).name)
+        if suffix in self.PPTX_EXTENSIONS:
+            return self._render_pptx_html(data, Path(rel).name)
         raise UnsupportedFileTypeError("This file type is not an office preview format.")
 
     @staticmethod
     def _render_docx_html(data: bytes, filename: str) -> str:
+        import base64
         import io
         import html as _html
 
         import mammoth
 
+        def _convert_image(image):
+            # Embed images as base64 data URLs so the iframe shows them
+            # without needing extra HTTP round-trips.
+            with image.open() as fh:
+                encoded = base64.b64encode(fh.read()).decode("ascii")
+            return {
+                "src": f"data:{image.content_type};base64,{encoded}",
+            }
+
         with io.BytesIO(data) as buf:
-            result = mammoth.convert_to_html(buf)
+            result = mammoth.convert_to_html(
+                buf,
+                convert_image=mammoth.images.img_element(_convert_image),
+            )
         body = result.value or "<p><em>(empty document)</em></p>"
         return WorkspaceService._wrap_office_html(_html.escape(filename), body)
 
@@ -594,30 +612,183 @@ class WorkspaceService:
         return WorkspaceService._wrap_office_html(_html.escape(filename), body)
 
     @staticmethod
+    def _render_pptx_html(data: bytes, filename: str) -> str:
+        """Render a .pptx as a column of cards, one per slide.
+        Each slide includes its title (if any), the bullet text from
+        body placeholders, and any embedded images as base64 data URLs."""
+        import base64
+        import io
+        import html as _html
+
+        from pptx import Presentation
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+        prs = Presentation(io.BytesIO(data))
+        slides_html: list[str] = []
+
+        for index, slide in enumerate(prs.slides, start=1):
+            title_text = ""
+            body_parts: list[str] = []
+            images: list[str] = []
+            note_text = ""
+
+            for shape in slide.shapes:
+                # Pictures → base64 inline
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    try:
+                        blob = shape.image.blob
+                        ct = shape.image.content_type or "image/png"
+                        b64 = base64.b64encode(blob).decode("ascii")
+                        images.append(f'<img src="data:{ct};base64,{b64}" alt="">')
+                    except Exception:
+                        # Some shape types (charts, smartart) raise — just skip
+                        pass
+                    continue
+                if not getattr(shape, "has_text_frame", False):
+                    continue
+                tf = shape.text_frame
+                # The "title" placeholder gets pulled out and shown as h2 of the card.
+                is_title = (
+                    shape.is_placeholder
+                    and shape.placeholder_format
+                    and shape.placeholder_format.idx == 0
+                )
+                buf: list[str] = []
+                for para in tf.paragraphs:
+                    text = "".join(run.text for run in para.runs).strip()
+                    if not text:
+                        continue
+                    indent = max(0, getattr(para, "level", 0) or 0)
+                    if is_title:
+                        buf.append(_html.escape(text))
+                    else:
+                        prefix = "&nbsp;&nbsp;" * indent
+                        buf.append(f"<li>{prefix}{_html.escape(text)}</li>")
+                if is_title:
+                    title_text = " ".join(buf) if buf else title_text
+                elif buf:
+                    body_parts.append(f"<ul>{''.join(buf)}</ul>")
+
+            # Speaker notes (if any) — small italic block at bottom of slide card.
+            try:
+                if slide.has_notes_slide:
+                    notes = slide.notes_slide.notes_text_frame.text.strip()
+                    if notes:
+                        note_text = (
+                            f"<p class='slide-notes'><strong>Notatki:</strong> "
+                            f"{_html.escape(notes)}</p>"
+                        )
+            except Exception:
+                pass
+
+            inner = (
+                f"<div class='slide-number'>Slajd {index}</div>"
+                + (f"<h2>{title_text}</h2>" if title_text else "")
+                + ("".join(images))
+                + ("".join(body_parts))
+                + note_text
+            )
+            slides_html.append(f"<section class='slide'>{inner}</section>")
+
+        body = "".join(slides_html) or "<p><em>(prezentacja jest pusta)</em></p>"
+        return WorkspaceService._wrap_office_html(_html.escape(filename), body)
+
+    @staticmethod
     def _wrap_office_html(title: str, body: str) -> str:
-        # Self-contained HTML with theme-aware styling that the iframe will
-        # respect via CSS variables inherited from the parent page.
+        # Self-contained HTML with proper heading hierarchy, list styling,
+        # tables, and theme-aware dark/light surfaces. The iframe runs in a
+        # sandbox, so styles must be inline (no external stylesheet).
+        css = """
+            *{box-sizing:border-box;}
+            body{
+              margin:0;padding:2rem 2.5rem;
+              font-family:'IBM Plex Sans','Segoe UI',-apple-system,sans-serif;
+              font-size:14px;line-height:1.55;
+              color:#1f2937;background:#f9fafb;
+              max-width:980px;margin-left:auto;margin-right:auto;
+            }
+            h1,h2,h3,h4,h5,h6{
+              font-family:'IBM Plex Serif',Georgia,serif;
+              font-weight:600;letter-spacing:-0.01em;line-height:1.3;
+              margin:1.6em 0 0.5em;
+            }
+            h1{font-size:1.85rem;border-bottom:1px solid #e5e7eb;padding-bottom:0.3em;}
+            h2{font-size:1.4rem;}
+            h3{font-size:1.15rem;}
+            h4{font-size:1rem;}
+            h5,h6{font-size:0.92rem;color:#6b7280;}
+            p{margin:0.7em 0;}
+            ul,ol{margin:0.6em 0;padding-left:1.7em;}
+            li{margin:0.25em 0;}
+            li > p{margin:0.2em 0;}
+            blockquote{
+              margin:1em 0;padding:0.4em 1em;
+              border-left:3px solid #9ca3af;color:#4b5563;
+              background:#f3f4f6;border-radius:0 6px 6px 0;
+            }
+            code{
+              font-family:'IBM Plex Mono','SFMono-Regular',monospace;
+              background:#e5e7eb;padding:0.1em 0.35em;border-radius:3px;
+              font-size:0.88em;
+            }
+            pre{
+              background:#1f2937;color:#e5e7eb;padding:1em;
+              border-radius:6px;overflow-x:auto;
+            }
+            pre code{background:transparent;padding:0;color:inherit;}
+            img{max-width:100%;height:auto;border-radius:4px;
+              margin:0.6em 0;}
+            a{color:#2563eb;text-decoration:underline;}
+            hr{border:0;height:1px;background:#e5e7eb;margin:2em 0;}
+            table{
+              border-collapse:collapse;
+              margin:0.6em 0 1.4em;font-size:0.88rem;
+              max-width:100%;
+            }
+            th,td{
+              border:1px solid #d1d5db;padding:0.45rem 0.7rem;
+              vertical-align:top;text-align:left;
+            }
+            thead,tr:first-child{background:#f3f4f6;font-weight:600;}
+            section{margin-bottom:2rem;}
+            section + section{padding-top:1.5rem;border-top:1px solid #e5e7eb;}
+            .slide{
+              background:#fff;border:1px solid #e5e7eb;border-radius:8px;
+              padding:1.5rem 2rem;margin:1.2rem 0;
+              box-shadow:0 2px 6px rgba(0,0,0,0.05);
+            }
+            .slide-number{
+              font-size:0.78rem;color:#6b7280;font-weight:500;
+              letter-spacing:0.06em;text-transform:uppercase;
+              margin-bottom:0.6rem;
+            }
+            @media (prefers-color-scheme: dark){
+              body{color:#e5e7eb;background:#0f172a;}
+              h1{border-bottom-color:#1e293b;}
+              h5,h6{color:#9ca3af;}
+              blockquote{background:#1e293b;color:#cbd5e1;
+                border-left-color:#475569;}
+              code{background:#1e293b;color:#fbbf24;}
+              pre{background:#0b1220;}
+              th,td{border-color:#334155;}
+              thead,tr:first-child{background:#1e293b;}
+              hr{background:#1e293b;}
+              section + section{border-top-color:#1e293b;}
+              .slide{background:#1e293b;border-color:#334155;
+                box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+              .slide-number{color:#94a3b8;}
+              a{color:#60a5fa;}
+            }
+        """
         return (
             "<!doctype html><html><head><meta charset='utf-8'>"
             f"<title>{title}</title>"
-            "<style>"
-            "body{margin:0;padding:1.5rem 2rem;"
-            "font-family:'IBM Plex Sans','Segoe UI',sans-serif;"
-            "color:#1f2937;background:#f9fafb;line-height:1.55;}"
-            "@media (prefers-color-scheme: dark){"
-            "body{color:#e5e7eb;background:#0f172a;}"
-            "table{border-color:#334155;}"
-            "th,td{border-color:#334155;}"
-            "thead{background:#1e293b;}"
-            "}"
-            "h1,h2,h3{font-family:'IBM Plex Serif',Georgia,serif;}"
-            "img{max-width:100%;height:auto;}"
-            "table{border-collapse:collapse;margin:0.5rem 0 1.5rem;}"
-            "th,td{border:1px solid #d1d5db;padding:0.4rem 0.6rem;"
-            "vertical-align:top;font-size:0.88rem;}"
-            "thead{background:#f3f4f6;}"
-            "section + section{margin-top:2rem;}"
-            "</style></head><body>"
+            "<link rel='preconnect' href='https://fonts.googleapis.com'>"
+            "<link rel='stylesheet' href='https://fonts.googleapis.com/css2?"
+            "family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&"
+            "family=IBM+Plex+Serif:wght@500;600&display=swap'>"
+            f"<style>{css}</style>"
+            "</head><body>"
             f"{body}"
             "</body></html>"
         )

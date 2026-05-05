@@ -2860,6 +2860,7 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
 .tree-icon-pdf     { color: #c96b6b; }
 .tree-icon-docx    { color: #4a86d4; }
 .tree-icon-xlsx    { color: #4a9d6d; }
+.tree-icon-pptx    { color: #d4794a; }
 .tree-icon-json    { color: #d4a55a; }
 .tree-icon-code    { color: #b884e0; }
 .tree-icon-archive { color: #a89472; }

@@ -592,6 +592,50 @@ def test_render_xlsx_preview_returns_html_table(tmp_path: Path):
     assert "Books" in html
 
 
+def test_render_pptx_preview_returns_html_with_slides(tmp_path: Path):
+    """Build a tiny .pptx with two slides (title + bullets) and confirm
+    the rendered HTML wraps each slide in its own card."""
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "deck.pptx"
+
+    prs = Presentation()
+    # Slide 1: title slide
+    slide1 = prs.slides.add_slide(prs.slide_layouts[0])
+    slide1.shapes.title.text = "Mój pierwszy slajd"
+    slide1.placeholders[1].text = "Podtytuł"
+    # Slide 2: title + content
+    slide2 = prs.slides.add_slide(prs.slide_layouts[1])
+    slide2.shapes.title.text = "Plan dnia"
+    body = slide2.placeholders[1].text_frame
+    body.text = "Wstać"
+    body.add_paragraph().text = "Zjeść"
+    body.add_paragraph().text = "Pisać kod"
+    prs.save(str(target))
+
+    service = build_service(notes)
+    html = service.render_office_preview("deck.pptx")
+
+    assert "Slajd 1" in html
+    assert "Slajd 2" in html
+    assert "Mój pierwszy slajd" in html
+    assert "Plan dnia" in html
+    assert "Wstać" in html
+    assert "Zjeść" in html
+    # Each slide is wrapped in its own card
+    assert html.count("class='slide'") == 2 or html.count('class="slide"') == 2
+
+
+def test_get_preview_kind_classifies_pptx(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes)
+    assert service.get_preview_kind("deck.pptx") == "pptx"
+
+
 def test_render_office_preview_rejects_non_office_file(tmp_path: Path):
     notes = tmp_path / "vault"
     notes.mkdir()

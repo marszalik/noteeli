@@ -1926,7 +1926,10 @@ if (shell) {
     hideCodeEditorMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
-    const isOffice = file.preview_kind === "docx" || file.preview_kind === "xlsx";
+    const isOffice =
+      file.preview_kind === "docx"
+      || file.preview_kind === "xlsx"
+      || file.preview_kind === "pptx";
     imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
     pdfPreview.classList.toggle("hidden", file.preview_kind !== "pdf");
     if (officePreview) officePreview.classList.toggle("hidden", !isOffice);
@@ -3013,6 +3016,8 @@ if (shell) {
       return { d: TREE_ICONS.fileText, cls: "tree-icon-docx" };
     if (ext === "xlsx" || ext === "xls" || ext === "xlsm" || ext === "csv")
       return { d: TREE_ICONS.fileText, cls: "tree-icon-xlsx" };
+    if (ext === "pptx" || ext === "ppt")
+      return { d: TREE_ICONS.fileText, cls: "tree-icon-pptx" };
     if (ext === "md" || ext === "markdown")
       return { d: TREE_ICONS.fileMd, cls: "tree-icon-md" };
     if (ext === "json" || ext === "json5" || ext === "jsonc")

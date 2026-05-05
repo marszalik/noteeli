@@ -117,7 +117,7 @@ async def workspace_file_preview_api(request: Request, background_tasks: Backgro
 
     # Office docs (.docx, .xlsx) are rendered server-side into HTML so the
     # browser can display them in a sandboxed iframe — no edit, just view.
-    if preview_kind in ("docx", "xlsx"):
+    if preview_kind in ("docx", "xlsx", "pptx"):
         from fastapi.responses import HTMLResponse
 
         html = workspace_service.render_office_preview(rel_path)
