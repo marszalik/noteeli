@@ -225,3 +225,57 @@ Jeśli dodajesz nowy ekran:
 - bezpośredniego dostępu do SQLite z routerów
 - mieszania logiki auth z workspace
 - tworzenia "utils.py" bez wyraźnej odpowiedzialności domenowej
+
+## Inwentarz funkcjonalności i testów
+
+Pełna lista wszystkiego, co Noteeli umie, oraz status pokrycia testami żyje
+w pliku [`functionalities.md`](./functionalities.md) w korzeniu repo. Plik
+jest zorganizowany domenowo (auth, storage, file tree, editors, themes, …)
+i każdą cechę oznacza jako:
+
+- ✅ — pokryta testem automatycznym (z nazwą testu)
+- ⚠️ — częściowo pokryta (np. tylko happy path)
+- ❌ — bez testu
+- 🌐 — funkcjonalność wyłącznie frontendowa, bez sensownego testu serwisowego
+
+Reguła: **przy każdej zmianie kodu aktualizuj ten dokument**. Dodajesz feature
+— dodaj wiersz. Piszesz test pokrywający istniejący wiersz — zmień status na
+✅ i wpisz nazwę testu. Usuwasz feature — usuń wiersz.
+
+## Strategia testowa
+
+Aktualnie testy żyją w `tests/` i są to testy serwisowe (poziom
+`PreferencesService` / `WorkspaceService`) używające `tmp_path`. Każdy test
+buduje świeży backend `LocalStorageBackend` i operuje na izolowanym katalogu.
+
+```bash
+pdm run test            # kanoniczna komenda
+pytest tests/           # to samo
+```
+
+### Kiedy pisać test
+
+- **Bug fix → test regresyjny**, zawsze. Jeśli błąd dało się wprowadzić raz,
+  da się drugi raz.
+- **Nowa funkcjonalność backendowa → test serwisowy.** Routing dostaje testy
+  integracyjne, gdy logika jest nietrywialna (auth, sanitizacja).
+- **Funkcjonalność czysto frontendowa** zostaje na razie bez automatów —
+  zaplanowanie harnessu Playwright/Selenium to oddzielny projekt.
+
+### Co testujemy w pierwszej kolejności
+
+Tabela "Coverage gaps" w `functionalities.md` jest priorytetową kolejką
+braków. W skrócie, najważniejsze niepokryte powierzchnie to:
+
+1. zachowanie rozszerzenia przy zmianie nazwy (regresja `pic.png → pic2.md`)
+2. blokada delete poza content-rootem (path-traversal w `delete_item`)
+3. guard `require_api_access` na wszystkich endpointach
+4. backendy SFTP i Google Drive (przynajmniej z mockami)
+5. routing typu pliku w edytorze (markdown / json / code / text)
+
+### Jak nie psuć testów
+
+- nie modyfikuj globalnego stanu (cache SFTP, pliki poza `tmp_path`)
+- nie zakładaj kolejności uruchomień
+- używaj `tmp_path` zamiast `mktemp` ręcznego — pytest sprząta
+- każdy test buduje własną instancję serwisu (nie współdziel state'u)
