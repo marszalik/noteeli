@@ -555,6 +555,51 @@ body[data-theme="noteeli"] .alert-error {
   background: rgba(69, 10, 10, 0.42);
 }
 
+/* ── Demo mode ──────────────────────────────────────────────
+   Banner pinned to the top, non-dismissable. Hides write-only UI
+   (Save, New file, New folder, Upload, Profile mgmt, kebab menu)
+   so the user doesn't tap things that would just throw 403. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0.55rem 1rem;
+  background: linear-gradient(90deg, #f59e0b, #f2b01d);
+  color: #1a1505;
+  font-size: 0.88rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.demo-banner a {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.app-shell.is-demo #save-button,
+.app-shell.is-demo #new-file,
+.app-shell.is-demo #new-directory,
+.app-shell.is-demo #save-settings,
+.app-shell.is-demo #save-profile,
+.app-shell.is-demo #cancel-profile-edit,
+.app-shell.is-demo .settings-tab[data-tab="profiles"],
+.app-shell.is-demo [data-panel="profiles"],
+.app-shell.is-demo .upload-stage,
+.app-shell.is-demo .tree-row-menu {
+  display: none !important;
+}
+.app-shell.is-demo .editor-mode-toggle {
+  opacity: 0.65;
+}
+
+/* When the demo banner is on top of the shell, account for its height
+   in the shell's max-height so the editor doesn't overflow viewport. */
+body:has(.demo-banner) .app-shell {
+  height: calc(100vh - 2.4rem);
+  height: calc(100dvh - 2.4rem);
+}
+
 .app-shell {
   /* --sidebar-w: grid column width (0 when collapsed/overlay, sidebarWidth when docked) */
   /* --sidebar-open-w: actual panel width when visible (used in overlay/mobile)          */

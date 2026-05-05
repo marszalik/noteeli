@@ -14,12 +14,21 @@
 </%def>
 
 <%def name="content()">
+  % if demo_mode:
+  <div class="demo-banner" role="status">
+    <strong>Tryb demo</strong> — żadne zmiany nie zostaną zapisane.
+    <a href="https://noteeli.com" target="_blank" rel="noopener">Pobierz Noteeli</a>,
+    żeby pisać i zapisywać własne notatki.
+  </div>
+  % endif
+
   <div
-    class="app-shell"
+    class="app-shell ${'is-demo' if demo_mode else ''}"
     data-config='${frontend_config | n}'
     data-theme-mode="${preferences.theme_mode}"
     data-editor-font-size="${preferences.editor_font_size}"
     data-language="${preferences.language}"
+    ${'data-demo="1"' if demo_mode else '' | n}
   >
     <aside class="sidebar" id="sidebar">
       <div class="brand-block">

@@ -13,6 +13,17 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Demo mode** (`--demo` flag, `NOTEELI_DEMO_MODE=1`). The app runs as
+  a public read-only showcase: every mutating service method (save,
+  create, rename, delete, move, upload, reorder, preference update,
+  profile mgmt) raises `DemoReadOnlyError` → 403 with a friendly
+  message. Auth is bypassed (auto-login as "Gość demo"), the bundled
+  `demo-content/` tree is copied into the configured content root on
+  startup so the demo always boots from a clean state, and the
+  frontend hides every write-only button (Save, New file/folder,
+  Upload, Profiles tab, kebab menu) plus shows a sticky banner
+  explaining the situation. Designed for a separate systemd service
+  on a dedicated port behind `demo.noteeli.com`.
 - Read-only preview for `.docx` (Word) and `.xlsx` / `.xlsm` (Excel) files.
   Word documents are converted to HTML on the server (`mammoth`); Excel
   workbooks render as HTML tables, one per sheet (`openpyxl`, capped at 5000

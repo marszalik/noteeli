@@ -1,0 +1,18 @@
+{
+  "appName": "Noteeli",
+  "version": "1.0.0",
+  "features": {
+    "wysiwyg": true,
+    "syntaxHighlighting": true,
+    "diagrams": ["mermaid", "plantuml"],
+    "preview": ["image", "pdf", "docx", "xlsx", "pptx"]
+  },
+  "themes": [
+    "light",
+    "dark",
+    "noteeli",
+    "webnote",
+    "obsidian"
+  ],
+  "languages": ["pl", "en", "es", "de", "ru"]
+}

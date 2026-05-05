@@ -34,6 +34,10 @@ class UnsupportedFileTypeError(WorkspaceError):
     """Raised when the requested document is not supported by the editor."""
 
 
+class DemoReadOnlyError(WorkspaceError):
+    """Raised when a write operation is attempted while demo mode is on."""
+
+
 class ItemAlreadyExistsError(WorkspaceError):
     """Raised when the target file or directory already exists."""
 
@@ -58,6 +62,19 @@ class WorkspaceService:
 
     def _get_backend(self) -> StorageBackend:
         return build_backend(self.preferences_service.get_preferences())
+
+    def _block_if_demo(self) -> None:
+        """Refuse every mutation when running as a public demo. Called
+        at the top of each writing method — fails fast before the
+        filesystem or SQLite is touched. Surfaced as 403 by the
+        router. The single-line guard means a future write method
+        added without `_block_if_demo()` is a clear code-review
+        smell."""
+        if self.settings.demo_mode:
+            raise DemoReadOnlyError(
+                "Tryb demo: ta operacja jest wyłączona. "
+                "Pobierz Noteeli i uruchom u siebie, żeby zachować zmiany."
+            )
 
     @property
     def root_display(self) -> str:
@@ -85,6 +102,7 @@ class WorkspaceService:
         image_upload_subdir: str = "assets",
         language: str = "pl",
     ) -> AppPreferences:
+        self._block_if_demo()
         invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
             content_root=content_root,
@@ -129,6 +147,7 @@ class WorkspaceService:
         image_upload_subdir: str = "assets",
         language: str = "pl",
     ) -> SavedPreferencesProfile:
+        self._block_if_demo()
         return self.preferences_service.create_profile(
             name=name,
             content_root=content_root,
@@ -171,6 +190,7 @@ class WorkspaceService:
         image_upload_subdir: str = "assets",
         language: str = "pl",
     ) -> SavedPreferencesProfile:
+        self._block_if_demo()
         return self.preferences_service.update_profile(
             profile_id,
             name=name,
@@ -193,9 +213,11 @@ class WorkspaceService:
         )
 
     def delete_preference_profile(self, profile_id: int) -> None:
+        self._block_if_demo()
         self.preferences_service.delete_profile(profile_id)
 
     def apply_preference_profile(self, profile_id: int) -> AppPreferences:
+        self._block_if_demo()
         invalidate_sftp_cache()
         return self.preferences_service.apply_profile(profile_id)
 
@@ -254,6 +276,7 @@ class WorkspaceService:
         )
 
     def save_document(self, relative_path: str, content: str) -> FileDocument:
+        self._block_if_demo()
         backend = self._get_backend()
         rel = self._get_file_path(relative_path, backend)
         if not self.is_editable(rel) and self.get_preview_kind(rel) is not None:
@@ -270,6 +293,7 @@ class WorkspaceService:
         return self._get_backend().get_as_local_path(relative_path)
 
     def create_item(self, parent_path: str, name: str, kind: str) -> CreatedItem:
+        self._block_if_demo()
         backend = self._get_backend()
         parent_rel = self._resolve_dir_path(parent_path, backend)
 
@@ -287,6 +311,7 @@ class WorkspaceService:
         return self._build_item_response(target_rel, backend)
 
     def rename_item(self, path: str, new_name: str) -> CreatedItem:
+        self._block_if_demo()
         backend = self._get_backend()
         src_rel = self._resolve_path(path, backend)
         kind = "directory" if backend.is_dir(src_rel) else "file"
@@ -315,11 +340,13 @@ class WorkspaceService:
         return self._build_item_response(dst_rel, backend)
 
     def delete_item(self, path: str) -> None:
+        self._block_if_demo()
         backend = self._get_backend()
         rel = self._resolve_path(path, backend)
         backend.delete(rel)
 
     def move_item(self, source_path: str, target_parent_path: str) -> CreatedItem:
+        self._block_if_demo()
         backend = self._get_backend()
         src_rel = self._resolve_path(source_path, backend)
         target_parent_rel = self._resolve_dir_path(target_parent_path, backend)
@@ -348,6 +375,7 @@ class WorkspaceService:
         return self._build_item_response(dst_rel, backend)
 
     def upload_files(self, parent_path: str, uploads: list[tuple[str, bytes]]) -> UploadItemsResponse:
+        self._block_if_demo()
         backend = self._get_backend()
         parent_rel = self._resolve_dir_path(parent_path, backend)
 
@@ -391,6 +419,7 @@ class WorkspaceService:
         )
 
     def reorder_items(self, parent_path: str, ordered_paths: list[str]) -> AppPreferences:
+        self._block_if_demo()
         preferences = self.get_preferences()
         if preferences.sort_mode != "manual":
             raise InvalidPathError("Manual order is available only in manual sort mode.")
@@ -414,6 +443,7 @@ class WorkspaceService:
         )
 
     def create_browsed_directory(self, parent_path: str, name: str) -> DirectoryBrowserResponse:
+        self._block_if_demo()
         normalized_name = name.strip()
         if not normalized_name:
             raise InvalidPathError("Directory name cannot be empty.")

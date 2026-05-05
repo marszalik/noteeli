@@ -5,6 +5,7 @@ import pytest
 
 from app.core.config import Settings
 from app.domains.workspace.service import (
+    DemoReadOnlyError,
     ItemAlreadyExistsError,
     InvalidPathError,
     UnsupportedFileTypeError,
@@ -12,13 +13,14 @@ from app.domains.workspace.service import (
 )
 
 
-def build_service(root: Path) -> WorkspaceService:
+def build_service(root: Path, demo_mode: bool = False) -> WorkspaceService:
     settings = Settings(
         content_root=root,
         data_dir=root.parent / ".noteeli",
         session_secret="test-secret",
         google_client_id="",
         google_client_secret="",
+        demo_mode=demo_mode,
     )
     return WorkspaceService(settings)
 
@@ -662,3 +664,117 @@ def test_save_and_read_json_document(tmp_path: Path):
     # And re-reading round-trips.
     fresh = service.read_document("config.json")
     assert fresh.content == '{"theme": "dark"}'
+
+
+# ── Demo mode (read-only) ───────────────────────────────────────
+# Locks in the safety guarantee that the public demo at
+# demo.noteeli.com refuses every kind of mutation. Each test creates
+# a fully populated vault, flips on demo_mode, and confirms that the
+# writing surface raises DemoReadOnlyError without touching disk.
+
+def test_demo_mode_blocks_save_document(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "note.md"
+    target.write_text("oryginał", encoding="utf-8")
+
+    service = build_service(notes, demo_mode=True)
+    with pytest.raises(DemoReadOnlyError):
+        service.save_document("note.md", "podmieniona treść")
+
+    assert target.read_text(encoding="utf-8") == "oryginał"
+
+
+def test_demo_mode_allows_reading(tmp_path: Path):
+    """Demo is read-only, not write-only — the user must still be able
+    to browse the tree and open files."""
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "hello.md").write_text("# witaj", encoding="utf-8")
+
+    service = build_service(notes, demo_mode=True)
+
+    tree = service.build_tree()
+    assert tree.kind == "directory"
+    doc = service.read_document("hello.md")
+    assert doc.content == "# witaj"
+
+
+def test_demo_mode_blocks_create_item(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.create_item("", "fresh-note", "file")
+    assert not (notes / "fresh-note.md").exists()
+
+
+def test_demo_mode_blocks_rename(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "old.md").write_text("x", encoding="utf-8")
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.rename_item("old.md", "new")
+    assert (notes / "old.md").exists()
+
+
+def test_demo_mode_blocks_delete(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "keepme.md"
+    target.write_text("data", encoding="utf-8")
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.delete_item("keepme.md")
+    assert target.exists()
+
+
+def test_demo_mode_blocks_move(tmp_path: Path):
+    notes = tmp_path / "vault"
+    inner = notes / "inbox"
+    inner.mkdir(parents=True)
+    (notes / "doc.md").write_text("x", encoding="utf-8")
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.move_item("doc.md", "inbox")
+    assert (notes / "doc.md").exists()
+    assert not (inner / "doc.md").exists()
+
+
+def test_demo_mode_blocks_upload(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.upload_files("", [("evil.png", b"fake")])
+    assert not (notes / "evil.png").exists()
+
+
+def test_demo_mode_blocks_update_preferences(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.update_preferences(
+            content_root=str(notes),
+            sort_mode="manual",
+            theme_mode="dark",
+            editor_font_size=18,
+        )
+
+
+def test_demo_mode_blocks_browsed_directory_creation(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes, demo_mode=True)
+
+    with pytest.raises(DemoReadOnlyError):
+        service.create_browsed_directory(str(notes), "shouldnt-exist")
+    assert not (notes / "shouldnt-exist").exists()

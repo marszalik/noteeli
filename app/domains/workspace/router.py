@@ -31,6 +31,7 @@ from app.domains.workspace.schemas import (
     UploadItemsResponse,
 )
 from app.domains.workspace.service import (
+    DemoReadOnlyError,
     DocumentNotFoundError,
     ItemAlreadyExistsError,
     InvalidPathError,
@@ -80,6 +81,7 @@ async def workspace_page(request: Request):
         preferences=preferences,
         database_path=str(settings.database_path),
         app_version=app_version,
+        demo_mode=settings.demo_mode,
         frontend_config=frontend_config,
     )
 

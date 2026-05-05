@@ -269,7 +269,20 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | `service-worker.js` served at root scope | ❌ | offline shell, asset caching |
 | Installable as a desktop/mobile app | 🌐 | tested manually only |
 
-## 18. Versioning & releases
+## 18. Demo mode (public showcase)
+
+| Feature | Status | Notes |
+|---|---|---|
+| `--demo` CLI flag and `NOTEELI_DEMO_MODE=1` env var | ✅ (covered indirectly via service-level demo tests) | `app/run.py`, `app/core/config.py` |
+| Service-layer write guard (`_block_if_demo`) on save/create/rename/delete/move/upload/reorder/prefs/profiles | ✅ `test_demo_mode_blocks_save_document`, `..._create_item`, `..._rename`, `..._delete`, `..._move`, `..._upload`, `..._update_preferences`, `..._browsed_directory_creation` | every mutator gets the guard |
+| Reading still works in demo mode | ✅ `test_demo_mode_allows_reading` | tree, file content, previews |
+| Auto-login as "Gość demo" (no `/login` round-trip) | ❌ | `AuthService.get_current_user` early return |
+| Sticky banner in the UI | 🌐 | template branch on `demo_mode` |
+| Hide write-only UI (Save, New file/folder, Upload, Profiles tab, kebab menu) | 🌐 | `.app-shell.is-demo` CSS overrides |
+| Bundled `demo-content/` tree copied into content root on startup | 🌐 | `_seed_demo_content_if_needed` in `app/main.py` |
+| Friendly 403 with `{detail, demo: true}` JSON | ❌ | global `DemoReadOnlyError` handler in `app/main.py` |
+
+## 19. Versioning & releases
 
 | Feature | Status | Notes |
 |---|---|---|

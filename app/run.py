@@ -35,19 +35,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    def _add_common(sub: argparse.ArgumentParser) -> None:
+        sub.add_argument("--host", default=DEFAULT_HOST)
+        sub.add_argument("--port", type=int, default=DEFAULT_PORT)
+        sub.add_argument(
+            "--demo",
+            action="store_true",
+            help="Read-only public demo mode. Disables auth, refuses every mutation, "
+                 "uses a baked demo content root. Equivalent to NOTEELI_DEMO_MODE=1.",
+        )
+
     dev_parser = subparsers.add_parser(
         "dev",
         help="Start in development mode with reload on the first free port.",
     )
-    dev_parser.add_argument("--host", default=DEFAULT_HOST)
-    dev_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    _add_common(dev_parser)
 
     prod_parser = subparsers.add_parser(
         "prod",
         help="Start in production mode without reload.",
     )
-    prod_parser.add_argument("--host", default=DEFAULT_HOST)
-    prod_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    _add_common(prod_parser)
 
     return parser
 
@@ -62,8 +70,16 @@ def run_prod(host: str, port: int) -> None:
 
 
 def main() -> None:
+    import os
+
     parser = build_parser()
     args = parser.parse_args()
+
+    # The flag has to win before uvicorn imports the app — settings are
+    # cached at import time so we set the env var here and let pydantic
+    # pick it up. uvicorn forks workers which inherit the environment.
+    if getattr(args, "demo", False):
+        os.environ["NOTEELI_DEMO_MODE"] = "1"
 
     if args.command == "dev":
         run_dev(args.host, args.port)

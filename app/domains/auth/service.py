@@ -38,6 +38,17 @@ class AuthService:
         return self._request_host(request) in LOCAL_HOSTS
 
     def get_current_user(self, request: Request) -> dict | None:
+        # Demo mode: every request gets a synthetic guest user, no login
+        # page, no session lookup. Combined with the service-layer write
+        # guard (DemoReadOnlyError) this is safe — the user can browse
+        # but every mutation is rejected.
+        if self.settings.demo_mode:
+            return {
+                "email": "demo@noteeli",
+                "name": "Gość demo",
+                "is_local": True,
+                "is_demo": True,
+            }
         if self.is_local_request(request):
             return {
                 "email": "local@noteeli",

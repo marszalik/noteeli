@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     content_root: Path = PROJECT_ROOT / "content"
     data_dir: Path = PROJECT_ROOT / ".noteeli"
     allowed_markdown_extensions: tuple[str, ...] = (".md", ".markdown")
+    # Demo mode — when on, the app refuses every mutation at the service
+    # layer, skips authentication entirely, and points at a baked
+    # read-only content root. Toggle via NOTEELI_DEMO_MODE=1 or the
+    # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
+    demo_mode: bool = False
 
     model_config = SettingsConfigDict(
         env_prefix="NOTEELI_",
