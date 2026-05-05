@@ -19,7 +19,7 @@ class FileDocument(BaseModel):
     file_type: Literal["markdown", "json", "text"] = "markdown"
     content: str
     previewable: bool = False
-    preview_kind: Literal["image", "pdf"] | None = None
+    preview_kind: Literal["image", "pdf", "docx", "xlsx"] | None = None
     message: str | None = None
 
 
