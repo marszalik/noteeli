@@ -2702,27 +2702,64 @@ if (shell) {
    * Add touch long-press to trigger the context menu (tablet support).
    * A press held for ≥ 500 ms without moving fires the menu at the touch point.
    * Moving the finger or lifting it early cancels the timer.
+   *
+   * iOS Safari pitfalls handled here:
+   *   1. The callout (Copy / Look Up) is suppressed via -webkit-touch-callout
+   *      so it doesn't hijack the long press.
+   *   2. The synthetic click that follows the long press is captured and
+   *      cancelled — otherwise the row would also open the file.
+   *   3. The native contextmenu event (which iOS does fire on long press)
+   *      is preventDefault'd if our long-press has already triggered.
    */
   function addLongPressContextMenu(element, node) {
     let timer = null;
     let startX = 0;
     let startY = 0;
+    let triggered = false;
+
+    // Stop iOS Safari from showing its own selection callout / magnifier
+    // and from selecting the row's text on long press.
+    element.style.webkitTouchCallout = "none";
+    element.style.webkitUserSelect = "none";
+    element.style.userSelect = "none";
 
     element.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
+      triggered = false;
       const touch = e.touches[0];
       startX = touch.clientX;
       startY = touch.clientY;
       timer = setTimeout(() => {
         timer = null;
-        // Prevent the subsequent click / contextmenu from firing twice
-        element.addEventListener("touchend", (te) => te.preventDefault(), { once: true });
+        triggered = true;
+        // Subtle haptic on Android; no-op on iOS but harmless.
+        try { navigator.vibrate?.(12); } catch {}
         openTreeContextMenu(
           { preventDefault() {}, clientX: startX, clientY: startY },
           node,
         );
       }, 500);
     }, { passive: true });
+
+    // The click event that fires after a long press would otherwise also
+    // open the file or toggle the directory. Capture it and stop it.
+    const swallowClick = (e) => {
+      if (triggered) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // Reset so the next genuine tap works again.
+        setTimeout(() => { triggered = false; }, 0);
+      }
+    };
+    element.addEventListener("click", swallowClick, true);
+    // iOS also fires a synthetic contextmenu after long press — suppress it.
+    element.addEventListener("contextmenu", (e) => {
+      if (triggered) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
 
     const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
     element.addEventListener("touchend",    cancel, { passive: true });
@@ -3000,6 +3037,35 @@ if (shell) {
     });
   }
 
+  // Tap-target for opening the context menu on touch devices, where
+  // long-press is finicky (especially on iOS Safari). Visible only when
+  // the device reports `pointer: coarse`, hidden on desktop.
+  function appendRowKebabMenu(row, node) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree-row-menu";
+    btn.setAttribute("aria-label", "Otwórz menu");
+    btn.title = "Menu";
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+      + '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/>'
+      + '<circle cx="12" cy="19" r="2"/></svg>';
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = btn.getBoundingClientRect();
+      openTreeContextMenu(
+        { preventDefault() {}, clientX: rect.left, clientY: rect.bottom },
+        node,
+      );
+    });
+    // Don't let the button leak its tap into the row's drag/click handlers.
+    btn.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+    // Don't let mousedown on the menu button initiate a row drag.
+    btn.addEventListener("mousedown", (e) => e.stopPropagation());
+    row.appendChild(btn);
+  }
+
   function makeSvgIcon(d) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -3120,6 +3186,7 @@ if (shell) {
       row.appendChild(label);
       row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
       addLongPressContextMenu(row, node);
+      appendRowKebabMenu(row, node);
       enableDragAndDrop(row, node);
       listItem.appendChild(row);
 
@@ -3156,6 +3223,7 @@ if (shell) {
     row.appendChild(fileButton);
     row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
     addLongPressContextMenu(row, node);
+    appendRowKebabMenu(row, node);
     enableDragAndDrop(row, node);
     listItem.appendChild(row);
 

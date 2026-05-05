@@ -1169,6 +1169,51 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
   display: flex;
   align-items: center;
   gap: 0.15rem;
+  position: relative;
+}
+
+/* Kebab "⋮" button per tree row — a reliable tap-target for opening
+   the context menu on touch devices (long-press is unreliable on iOS).
+   On desktop with a real mouse the button reveals on row hover; on
+   touch (coarse pointer) it's permanently visible. */
+.tree-row-menu {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.tree-row-menu svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tree-row:hover .tree-row-menu,
+.tree-row:focus-within .tree-row-menu,
+.tree-row-menu:focus-visible {
+  opacity: 1;
+}
+
+.tree-row-menu:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* On coarse-pointer devices (iPad / phones) the button is always
+   visible — there's no hover to reveal it. */
+@media (pointer: coarse) {
+  .tree-row-menu { opacity: 1; }
 }
 
 .tree-toggle,
