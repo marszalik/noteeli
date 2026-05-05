@@ -1056,6 +1056,13 @@ if (shell) {
       group_source: "Źródło", group_appearance: "Wygląd",
       group_editor: "Edytor", group_images: "Obrazki", group_profiles: "Profile",
       label_code_theme: "Motyw kolorowania kodu", code_theme_auto: "Automatyczny",
+      ctx_open: "Otwórz", ctx_collapse: "Zwiń", ctx_expand: "Rozwiń",
+      ctx_scope: "Skup się na folderze", ctx_upload: "Wgraj tutaj",
+      ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
+      ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
+      ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
+      ctx_refresh: "Odśwież drzewo", ctx_delete: "Usuń",
+      ctx_confirm_delete: "Kliknij ponownie, aby potwierdzić",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
       selected_file_label: "Wybrany plik",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1171,6 +1178,13 @@ if (shell) {
       group_source: "Source", group_appearance: "Appearance",
       group_editor: "Editor", group_images: "Images", group_profiles: "Profiles",
       label_code_theme: "Code highlighting theme", code_theme_auto: "Automatic",
+      ctx_open: "Open", ctx_collapse: "Collapse", ctx_expand: "Expand",
+      ctx_scope: "Focus on this folder", ctx_upload: "Upload here",
+      ctx_new_file: "New file", ctx_new_dir: "New folder",
+      ctx_download: "Download", ctx_download_zip: "Download as ZIP",
+      ctx_copy_path: "Copy path", ctx_rename: "Rename",
+      ctx_refresh: "Refresh tree", ctx_delete: "Delete",
+      ctx_confirm_delete: "Click again to confirm",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
       selected_file_label: "Selected file",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1286,6 +1300,13 @@ if (shell) {
       group_source: "Fuente", group_appearance: "Apariencia",
       group_editor: "Editor", group_images: "Imágenes", group_profiles: "Perfiles",
       label_code_theme: "Tema de resaltado de código", code_theme_auto: "Automático",
+      ctx_open: "Abrir", ctx_collapse: "Contraer", ctx_expand: "Expandir",
+      ctx_scope: "Enfocar esta carpeta", ctx_upload: "Subir aquí",
+      ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
+      ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
+      ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
+      ctx_refresh: "Refrescar árbol", ctx_delete: "Eliminar",
+      ctx_confirm_delete: "Haz clic de nuevo para confirmar",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
       selected_file_label: "Archivo seleccionado",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1401,6 +1422,13 @@ if (shell) {
       group_source: "Quelle", group_appearance: "Darstellung",
       group_editor: "Editor", group_images: "Bilder", group_profiles: "Profile",
       label_code_theme: "Syntaxhervorhebungs-Theme", code_theme_auto: "Automatisch",
+      ctx_open: "Öffnen", ctx_collapse: "Einklappen", ctx_expand: "Aufklappen",
+      ctx_scope: "Auf diesen Ordner fokussieren", ctx_upload: "Hier hochladen",
+      ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
+      ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
+      ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
+      ctx_refresh: "Baum aktualisieren", ctx_delete: "Löschen",
+      ctx_confirm_delete: "Erneut klicken zum Bestätigen",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
       selected_file_label: "Ausgewählte Datei",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -1516,6 +1544,13 @@ if (shell) {
       group_source: "Источник", group_appearance: "Оформление",
       group_editor: "Редактор", group_images: "Изображения", group_profiles: "Профили",
       label_code_theme: "Тема подсветки кода", code_theme_auto: "Автоматически",
+      ctx_open: "Открыть", ctx_collapse: "Свернуть", ctx_expand: "Развернуть",
+      ctx_scope: "Сфокусироваться на папке", ctx_upload: "Загрузить сюда",
+      ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
+      ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
+      ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
+      ctx_refresh: "Обновить дерево", ctx_delete: "Удалить",
+      ctx_confirm_delete: "Нажмите ещё раз для подтверждения",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
       selected_file_label: "Выбранный файл",
       wysiwyg_mode: "WYSIWYG", markdown_mode: "Markdown",
@@ -2442,11 +2477,37 @@ if (shell) {
     }
   }
 
-  function createContextMenuButton(label, onClick, tone = "default", skipClose = false) {
+  // Material-icons-style 24×24 paths used as inline SVG inside menu buttons.
+  const CONTEXT_ICONS = {
+    open: "M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zM19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z",
+    collapse: "M16.59 15.41 12 10.83l-4.59 4.58L6 14l6-6 6 6z",
+    expand: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z",
+    scope: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
+    upload: "M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z",
+    newFile: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 14h2v2h2v-2h2v-2h-2v-2h-2v2H8z",
+    newFolder: "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3z",
+    download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+    copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11z",
+    rename: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+    refresh: "M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
+    delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+    confirm: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  };
+
+  function createContextMenuButton(label, iconD, onClick, tone = "default", skipClose = false) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `context-menu-item context-menu-item-${tone}`;
-    button.textContent = label;
+    if (iconD) {
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "context-menu-icon";
+      iconSpan.appendChild(makeSvgIcon(iconD));
+      button.appendChild(iconSpan);
+    }
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "context-menu-label";
+    labelSpan.textContent = label;
+    button.appendChild(labelSpan);
     button.addEventListener("click", async (event) => {
       event.stopPropagation();
       if (!skipClose) closeTreeContextMenu();
@@ -2474,56 +2535,65 @@ if (shell) {
     treeContextMenu.appendChild(header);
 
     if (node.kind === "directory") {
+      const isExpanded = expandedDirectories.has(node.path);
       treeContextMenu.appendChild(
-        createContextMenuButton(expandedDirectories.has(node.path) ? "Collapse" : "Expand", async () => {
-          selectedTreePath = node.path;
-          selectedTreeKind = "directory";
-          if (expandedDirectories.has(node.path)) {
-            expandedDirectories.delete(node.path);
-          } else {
-            expandedDirectories.add(node.path);
-          }
-          renderTree(treeData);
-        }),
+        createContextMenuButton(
+          isExpanded ? t("ctx_collapse") : t("ctx_expand"),
+          isExpanded ? CONTEXT_ICONS.collapse : CONTEXT_ICONS.expand,
+          async () => {
+            selectedTreePath = node.path;
+            selectedTreeKind = "directory";
+            if (isExpanded) {
+              expandedDirectories.delete(node.path);
+            } else {
+              expandedDirectories.add(node.path);
+            }
+            renderTree(treeData);
+          },
+        ),
       );
       treeContextMenu.appendChild(
-        createContextMenuButton("Scope to this folder", async () => {
+        createContextMenuButton(t("ctx_scope"), CONTEXT_ICONS.scope, async () => {
           setScopedRoot(node.path);
           setStatus(`${t("st_showing_only")} ${node.path}.`);
         }),
       );
     } else {
       treeContextMenu.appendChild(
-        createContextMenuButton("Open", async () => {
+        createContextMenuButton(t("ctx_open"), CONTEXT_ICONS.open, async () => {
           await loadFile(node.path);
         }),
       );
     }
 
     treeContextMenu.appendChild(
-      createContextMenuButton("Upload here", async () => {
+      createContextMenuButton(t("ctx_upload"), CONTEXT_ICONS.upload, async () => {
         showUploadMode(uploadPath);
         setStatus(`${t("st_upload_prepared")} ${getUploadTargetLabel(uploadPath)}.`);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("New file here", async () => {
+      createContextMenuButton(t("ctx_new_file"), CONTEXT_ICONS.newFile, async () => {
         openCreateModal("file", parentPath);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("New directory here", async () => {
+      createContextMenuButton(t("ctx_new_dir"), CONTEXT_ICONS.newFolder, async () => {
         openCreateModal("directory", parentPath);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton(node.kind === "directory" ? "Download as ZIP" : "Download", async () => {
-        window.location.href = `${config.downloadUrl}?path=${encodeURIComponent(node.path)}`;
-        setStatus(node.kind === "directory" ? t("st_preparing_zip") : t("st_start_download"));
-      }),
+      createContextMenuButton(
+        node.kind === "directory" ? t("ctx_download_zip") : t("ctx_download"),
+        CONTEXT_ICONS.download,
+        async () => {
+          window.location.href = `${config.downloadUrl}?path=${encodeURIComponent(node.path)}`;
+          setStatus(node.kind === "directory" ? t("st_preparing_zip") : t("st_start_download"));
+        },
+      ),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Copy path", async () => {
+      createContextMenuButton(t("ctx_copy_path"), CONTEXT_ICONS.copy, async () => {
         try {
           await navigator.clipboard.writeText(node.path);
           setStatus(t("st_path_copied"));
@@ -2533,12 +2603,12 @@ if (shell) {
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Rename", async () => {
+      createContextMenuButton(t("ctx_rename"), CONTEXT_ICONS.rename, async () => {
         openRenameModal(node);
       }),
     );
     treeContextMenu.appendChild(
-      createContextMenuButton("Refresh tree", async () => {
+      createContextMenuButton(t("ctx_refresh"), CONTEXT_ICONS.refresh, async () => {
         await loadTree();
       }, "muted"),
     );
@@ -2546,7 +2616,8 @@ if (shell) {
     const isConfirming = contextMenuState.deleteConfirm === true;
     treeContextMenu.appendChild(
       createContextMenuButton(
-        isConfirming ? "Click again to confirm" : "Delete",
+        isConfirming ? t("ctx_confirm_delete") : t("ctx_delete"),
+        isConfirming ? CONTEXT_ICONS.confirm : CONTEXT_ICONS.delete,
         async () => {
           if (isConfirming) {
             contextMenuState.deleteConfirm = false;

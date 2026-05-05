@@ -835,14 +835,35 @@ body[data-theme="noteeli"] .sidebar-tree-icon.is-active {
   background: transparent;
   color: var(--text);
   text-align: left;
-  border-radius: 12px;
-  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.86rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.context-menu-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.context-menu-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .context-menu-item:hover {
   background: var(--accent-soft);
+}
+
+.context-menu-item:hover .context-menu-icon {
+  color: var(--accent);
 }
 
 .context-menu-item-muted {
@@ -852,6 +873,10 @@ body[data-theme="noteeli"] .sidebar-tree-icon.is-active {
 .context-menu-item-danger {
   color: var(--warning);
   font-weight: 600;
+}
+
+.context-menu-item-danger .context-menu-icon {
+  color: var(--warning);
 }
 
 body[data-theme="dark"] .context-menu,
