@@ -79,6 +79,7 @@ if (shell) {
   const jsonEditorContainer = document.getElementById("json-editor");
   const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
+  const officePreview = document.getElementById("office-preview");
   const imagePreview = document.getElementById("image-preview");
   const pdfPreview = document.getElementById("pdf-preview");
   const uploadStage = document.getElementById("upload-stage");
@@ -1902,6 +1903,8 @@ if (shell) {
     imagePreview.alt = "";
     pdfPreview.classList.add("hidden");
     pdfPreview.removeAttribute("src");
+    officePreview?.classList.add("hidden");
+    officePreview?.removeAttribute("src");
   }
 
   function hideUploadStage() {
@@ -1923,18 +1926,30 @@ if (shell) {
     hideCodeEditorMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
+    const isOffice = file.preview_kind === "docx" || file.preview_kind === "xlsx";
     imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
     pdfPreview.classList.toggle("hidden", file.preview_kind !== "pdf");
+    if (officePreview) officePreview.classList.toggle("hidden", !isOffice);
 
     const previewUrl = getPreviewUrl(file.path);
     if (file.preview_kind === "image") {
       imagePreview.src = previewUrl;
       imagePreview.alt = file.name;
       pdfPreview.removeAttribute("src");
+      officePreview?.removeAttribute("src");
     } else if (file.preview_kind === "pdf") {
       pdfPreview.src = previewUrl;
       imagePreview.removeAttribute("src");
       imagePreview.alt = "";
+      officePreview?.removeAttribute("src");
+    } else if (isOffice) {
+      // Server returns rendered HTML — pass it to a sandboxed iframe.
+      // sandbox="allow-same-origin" lets the iframe inherit theme styles
+      // but blocks scripts and form submission.
+      if (officePreview) officePreview.src = previewUrl;
+      imagePreview.removeAttribute("src");
+      imagePreview.alt = "";
+      pdfPreview.removeAttribute("src");
     }
   }
 
@@ -2994,6 +3009,10 @@ if (shell) {
       return { d: TREE_ICONS.fileImage, cls: "tree-icon-image" };
     if (ext === "pdf")
       return { d: TREE_ICONS.filePdf, cls: "tree-icon-pdf" };
+    if (ext === "docx" || ext === "doc")
+      return { d: TREE_ICONS.fileText, cls: "tree-icon-docx" };
+    if (ext === "xlsx" || ext === "xls" || ext === "xlsm" || ext === "csv")
+      return { d: TREE_ICONS.fileText, cls: "tree-icon-xlsx" };
     if (ext === "md" || ext === "markdown")
       return { d: TREE_ICONS.fileMd, cls: "tree-icon-md" };
     if (ext === "json" || ext === "json5" || ext === "jsonc")

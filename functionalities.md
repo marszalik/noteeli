@@ -143,6 +143,9 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | User-pickable code highlighting theme (12 options) + auto | 🌐 | `code-theme-select`, lazy CSS loading |
 | Editor font size adjustment (12–28 px) | 🌐 | `applyEditorFontSize` |
 | Preview pane for images and PDFs (read-only) | 🌐 | `showPreviewMode` |
+| Preview pane for `.docx` (Word) — read-only HTML render | ✅ `test_render_docx_preview_returns_html`, `test_get_preview_kind_classifies_office_documents` | `render_office_preview`, `mammoth` |
+| Preview pane for `.xlsx` / `.xlsm` (Excel) — read-only HTML tables, one per sheet | ✅ `test_render_xlsx_preview_returns_html_table` | `render_office_preview`, `openpyxl`, 5000-row safety cap |
+| Office preview rejects non-office files | ✅ `test_render_office_preview_rejects_non_office_file` | |
 
 ## 7. Embedded assets & images
 
@@ -293,7 +296,7 @@ tests/
 └── test_auth_guard.py               — 11 tests (every workspace API endpoint
                                         gets 401 from non-local hosts; HTML root
                                         redirects to /login; local-host bypass)
-                                       — 55 tests total
+                                       — 59 tests total (workspace + browser + prefs + profiles + auth)
 ```
 
 ## Coverage gaps (priority order)

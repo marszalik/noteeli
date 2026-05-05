@@ -141,6 +141,7 @@
         <div id="preview-stage" class="file-preview hidden">
           <img id="image-preview" class="file-preview-image hidden" alt="" />
           <iframe id="pdf-preview" class="file-preview-pdf hidden" title="Podglad PDF"></iframe>
+          <iframe id="office-preview" class="file-preview-office hidden" sandbox="allow-same-origin" title="Podglad dokumentu"></iframe>
         </div>
 
         <section id="upload-stage" class="upload-stage hidden" aria-labelledby="upload-stage-title">

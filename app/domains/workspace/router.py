@@ -115,6 +115,14 @@ async def workspace_file_preview_api(request: Request, background_tasks: Backgro
     if preview_kind is None:
         raise HTTPException(status_code=422, detail="This file type is not available in preview mode.")
 
+    # Office docs (.docx, .xlsx) are rendered server-side into HTML so the
+    # browser can display them in a sandboxed iframe — no edit, just view.
+    if preview_kind in ("docx", "xlsx"):
+        from fastapi.responses import HTMLResponse
+
+        html = workspace_service.render_office_preview(rel_path)
+        return HTMLResponse(content=html)
+
     local_path, is_temporary = workspace_service.get_local_path(rel_path)
     if is_temporary:
         background_tasks.add_task(Path.unlink, local_path, missing_ok=True)

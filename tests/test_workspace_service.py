@@ -505,6 +505,103 @@ def test_is_editable_true_for_markdown_and_json(tmp_path: Path):
     assert service.is_editable("a.pdf") is False
 
 
+# ── Office (docx / xlsx) preview rendering ─────────────────────
+
+def test_get_preview_kind_classifies_office_documents(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    service = build_service(notes)
+
+    assert service.get_preview_kind("note.docx") == "docx"
+    assert service.get_preview_kind("data.xlsx") == "xlsx"
+    assert service.get_preview_kind("data.xlsm") == "xlsx"
+    assert service.get_preview_kind("note.txt") is None
+
+
+def test_render_docx_preview_returns_html(tmp_path: Path):
+    """Render a tiny .docx file (built on the fly) into HTML and check
+    the output contains the document's text."""
+    import io
+    import zipfile
+
+    docx_xml_document = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Hello from a docx</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Second paragraph</w:t></w:r></w:p>
+  </w:body>
+</w:document>"""
+    content_types = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>"""
+    rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>"""
+
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "letter.docx"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("[Content_Types].xml", content_types)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("word/document.xml", docx_xml_document)
+    target.write_bytes(buf.getvalue())
+
+    service = build_service(notes)
+    html = service.render_office_preview("letter.docx")
+
+    assert "<html" in html
+    assert "Hello from a docx" in html
+    assert "Second paragraph" in html
+
+
+def test_render_xlsx_preview_returns_html_table(tmp_path: Path):
+    """Render a workbook with two sheets and check both tables show up
+    in the rendered HTML."""
+    from openpyxl import Workbook
+
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "budget.xlsx"
+
+    wb = Workbook()
+    sheet1 = wb.active
+    sheet1.title = "January"
+    sheet1.append(["Item", "Cost"])
+    sheet1.append(["Coffee", 12.50])
+    sheet1.append(["Lunch", 25])
+
+    sheet2 = wb.create_sheet("February")
+    sheet2.append(["Item", "Cost"])
+    sheet2.append(["Books", 99.00])
+    wb.save(str(target))
+
+    service = build_service(notes)
+    html = service.render_office_preview("budget.xlsx")
+
+    assert "<table" in html
+    assert "January" in html
+    assert "February" in html
+    assert "Coffee" in html
+    assert "12.5" in html or "12.50" in html  # openpyxl may strip trailing zero
+    assert "Books" in html
+
+
+def test_render_office_preview_rejects_non_office_file(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "note.md").write_text("# hi\n", encoding="utf-8")
+
+    service = build_service(notes)
+    with pytest.raises(UnsupportedFileTypeError):
+        service.render_office_preview("note.md")
+
+
 # ── JSON document round-trip ────────────────────────────────────
 
 def test_save_and_read_json_document(tmp_path: Path):

@@ -41,6 +41,8 @@ class ItemAlreadyExistsError(WorkspaceError):
 class WorkspaceService:
     IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"}
     PDF_EXTENSIONS = {".pdf"}
+    DOCX_EXTENSIONS = {".docx"}
+    XLSX_EXTENSIONS = {".xlsx", ".xlsm"}
     JSON_EXTENSIONS = {".json"}
     MAX_TEXT_FILE_BYTES = 1024 * 1024
 
@@ -528,7 +530,97 @@ class WorkspaceService:
             return "image"
         if suffix in self.PDF_EXTENSIONS:
             return "pdf"
+        if suffix in self.DOCX_EXTENSIONS:
+            return "docx"
+        if suffix in self.XLSX_EXTENSIONS:
+            return "xlsx"
         return None
+
+    def render_office_preview(self, path: str) -> str:
+        """Convert a .docx or .xlsx file into self-contained HTML for
+        read-only preview in the browser. Used by the preview API."""
+        backend = self._get_backend()
+        rel = self._resolve_path(path, backend)
+        suffix = Path(rel).suffix.lower()
+        data = backend.read_bytes(rel)
+        if suffix in self.DOCX_EXTENSIONS:
+            return self._render_docx_html(data, Path(rel).name)
+        if suffix in self.XLSX_EXTENSIONS:
+            return self._render_xlsx_html(data, Path(rel).name)
+        raise UnsupportedFileTypeError("This file type is not an office preview format.")
+
+    @staticmethod
+    def _render_docx_html(data: bytes, filename: str) -> str:
+        import io
+        import html as _html
+
+        import mammoth
+
+        with io.BytesIO(data) as buf:
+            result = mammoth.convert_to_html(buf)
+        body = result.value or "<p><em>(empty document)</em></p>"
+        return WorkspaceService._wrap_office_html(_html.escape(filename), body)
+
+    @staticmethod
+    def _render_xlsx_html(data: bytes, filename: str) -> str:
+        import io
+        import html as _html
+
+        from openpyxl import load_workbook
+
+        wb = load_workbook(io.BytesIO(data), data_only=True, read_only=True)
+        sheets_html: list[str] = []
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            rows_html: list[str] = []
+            row_count = 0
+            for row in ws.iter_rows(values_only=True):
+                cells = "".join(
+                    f"<td>{_html.escape('' if c is None else str(c))}</td>" for c in row
+                )
+                rows_html.append(f"<tr>{cells}</tr>")
+                row_count += 1
+                if row_count > 5000:  # safety cap for the preview pane
+                    rows_html.append(
+                        f"<tr><td colspan='99'><em>(... truncated after 5000 rows)</em></td></tr>"
+                    )
+                    break
+            sheets_html.append(
+                f"<section><h2>{_html.escape(sheet_name)}</h2>"
+                f"<table>{''.join(rows_html) or '<tr><td><em>(empty sheet)</em></td></tr>'}</table></section>"
+            )
+        wb.close()
+        body = "".join(sheets_html) or "<p><em>(workbook has no sheets)</em></p>"
+        return WorkspaceService._wrap_office_html(_html.escape(filename), body)
+
+    @staticmethod
+    def _wrap_office_html(title: str, body: str) -> str:
+        # Self-contained HTML with theme-aware styling that the iframe will
+        # respect via CSS variables inherited from the parent page.
+        return (
+            "<!doctype html><html><head><meta charset='utf-8'>"
+            f"<title>{title}</title>"
+            "<style>"
+            "body{margin:0;padding:1.5rem 2rem;"
+            "font-family:'IBM Plex Sans','Segoe UI',sans-serif;"
+            "color:#1f2937;background:#f9fafb;line-height:1.55;}"
+            "@media (prefers-color-scheme: dark){"
+            "body{color:#e5e7eb;background:#0f172a;}"
+            "table{border-color:#334155;}"
+            "th,td{border-color:#334155;}"
+            "thead{background:#1e293b;}"
+            "}"
+            "h1,h2,h3{font-family:'IBM Plex Serif',Georgia,serif;}"
+            "img{max-width:100%;height:auto;}"
+            "table{border-collapse:collapse;margin:0.5rem 0 1.5rem;}"
+            "th,td{border:1px solid #d1d5db;padding:0.4rem 0.6rem;"
+            "vertical-align:top;font-size:0.88rem;}"
+            "thead{background:#f3f4f6;}"
+            "section + section{margin-top:2rem;}"
+            "</style></head><body>"
+            f"{body}"
+            "</body></html>"
+        )
 
     def is_small_text_file(self, path: str, backend: StorageBackend) -> bool:
         return self._read_small_text_file(path, backend) is not None

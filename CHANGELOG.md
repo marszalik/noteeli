@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Read-only preview for `.docx` (Word) and `.xlsx` / `.xlsm` (Excel) files.
+  Word documents are converted to HTML on the server (`mammoth`); Excel
+  workbooks render as HTML tables, one per sheet (`openpyxl`, capped at 5000
+  rows per sheet for safety). Preview shows in a sandboxed iframe — no edit,
+  no script execution. Distinct sidebar icons (blue for docx, green for
+  xlsx/csv).
+
 ## [1.0.0] - 2026-05-01
 
 ### Added
