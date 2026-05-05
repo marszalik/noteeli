@@ -4,6 +4,48 @@ A living catalogue of every user-facing feature in Noteeli, kept in sync with
 the codebase and the automated test suite. Use it as the canonical answer to
 "does Noteeli do X?" and as a regression checklist when shipping changes.
 
+## Quick index
+
+The most-used features, by everyday name. Each links to its detail row.
+
+### Codzienne pisanie
+
+- **Edytor WYSIWYG dla Markdowna** → [§6 Editors](#6-editors)
+- **Automatyczny zapis (autosave)** → [§5 Reading & saving](#5-reading--saving-documents) ("Auto-save (debounced, configurable)")
+- **Ręczny zapis z Ctrl+S / przyciskiem** → [§5 Reading & saving](#5-reading--saving-documents)
+- **Wstawianie / dodawanie obrazka** → [§7 Embedded assets & images](#7-embedded-assets--images) (paste, drag-drop, Add image button)
+- **Drag-drop obrazka z drzewa do edytora** → [§7](#7-embedded-assets--images) ("Drag image from sidebar tree → embed in editor")
+- **Auto-kopia obrazka do skonfigurowanej lokalizacji (Obsidian-style)** → [§7](#7-embedded-assets--images)
+
+### Nawigacja po notatkach
+
+- **Skupienie na folderze ("focus na folderze")** → [§3 File tree](#3-file-tree--navigation) ("Tree scope")
+- **Drzewo plików z ikonami per typ** → [§3](#3-file-tree--navigation)
+- **Pokaż / ukryj pliki ukryte** → [§3](#3-file-tree--navigation)
+- **Drag-drop plików w drzewie (przesuwanie / sortowanie)** → [§4 File CRUD](#4-file-crud)
+- **Pamiętaj ostatnio otwarty plik** → [§3](#3-file-tree--navigation)
+
+### Nowy plik / folder
+
+- **Nowy plik / nowy folder z menu kontekstowego lub paska bocznego** → [§4 File CRUD](#4-file-crud)
+- **Zmiana nazwy z zachowaniem rozszerzenia** → [§4](#4-file-crud)
+- **Usuwanie z potwierdzeniem dwuklikiem** → [§4](#4-file-crud)
+- **Pobieranie pliku / folderu jako ZIP** → [§8 Upload & download](#8-file-upload--download)
+
+### Konfiguracja
+
+- **5 motywów (Light / Dark / Noteeli / Webnote / Obsidian)** → [§13 Themes](#13-themes--visual-styling)
+- **5 języków UI (pl / en / es / de / ru)** → [§16 i18n](#16-internationalisation)
+- **Profile ustawień (zestawy)** → [§11 Preference profiles](#11-preference-profiles-saved-sets)
+- **Edycja kodu z kolorowaniem składni** → [§6 Editors](#6-editors) (CodeMirror)
+- **Edycja JSON w trybie formularza** → [§6](#6-editors)
+
+### Współpraca / dystrybucja
+
+- **PWA — instalacja jako apka** → [§17 PWA](#17-pwa-support)
+- **Przełączanie źródła notatek (lokalne / SFTP / Google Drive)** → [§2 Storage backends](#2-storage-backends)
+- **Wersjonowanie + linki do release notes** → [§18 Versioning & releases](#18-versioning--releases)
+
 ## Legend
 
 - ✅ — covered by an automated test (the test name follows in code font)
@@ -24,7 +66,9 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Built-in password login (`NOTEELI_LOCAL_USERNAME` / `_PASSWORD`) | ❌ | bypass for local/dev environments |
 | Logout | ❌ | `auth/router.py` — `logout_action` |
 | Session middleware (signed cookie) | ❌ | configured in `app/main.py` |
-| `require_api_access` guard on every workspace endpoint | ❌ | implicit dependency |
+| `require_api_access` guard on every workspace API endpoint | ✅ `tests/test_auth_guard.py` (10 tests covering tree, file, save, create, delete, rename, upload, preferences, profiles) | implicit dependency |
+| Local-host bypass (`127.0.0.1`, `localhost`) | ✅ `test_local_host_bypass_allows_unauthenticated_access` | |
+| Workspace HTML root redirects to login | ✅ `test_workspace_root_redirects_to_login` | 303 to `/login` |
 | Google Drive OAuth (separate consent for Drive scope) | ❌ | `auth_gdrive_start`, `auth_gdrive_callback` |
 | "Local mode" chip when running without Google auth | 🌐 | template branch on `user.is_local` |
 
@@ -50,7 +94,8 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Tree scope (focus on a subfolder) | 🌐 | `setScopedRoot` in app.js |
 | Hidden-file toggle (`.git/`, `.megaignore`, dotfiles) | 🌐 | `filterVisibleTree`, persisted in localStorage |
 | File-type icons in the tree (md / json / code / image / pdf / audio / video / archive / text / generic) | 🌐 | `getFileIconInfo` |
-| Path traversal protection (`..`, escape root) | ✅ `test_path_traversal_is_blocked` | `_sanitize_path` |
+| Path traversal protection (`..`, escape root) | ✅ `test_path_traversal_is_blocked`, `test_delete_blocks_path_traversal`, `test_create_item_rejects_separator_in_name` | `_sanitize_path` |
+| Path normalisation (Windows backslashes, double slashes) | ✅ `test_path_sanitisation_handles_windows_style_separators` | |
 | Last-opened-file persistence across reloads | 🌐 | `localStorage["last-opened-file"]` |
 
 ## 4. File CRUD
@@ -60,8 +105,8 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Create directory | ✅ `test_create_directory_and_markdown_file` | |
 | Create Markdown file (auto-append `.md` if extension missing) | ✅ `test_create_directory_and_markdown_file` | `_normalize_item_name` |
 | Reject duplicate name on create | ✅ `test_create_item_rejects_duplicates` | |
-| Rename file/directory | ❌ | `rename_item` — note: rename **preserves** the original extension when the new name has no dot (recent fix); not yet covered by a test |
-| Delete file/directory (with confirm-twice UI gate) | ❌ | `delete_item` — service is one-shot, the double-click confirm lives in the frontend |
+| Rename file/directory | ✅ `test_rename_image_preserves_original_extension`, `test_rename_code_file_preserves_extension`, `test_rename_markdown_keeps_md_suffix_when_user_omits_it`, `test_rename_explicit_extension_replaces_original`, `test_rename_directory_does_not_get_md_suffix`, `test_rename_rejects_path_separators`, `test_rename_rejects_collision_with_existing` | recent regression fix locked in |
+| Delete file/directory (with confirm-twice UI gate) | ✅ `test_delete_removes_file`, `test_delete_removes_directory_recursively`, `test_delete_blocks_path_traversal` | service is one-shot, the double-click confirm lives in the frontend |
 | Move file/directory | ✅ `test_move_item_to_another_directory` | `move_item` |
 | Block moving a directory into its own child | ✅ `test_move_directory_into_child_is_blocked` | |
 | Drag-to-reorder within parent | 🌐 | `reorderWithinParent` (uses `reorder_items`) |
@@ -76,8 +121,9 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Save Markdown document | ✅ `test_save_document_updates_markdown_file` | |
 | Reject save on non-editable file types (e.g. binary) | ✅ `test_non_markdown_file_cannot_be_saved` | |
 | Open & save unknown small text files (1 MB cap, valid UTF-8, no NUL bytes) | ✅ `test_unknown_text_file_opens_and_saves_as_plain_text` | `_read_small_text_file`, `MAX_TEXT_FILE_BYTES` |
-| JSON file detection (`.json`, `.json5`, `.jsonc`) | ❌ | `JSON_EXTENSIONS`, `is_json` |
-| Editor file-type routing (`markdown` / `json` / `text`) | ❌ | `get_editor_file_type` |
+| JSON file detection (`.json`, `.json5`, `.jsonc`) | ✅ `test_editor_file_type_classifies_markdown_json_and_text` | `JSON_EXTENSIONS`, `is_json` |
+| Editor file-type routing (`markdown` / `json` / `text`) | ✅ `test_editor_file_type_classifies_markdown_json_and_text`, `test_is_editable_true_for_markdown_and_json` | `get_editor_file_type` |
+| Save and read a JSON document (round-trip) | ✅ `test_save_and_read_json_document` | |
 | Auto-save (debounced, configurable) | 🌐 | `scheduleAutosave`, `AUTOSAVE_DELAY_MS` |
 | Manual save with dirty indicator and disabled state | 🌐 | `markEditorDirty`, `saveButton.disabled` |
 | Save button hidden when autosave is enabled | 🌐 | `applyPreferencesToUi` |
@@ -137,9 +183,9 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 
 | Feature | Status | Notes |
 |---|---|---|
-| `get_preferences` / `update_preferences` | ⚠️ | `update_preferences` is exercised indirectly via profile-apply tests |
+| `get_preferences` / `update_preferences` | ✅ `test_update_preferences_persists_basic_fields`, `test_update_preferences_normalises_local_content_root` | |
 | Fall back to default content root when saved path is invalid | ✅ `test_get_preferences_falls_back_to_default_content_root_when_saved_path_is_invalid` | |
-| Source-type preference (`local` / `sftp` / `gdrive`) | ❌ | switched via Settings modal |
+| Source-type preference (`local` / `sftp` / `gdrive`) | ✅ `test_update_preferences_switches_to_sftp_source_type` | switched via Settings modal |
 | Sort mode (`alphabetical` / `manual`) | ⚠️ | manual mode reorder covered by manual_order test |
 | Theme (`light` / `dark` / `noteeli` / `webnote` / `obsidian`) | 🌐 | `applyTheme` |
 | Interface language (`pl` / `en` / `es` / `de` / `ru`) | 🌐 | `applyLanguage`, `t()` |
@@ -237,11 +283,17 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 
 ```
 tests/
-├── test_workspace_service.py       — 18 tests (file CRUD, tree, preview, embed, upload/download)
-├── test_directory_browser_service.py — 3 tests (browser modal backend)
-├── test_preferences_service.py     — 1 test (fallback to default content root)
-└── test_preference_profiles.py     — 3 tests (save/list/apply, update, delete)
-                                     —  25 tests total
+├── test_workspace_service.py        — 34 tests (file CRUD, tree, preview, embed,
+│                                       upload/download, rename, delete, path safety,
+│                                       editor file-type routing, JSON round-trip)
+├── test_directory_browser_service.py —  3 tests (browser modal backend)
+├── test_preferences_service.py      —  4 tests (fallback to default root,
+│                                       update fields, source-type switching, content-root norm.)
+├── test_preference_profiles.py      —  3 tests (save/list/apply, update, delete)
+└── test_auth_guard.py               — 11 tests (every workspace API endpoint
+                                        gets 401 from non-local hosts; HTML root
+                                        redirects to /login; local-host bypass)
+                                       — 55 tests total
 ```
 
 ## Coverage gaps (priority order)
@@ -249,32 +301,34 @@ tests/
 These are the largest "if it broke, the user would notice" surfaces with **no**
 automated coverage. Each one is a candidate for the next batch of tests.
 
-### Critical / safety
-1. **Rename preserves extension** — recent regression caused by `_normalize_item_name` clobbering image suffixes. A test would lock in: `pic.png → pic2 → pic2.png`, `note.md → note2 → note2.md`.
-2. **Delete item** — `delete_item` deletes any path; needs a test that confirms it refuses to traverse outside the content root.
-3. **Auth guard** — every API endpoint requires a session; no test verifies that an unauthenticated request gets 401/redirect.
-4. **Path normalization edge cases** — embedded `\\`, leading `/`, Unicode normalization.
-
 ### Storage backends
-5. **SFTP backend** — at minimum, a fake-SFTP integration test (e.g. paramiko stub) covering exists/list/read/write/rename.
-6. **Google Drive backend** — likely mock-only.
+1. **SFTP backend** — at minimum, a fake-SFTP integration test (e.g. paramiko stub) covering exists/list/read/write/rename.
+2. **Google Drive backend** — likely mock-only.
 
 ### Editor / frontend (would benefit from a Playwright or Selenium harness)
-7. **Editor file-type routing** — Markdown → Toast UI, JSON → JSONEditor, code → CodeMirror, plain text → CodeMirror.
-8. **Drag-and-drop image copy** — Obsidian-style auto-copy when source isn't in target dir.
-9. **Auto-save debounce** — fires after delay, doesn't double-save during in-flight save, cancels on file switch.
-10. **Cursor reset after `setMarkdown`** — toolbar buttons (Task, list) operate on the new doc.
+3. **Drag-and-drop image copy** — Obsidian-style auto-copy when source isn't in target dir.
+4. **Auto-save debounce** — fires after delay, doesn't double-save during in-flight save, cancels on file switch.
+5. **Cursor reset after `setMarkdown`** — toolbar buttons (Task, list) operate on the new doc.
+6. **Tree scope (focus on a folder)** — localStorage-backed, frontend-only.
+7. **Drag-to-reorder** in manual sort mode — full UI flow.
 
-### Preferences
-11. **Source-type switching** — local → sftp → gdrive round-trip via `update_preferences`.
-12. **Theme/language application** — frontend, but also that backend persists the value.
+### Auth (full flow)
+8. **Google OAuth callback** — happy path and disallowed email.
+9. **Password login** — happy path, wrong password, missing config.
+10. **Logout clears the session.**
+11. **Password login throttling** — currently none; worth adding before exposing publicly.
 
 ### PWA
-13. **Service-worker registration & cache invalidation** — manual only.
+12. **Service-worker registration & cache invalidation** — manual only.
 
-### Auth
-14. **Google OAuth callback** — happy path and disallowed email.
-15. **Password login throttling** — currently none, worth adding.
+### Done since the last audit ✅
+- ~~Rename preserves extension~~ — 7 tests covering image, code, markdown, dirs, separators, collisions
+- ~~Delete item path traversal~~ — 3 tests including a sensitive-file-survival check
+- ~~Auth guard on every API endpoint~~ — 10 tests
+- ~~Path normalization edge cases~~ — backslashes, double-dots in names
+- ~~Editor file-type routing~~ — `is_editable`, `is_json`, `get_editor_file_type`
+- ~~Source-type switching~~ — sftp round-trip
+- ~~Update preferences round-trip~~ — basic fields + content-root normalisation
 
 ## How to keep this document honest
 

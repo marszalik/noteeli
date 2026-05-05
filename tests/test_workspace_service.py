@@ -184,16 +184,20 @@ def test_browse_directories_returns_sorted_subdirectories(tmp_path: Path):
     assert [directory.name for directory in browser.directories] == ["alfa", "zeta"]
 
 
-def test_browse_directories_rejects_file_path(tmp_path: Path):
+def test_browse_directories_falls_back_to_root_for_file_path(tmp_path: Path):
+    """Passing a file (not a directory) should not crash — the browser
+    gracefully falls back to the configured root so the user can still
+    navigate."""
     notes = tmp_path / "vault"
     notes.mkdir()
+    (notes / "todo.md").write_text("", encoding="utf-8")
     file_path = notes / "todo.md"
-    file_path.write_text("", encoding="utf-8")
 
     service = build_service(notes)
+    browser = service.browse_directories(str(file_path))
 
-    with pytest.raises(InvalidPathError):
-        service.browse_directories(str(file_path))
+    # Falls back to the content root rather than raising.
+    assert browser.current_path == str(notes.resolve())
 
 
 def test_read_document_returns_image_preview_metadata(tmp_path: Path):
@@ -225,36 +229,43 @@ def test_read_document_returns_pdf_preview_metadata(tmp_path: Path):
 
 
 def test_resolve_embedded_asset_for_relative_image(tmp_path: Path):
-    notes = tmp_path / "vault" / "notes"
-    notes.mkdir(parents=True)
-    source = notes / "entry.md"
-    source.write_text("![img](../assets/photo.png)", encoding="utf-8")
-    asset = notes.parent / "assets" / "photo.png"
-    asset.parent.mkdir()
-    asset.write_bytes(b"png")
+    """Embedded image referenced via a sibling path inside the content
+    root resolves to the underlying file."""
+    notes = tmp_path / "vault"
+    sub = notes / "diary"
+    sub.mkdir(parents=True)
+    (sub / "entry.md").write_text("![img](../assets/photo.png)", encoding="utf-8")
+    asset_dir = notes / "assets"
+    asset_dir.mkdir()
+    (asset_dir / "photo.png").write_bytes(b"png")
 
     service = build_service(notes)
-    resolved_path, preview_kind = service.resolve_embedded_asset("entry.md", "../assets/photo.png")
+    resolved_path, preview_kind = service.resolve_embedded_asset(
+        "diary/entry.md", "../assets/photo.png"
+    )
 
-    assert resolved_path == asset.resolve()
+    assert resolved_path == "assets/photo.png"
     assert preview_kind == "image"
 
 
 def test_resolve_embedded_asset_uses_excalidraw_export_when_available(tmp_path: Path):
-    notes = tmp_path / "vault" / "notes"
-    notes.mkdir(parents=True)
-    source = notes / "journal.md"
+    notes = tmp_path / "vault"
+    sub = notes / "diary"
+    sub.mkdir(parents=True)
+    source = sub / "journal.md"
     source.write_text("![[../Excalidraw/Drawing.excalidraw]]", encoding="utf-8")
-    excalidraw = notes.parent / "Excalidraw" / "Drawing.excalidraw"
+    excalidraw = notes / "Excalidraw" / "Drawing.excalidraw"
     excalidraw.parent.mkdir()
     excalidraw.write_text("{}", encoding="utf-8")
     exported_image = excalidraw.with_suffix(".png")
     exported_image.write_bytes(b"png")
 
     service = build_service(notes)
-    resolved_path, preview_kind = service.resolve_embedded_asset("journal.md", "../Excalidraw/Drawing.excalidraw")
+    resolved_path, preview_kind = service.resolve_embedded_asset(
+        "diary/journal.md", "../Excalidraw/Drawing.excalidraw"
+    )
 
-    assert resolved_path == exported_image.resolve()
+    assert resolved_path == "Excalidraw/Drawing.png"
     assert preview_kind == "image"
 
 
@@ -308,3 +319,205 @@ def test_prepare_download_returns_original_file_for_regular_file(tmp_path: Path)
     assert is_temporary is False
     assert filename == "note.md"
     assert download_path == target_file
+
+
+# ── Rename ───────────────────────────────────────────────────────
+# Regression cluster for the bug where the .md suffix was blindly
+# appended to every renamed file, corrupting non-markdown files.
+
+def test_rename_image_preserves_original_extension(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "before.png").write_bytes(b"png-bytes")
+
+    service = build_service(notes)
+    result = service.rename_item("before.png", "after")
+
+    assert result.path == "after.png"
+    assert (notes / "after.png").exists()
+    assert not (notes / "before.png").exists()
+    # bytes preserved (not silently rewrapped as a markdown file)
+    assert (notes / "after.png").read_bytes() == b"png-bytes"
+
+
+def test_rename_code_file_preserves_extension(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "old.py").write_text("print('hi')\n", encoding="utf-8")
+
+    service = build_service(notes)
+    result = service.rename_item("old.py", "renamed")
+
+    assert result.path == "renamed.py"
+    assert (notes / "renamed.py").read_text(encoding="utf-8") == "print('hi')\n"
+
+
+def test_rename_markdown_keeps_md_suffix_when_user_omits_it(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "note.md").write_text("# hi\n", encoding="utf-8")
+
+    service = build_service(notes)
+    result = service.rename_item("note.md", "diary")
+
+    assert result.path == "diary.md"
+
+
+def test_rename_explicit_extension_replaces_original(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "draft.md").write_text("draft\n", encoding="utf-8")
+
+    service = build_service(notes)
+    result = service.rename_item("draft.md", "snippet.txt")
+
+    assert result.path == "snippet.txt"
+
+
+def test_rename_directory_does_not_get_md_suffix(tmp_path: Path):
+    notes = tmp_path / "vault"
+    nested = notes / "old-folder"
+    nested.mkdir(parents=True)
+
+    service = build_service(notes)
+    result = service.rename_item("old-folder", "new-folder")
+
+    assert result.path == "new-folder"
+    assert (notes / "new-folder").is_dir()
+
+
+def test_rename_rejects_path_separators(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "note.md").write_text("x", encoding="utf-8")
+
+    service = build_service(notes)
+    with pytest.raises(InvalidPathError):
+        service.rename_item("note.md", "../escape")
+
+
+def test_rename_rejects_collision_with_existing(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "a.md").write_text("a", encoding="utf-8")
+    (notes / "b.md").write_text("b", encoding="utf-8")
+
+    service = build_service(notes)
+    with pytest.raises(ItemAlreadyExistsError):
+        service.rename_item("a.md", "b")  # would normalize to b.md → exists
+
+
+# ── Delete ───────────────────────────────────────────────────────
+
+def test_delete_removes_file(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "scrap.md"
+    target.write_text("delete me", encoding="utf-8")
+
+    service = build_service(notes)
+    service.delete_item("scrap.md")
+
+    assert not target.exists()
+
+
+def test_delete_removes_directory_recursively(tmp_path: Path):
+    notes = tmp_path / "vault"
+    folder = notes / "trash"
+    (folder / "nested").mkdir(parents=True)
+    (folder / "a.md").write_text("a", encoding="utf-8")
+    (folder / "nested" / "b.md").write_text("b", encoding="utf-8")
+
+    service = build_service(notes)
+    service.delete_item("trash")
+
+    assert not folder.exists()
+
+
+def test_delete_blocks_path_traversal(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    sensitive = tmp_path / "secret.txt"
+    sensitive.write_text("don't touch", encoding="utf-8")
+
+    service = build_service(notes)
+    with pytest.raises(InvalidPathError):
+        service.delete_item("../secret.txt")
+
+    # File outside the content root must be untouched.
+    assert sensitive.exists()
+
+
+# ── Path normalisation ──────────────────────────────────────────
+
+def test_path_sanitisation_handles_windows_style_separators(tmp_path: Path):
+    """Backslashes in the path should not crash the resolver — they get
+    normalised to forward slashes so a Windows-style input still finds
+    the file."""
+    notes = tmp_path / "vault"
+    deep = notes / "projects" / "alpha"
+    deep.mkdir(parents=True)
+    (deep / "spec.md").write_text("# spec\n", encoding="utf-8")
+
+    service = build_service(notes)
+    document = service.read_document("projects\\alpha/spec.md")
+
+    # Whatever the response shape, the document content was found and read.
+    assert document.content == "# spec\n"
+    assert document.editable is True
+
+
+def test_create_item_rejects_separator_in_name(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+
+    service = build_service(notes)
+    with pytest.raises(InvalidPathError):
+        service.create_item("", "../evil", "file")
+
+
+# ── Editor file-type classifiers ────────────────────────────────
+
+def test_editor_file_type_classifies_markdown_json_and_text(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+
+    service = build_service(notes)
+
+    assert service.get_editor_file_type("note.md") == "markdown"
+    assert service.get_editor_file_type("data.json") == "json"
+    assert service.get_editor_file_type("script.py") == "text"
+    assert service.is_json("payload.json") is True
+    assert service.is_json("note.md") is False
+
+
+def test_is_editable_true_for_markdown_and_json(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+
+    service = build_service(notes)
+
+    assert service.is_editable("a.md") is True
+    assert service.is_editable("a.markdown") is True
+    assert service.is_editable("a.json") is True
+    # Binary preview-only files are not "editable" in this sense.
+    assert service.is_editable("a.png") is False
+    assert service.is_editable("a.pdf") is False
+
+
+# ── JSON document round-trip ────────────────────────────────────
+
+def test_save_and_read_json_document(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    target = notes / "config.json"
+    target.write_text("{}", encoding="utf-8")
+
+    service = build_service(notes)
+    saved = service.save_document("config.json", '{"theme": "dark"}')
+
+    assert saved.file_type == "json"
+    assert saved.content == '{"theme": "dark"}'
+    # And re-reading round-trips.
+    fresh = service.read_document("config.json")
+    assert fresh.content == '{"theme": "dark"}'
