@@ -64,6 +64,7 @@ if (shell) {
   const profileEditorTitle = document.getElementById("profile-editor-title");
   const settingsProfileList = document.getElementById("settings-profile-list");
   const codeThemeSelect = document.getElementById("code-theme-select");
+  const markdownStyleSelect = document.getElementById("markdown-style-select");
   const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
   const imageUploadSubdirInput = document.getElementById("image-upload-subdir-input");
   const imageUploadSubdirSection = document.getElementById("image-upload-subdir-section");
@@ -1057,6 +1058,10 @@ if (shell) {
       group_source: "Źródło", group_appearance: "Wygląd",
       group_editor: "Edytor", group_images: "Obrazki", group_profiles: "Profile",
       label_code_theme: "Motyw kolorowania kodu", code_theme_auto: "Automatyczny",
+      label_md_style: "Styl wyświetlania Markdown",
+      md_style_default: "Domyślny", md_style_clean: "Minimalny",
+      md_style_magazine: "Magazyn (serif)", md_style_compact: "Kompaktowy",
+      md_style_manuscript: "Książkowy",
       ctx_open: "Otwórz", ctx_collapse: "Zwiń", ctx_expand: "Rozwiń",
       ctx_scope: "Skup się na folderze", ctx_upload: "Wgraj tutaj",
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
@@ -1179,6 +1184,10 @@ if (shell) {
       group_source: "Source", group_appearance: "Appearance",
       group_editor: "Editor", group_images: "Images", group_profiles: "Profiles",
       label_code_theme: "Code highlighting theme", code_theme_auto: "Automatic",
+      label_md_style: "Markdown rendering style",
+      md_style_default: "Default", md_style_clean: "Clean",
+      md_style_magazine: "Magazine (serif)", md_style_compact: "Compact",
+      md_style_manuscript: "Manuscript",
       ctx_open: "Open", ctx_collapse: "Collapse", ctx_expand: "Expand",
       ctx_scope: "Focus on this folder", ctx_upload: "Upload here",
       ctx_new_file: "New file", ctx_new_dir: "New folder",
@@ -1301,6 +1310,10 @@ if (shell) {
       group_source: "Fuente", group_appearance: "Apariencia",
       group_editor: "Editor", group_images: "Imágenes", group_profiles: "Perfiles",
       label_code_theme: "Tema de resaltado de código", code_theme_auto: "Automático",
+      label_md_style: "Estilo de renderizado Markdown",
+      md_style_default: "Predeterminado", md_style_clean: "Minimalista",
+      md_style_magazine: "Revista (serif)", md_style_compact: "Compacto",
+      md_style_manuscript: "Manuscrito",
       ctx_open: "Abrir", ctx_collapse: "Contraer", ctx_expand: "Expandir",
       ctx_scope: "Enfocar esta carpeta", ctx_upload: "Subir aquí",
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
@@ -1423,6 +1436,10 @@ if (shell) {
       group_source: "Quelle", group_appearance: "Darstellung",
       group_editor: "Editor", group_images: "Bilder", group_profiles: "Profile",
       label_code_theme: "Syntaxhervorhebungs-Theme", code_theme_auto: "Automatisch",
+      label_md_style: "Markdown-Darstellungsstil",
+      md_style_default: "Standard", md_style_clean: "Minimal",
+      md_style_magazine: "Magazin (Serif)", md_style_compact: "Kompakt",
+      md_style_manuscript: "Manuskript",
       ctx_open: "Öffnen", ctx_collapse: "Einklappen", ctx_expand: "Aufklappen",
       ctx_scope: "Auf diesen Ordner fokussieren", ctx_upload: "Hier hochladen",
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
@@ -1545,6 +1562,10 @@ if (shell) {
       group_source: "Источник", group_appearance: "Оформление",
       group_editor: "Редактор", group_images: "Изображения", group_profiles: "Профили",
       label_code_theme: "Тема подсветки кода", code_theme_auto: "Автоматически",
+      label_md_style: "Стиль отображения Markdown",
+      md_style_default: "По умолчанию", md_style_clean: "Минимальный",
+      md_style_magazine: "Журнал (serif)", md_style_compact: "Компактный",
+      md_style_manuscript: "Рукопись",
       ctx_open: "Открыть", ctx_collapse: "Свернуть", ctx_expand: "Развернуть",
       ctx_scope: "Сфокусироваться на папке", ctx_upload: "Загрузить сюда",
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
@@ -2148,6 +2169,23 @@ if (shell) {
       if (value === "auto") localStorage.removeItem("code-theme");
       else localStorage.setItem("code-theme", value);
       applyCodeEditorTheme();
+    });
+  }
+
+  function applyMarkdownStyle(style) {
+    document.body.dataset.mdStyle = style || "default";
+  }
+
+  // Restore previously chosen markdown style on page load.
+  applyMarkdownStyle(localStorage.getItem("markdown-style") || "default");
+
+  if (markdownStyleSelect) {
+    markdownStyleSelect.value = localStorage.getItem("markdown-style") || "default";
+    markdownStyleSelect.addEventListener("change", () => {
+      const value = markdownStyleSelect.value || "default";
+      if (value === "default") localStorage.removeItem("markdown-style");
+      else localStorage.setItem("markdown-style", value);
+      applyMarkdownStyle(value);
     });
   }
 

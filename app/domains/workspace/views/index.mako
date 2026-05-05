@@ -303,6 +303,15 @@
               </span>
             </label>
 
+            <label class="settings-label" data-i18n="label_md_style" for="markdown-style-select">Styl wyświetlania Markdown</label>
+            <select id="markdown-style-select" class="settings-input">
+              <option value="default" data-i18n-opt="md_style_default">Domyślny</option>
+              <option value="clean" data-i18n-opt="md_style_clean">Minimalny</option>
+              <option value="magazine" data-i18n-opt="md_style_magazine">Magazyn (serif)</option>
+              <option value="compact" data-i18n-opt="md_style_compact">Kompaktowy</option>
+              <option value="manuscript" data-i18n-opt="md_style_manuscript">Książkowy</option>
+            </select>
+
             <label class="settings-label" data-i18n="label_code_theme" for="code-theme-select">Motyw kolorowania kodu</label>
             <select id="code-theme-select" class="settings-input">
               <option value="auto" data-i18n-opt="code_theme_auto">Automatyczny</option>

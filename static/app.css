@@ -1864,6 +1864,178 @@ body[data-theme="noteeli"] .overlay-card {
   font-size: var(--editor-font-size);
 }
 
+/* Toast UI hardcodes color:#222 on heading elements which clashes with
+   dark themes — make them inherit from the document instead. */
+.toastui-editor-contents h1,
+.toastui-editor-contents h2,
+.toastui-editor-contents h3,
+.toastui-editor-contents h4,
+.toastui-editor-contents h5,
+.toastui-editor-contents h6,
+.toastui-editor-md-preview h1,
+.toastui-editor-md-preview h2,
+.toastui-editor-md-preview h3,
+.toastui-editor-md-preview h4,
+.toastui-editor-md-preview h5,
+.toastui-editor-md-preview h6 {
+  color: inherit !important;
+}
+
+/* ── Markdown rendering style presets ─────────────────────────
+   Selected via body[data-md-style="…"]. Theme-orthogonal:
+   colour comes from the theme palette, layout/typography comes
+   from the picked preset. Default keeps Toast UI's built-in
+   look (h1 with double underline, h2 with single line) — the
+   other four offer distinct reading experiences. */
+
+/* === Clean === minimal, no borders, balanced weights. */
+body[data-md-style="clean"] .toastui-editor-contents h1,
+body[data-md-style="clean"] .toastui-editor-md-preview h1 {
+  border-bottom: none !important;
+  font-size: 1.7rem !important;
+  font-weight: 600 !important;
+  margin: 1.6em 0 0.4em !important;
+  padding-bottom: 0 !important;
+  line-height: 1.25 !important;
+}
+body[data-md-style="clean"] .toastui-editor-contents h2,
+body[data-md-style="clean"] .toastui-editor-md-preview h2 {
+  border-bottom: none !important;
+  font-size: 1.35rem !important;
+  font-weight: 600 !important;
+  padding-bottom: 0 !important;
+  margin: 1.3em 0 0.4em !important;
+  line-height: 1.3 !important;
+}
+body[data-md-style="clean"] .toastui-editor-contents h3,
+body[data-md-style="clean"] .toastui-editor-md-preview h3 {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+}
+
+/* === Magazine === serif, generous, italic h2, optional drop-cap. */
+body[data-md-style="magazine"] .toastui-editor-contents,
+body[data-md-style="magazine"] .toastui-editor-md-preview {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  line-height: 1.72;
+}
+body[data-md-style="magazine"] .toastui-editor-contents h1,
+body[data-md-style="magazine"] .toastui-editor-md-preview h1 {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  border-bottom: none !important;
+  font-size: 2.3rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+  margin: 1.5em 0 0.45em !important;
+  padding: 0 !important;
+  line-height: 1.1 !important;
+}
+body[data-md-style="magazine"] .toastui-editor-contents h2,
+body[data-md-style="magazine"] .toastui-editor-md-preview h2 {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  border-bottom: none !important;
+  font-size: 1.55rem !important;
+  font-style: italic;
+  font-weight: 500 !important;
+  padding-bottom: 0 !important;
+  margin: 1.3em 0 0.4em !important;
+}
+body[data-md-style="magazine"] .toastui-editor-contents h3,
+body[data-md-style="magazine"] .toastui-editor-md-preview h3 {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+/* Drop-cap effect on first paragraph after the first H1 */
+body[data-md-style="magazine"] .toastui-editor-contents h1 + p::first-letter,
+body[data-md-style="magazine"] .toastui-editor-md-preview h1 + p::first-letter {
+  font-size: 3em;
+  font-weight: 700;
+  float: left;
+  line-height: 0.85;
+  margin: 0.04em 0.08em 0 0;
+  color: var(--accent);
+}
+
+/* === Compact === tight spacing, smaller fonts, dense reading. */
+body[data-md-style="compact"] .toastui-editor-contents,
+body[data-md-style="compact"] .toastui-editor-md-preview {
+  line-height: 1.42;
+}
+body[data-md-style="compact"] .toastui-editor-contents h1,
+body[data-md-style="compact"] .toastui-editor-md-preview h1 {
+  font-size: 1.4rem !important;
+  border-bottom: 1px solid var(--line) !important;
+  padding-bottom: 0.2em !important;
+  margin: 1em 0 0.3em !important;
+  line-height: 1.3 !important;
+}
+body[data-md-style="compact"] .toastui-editor-contents h2,
+body[data-md-style="compact"] .toastui-editor-md-preview h2 {
+  font-size: 1.2rem !important;
+  border-bottom: none !important;
+  margin: 0.8em 0 0.25em !important;
+  line-height: 1.3 !important;
+}
+body[data-md-style="compact"] .toastui-editor-contents h3,
+body[data-md-style="compact"] .toastui-editor-md-preview h3 {
+  font-size: 1.05rem !important;
+  margin: 0.7em 0 0.2em !important;
+}
+body[data-md-style="compact"] .toastui-editor-contents p,
+body[data-md-style="compact"] .toastui-editor-md-preview p {
+  margin: 0.45em 0 !important;
+}
+body[data-md-style="compact"] .toastui-editor-contents li,
+body[data-md-style="compact"] .toastui-editor-md-preview li {
+  margin: 0.1em 0 !important;
+}
+
+/* === Manuscript === book-like: serif body, justified, indented paragraphs. */
+body[data-md-style="manuscript"] .toastui-editor-contents,
+body[data-md-style="manuscript"] .toastui-editor-md-preview {
+  font-family: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  line-height: 1.78;
+  text-align: justify;
+  hyphens: auto;
+}
+body[data-md-style="manuscript"] .toastui-editor-contents h1,
+body[data-md-style="manuscript"] .toastui-editor-md-preview h1 {
+  border-bottom: none !important;
+  text-align: center;
+  font-variant: small-caps;
+  font-size: 1.75rem !important;
+  letter-spacing: 0.06em;
+  margin: 2em 0 1em !important;
+  padding-bottom: 0 !important;
+  font-weight: 500 !important;
+}
+body[data-md-style="manuscript"] .toastui-editor-contents h2,
+body[data-md-style="manuscript"] .toastui-editor-md-preview h2 {
+  border-bottom: none !important;
+  font-style: italic;
+  font-size: 1.35rem !important;
+  text-align: center;
+  font-weight: 500 !important;
+  padding-bottom: 0 !important;
+  margin: 1.4em 0 0.6em !important;
+}
+body[data-md-style="manuscript"] .toastui-editor-contents h3,
+body[data-md-style="manuscript"] .toastui-editor-md-preview h3 {
+  font-style: italic;
+  font-size: 1.15rem !important;
+  font-weight: 500 !important;
+}
+/* First paragraph after a heading: no indent. Subsequent paragraphs:
+   indented like a typeset book. */
+body[data-md-style="manuscript"] .toastui-editor-contents p + p,
+body[data-md-style="manuscript"] .toastui-editor-md-preview p + p {
+  text-indent: 1.8em;
+  margin-top: 0 !important;
+}
+
 /* ── Hide default mode switch, use topbar button instead ── */
 .toastui-editor-mode-switch {
   display: none !important;
