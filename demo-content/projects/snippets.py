@@ -1,9 +1,9 @@
-"""Pokazówka kolorowania składni w Noteeli.
+"""Showcase of syntax highlighting in Noteeli.
 
-Pliki kodu (.py, .js, .ts, .php, .rb, .go, .rs, .c, .cpp, .sh, .css,
-.html, .yaml, .toml…) otwierają się w CodeMirrorze z dynamicznie
-ładowanym trybem językowym i wybranym przez Ciebie motywem
-(Ustawienia → Edytor → Motyw kolorowania kodu).
+Code files (.py, .js, .ts, .php, .rb, .go, .rs, .c, .cpp, .sh, .css,
+.html, .yaml, .toml…) open in CodeMirror with the language mode loaded
+on demand and the colour theme you picked
+(Settings → Editor → Code highlighting theme).
 """
 from __future__ import annotations
 

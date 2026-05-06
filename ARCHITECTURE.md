@@ -1,30 +1,35 @@
 # Noteeli Architecture
 
-Ten dokument opisuje aktualny układ aplikacji i konwencje, których warto się trzymać przy dalszym rozwoju projektu.
+This document describes the current shape of the application and the
+conventions worth keeping as the project grows.
 
-## Cel
+## Goal
 
-Projekt to uproszczony edytor notatek Markdown inspirowany Obsidianem:
+Noteeli is a simple Obsidian-flavoured Markdown notebook that runs in
+the browser:
 
-- FastAPI odpowiada za routing HTTP i API
-- Mako renderuje widoki HTML po stronie serwera
-- SQLite przechowuje ustawienia aplikacji i manualny order elementów
-- frontend w `static/app.js` obsługuje drzewo plików, modale, edycję i drag and drop
+- FastAPI handles HTTP routing and the API
+- Mako renders HTML views server-side
+- SQLite holds app preferences and the manual tree order
+- the frontend in `static/app.js` drives the file tree, modals,
+  editing, and drag-and-drop
 
-## Główne zasady układu
+## Layout principle
 
-Najważniejsza zasada: projekt jest organizowany domenowo, a nie warstwowo.
+The single most important rule: the project is organised **by domain,
+not by layer**.
 
-To oznacza, że kod związany z jednym obszarem funkcjonalnym trzymamy razem:
+That means everything related to one functional area lives together:
 
 - routing
-- logika domenowa
-- schematy danych
-- widoki Mako specyficzne dla tej domeny
+- domain logic
+- data schemas
+- Mako views specific to that domain
 
-Zamiast jednego wspólnego katalogu typu `routers/`, `services/`, `templates/` dla całej aplikacji, preferowany jest układ z podziałem na domeny.
+Instead of one `routers/`, `services/`, `templates/` directory shared
+across the whole app, the preferred layout splits the code by domain.
 
-## Struktura katalogów
+## Directory layout
 
 ```text
 app/
@@ -56,226 +61,82 @@ content/
   ...
 ```
 
-## Co gdzie trafia
-
-### `app/core`
-
-Kod wspólny dla całej aplikacji:
-
-- `config.py` trzyma ustawienia i ścieżki runtime
-- `templates.py` konfiguruje lookup Mako i renderowanie
-
-To miejsce jest dla rzeczy frameworkowych i współdzielonych, nie dla logiki biznesowej.
-
-### `app/domains/auth`
-
-Odpowiada za:
-
-- logowanie Google
-- bypass autoryzacji dla ruchu lokalnego
-- widok logowania
-
-Jeśli pojawią się nowe ekrany związane z autoryzacją, powinny trafić do `app/domains/auth/views/`.
-
-### `app/domains/preferences`
-
-Odpowiada za trwałe ustawienia aplikacji:
-
-- katalog notatek
-- tryb sortowania
-- tryb jasny/ciemny
-- manualny order elementów w drzewie
-
-Podział odpowiedzialności:
-
-- `schemas.py` definiuje modele wejścia i wyjścia
-- `repository.py` rozmawia bezpośrednio z SQLite
-- `service.py` zawiera logikę aplikacyjną wokół repozytorium
-
-### `app/domains/workspace`
-
-To główna domena aplikacji. Odpowiada za:
-
-- budowę drzewa katalogów i plików
-- odczyt i zapis Markdown
-- tworzenie nowych katalogów i plików
-- reorder elementów
-- główny widok aplikacji
-- API używane przez frontend
-
-Podział odpowiedzialności:
-
-- `router.py` mapuje requesty HTTP na operacje domenowe
-- `service.py` zawiera logikę pracy na plikach i walidację ścieżek
-- `schemas.py` opisuje payloady i odpowiedzi API
-- `views/index.mako` renderuje główny ekran workspace
-
-### `app/views`
-
-Tutaj trzymamy tylko widoki wspólne dla wielu domen.
-
-Obecnie jest tam:
-
-- `base.mako`
-
-Jeśli jakiś widok jest używany tylko przez jedną domenę, powinien siedzieć w `views/` tej domeny, a nie tutaj.
-
-## Dlaczego widoki Mako są przy domenach
-
-To jest celowa decyzja architektoniczna.
-
-Korzyści:
-
-- łatwiej zrozumieć cały feature, bo routing, widok i logika są blisko siebie
-- łatwiej pracować z AI, bo mniej trzeba tłumaczyć gdzie czego szukać
-- łatwiej usuwać lub rozbudowywać pojedynczą domenę
-- mniejsze ryzyko, że widoki staną się anonimową, płaską listą plików
-
-Reguła praktyczna:
-
-- widok specyficzny dla domeny: `app/domains/<nazwa>/views/`
-- layout współdzielony: `app/views/`
-
-## Routing
-
-Każda domena ma własny `router.py`.
-
-Router:
-
-- powinien być cienki
-- powinien mapować HTTP na operacje domenowe
-- nie powinien zawierać ciężkiej logiki biznesowej ani logiki persistence
-
-Jeśli handler zaczyna robić dużo pracy na plikach, SQL albo walidować wiele reguł biznesowych, to ta logika powinna wylądować w `service.py`.
-
-## Serwisy
-
-`service.py` to miejsce na logikę aplikacyjną i domenową.
-
-Przykłady:
-
-- walidacja ścieżek względem `content_root`
-- budowanie drzewa katalogów
-- tworzenie pliku Markdown z automatycznym `.md`
-- sprawdzanie, czy reorder jest poprawny
-
-Serwis może korzystać z repozytorium, ale router nie powinien gadać z repozytorium bezpośrednio.
-
-## Repozytorium i SQLite
-
-Bezpośredni dostęp do SQLite powinien być skupiony w `preferences/repository.py`.
-
-To daje:
-
-- jedno miejsce do zmian schematu i SQL
-- prostsze testowanie logiki wyżej
-- jasny podział między persistence a logiką domenową
-
-Jeśli w przyszłości pojawią się nowe tabele dla innych domen, najlepiej dodać repozytorium w odpowiedniej domenie, zamiast wrzucać wszystko do jednego wspólnego pliku.
-
-## Frontend
-
-Frontend jest obecnie prosty i świadomie centralny:
-
-- `static/app.js`
-- `static/app.css`
-
-To jest akceptowalne na obecnym etapie, bo aplikacja ma jeden główny ekran.
-
-Jeśli UI urośnie, sensowny kierunek to podział na moduły według odpowiedzialności, na przykład:
-
-- drzewo plików
-- modale
-- ustawienia
-- edytor
-
-Na razie jednak prostota jednego pliku JS i jednego CSS jest uzasadniona.
-
-## Konwencje dalszego rozwoju
-
-Przy dodawaniu nowego feature:
-
-1. Najpierw określ domenę, do której należy.
-2. Jeśli feature jest specyficzny dla jednej domeny, trzymaj routing, widok i logikę blisko niej.
-3. Jeśli coś ma być współdzielone między domenami, dopiero wtedy przenieś to do `core/` albo `app/views/`.
-4. Nie wkładaj logiki biznesowej do szablonów Mako.
-5. Nie wkładaj ciężkiej logiki do routerów.
-6. Nie mieszaj SQL z warstwą HTTP.
-
-## Wskazówki dla AI i nowych osób
-
-Jeśli chcesz zmienić zachowanie aplikacji, najczęściej szukaj w tej kolejności:
-
-1. `app/domains/workspace/router.py` albo `app/domains/auth/router.py`
-2. odpowiadający `service.py`
-3. odpowiadający widok Mako w `views/`
-4. `static/app.js`, jeśli zmiana dotyczy interakcji w przeglądarce
-5. `preferences/repository.py`, jeśli zmiana dotyczy trwałych ustawień
-
-Jeśli dodajesz nowy ekran:
-
-- najpierw zdecyduj, do której domeny należy
-- dodaj widok Mako w `views/` tej domeny
-- podepnij go przez router tej domeny
-
-## Czego unikać
-
-- powrotu do jednego globalnego katalogu `templates/` dla wszystkich widoków domenowych
-- wrzucania całej logiki do `app.js`, jeśli UI zacznie wyraźnie rosnąć
-- bezpośredniego dostępu do SQLite z routerów
-- mieszania logiki auth z workspace
-- tworzenia "utils.py" bez wyraźnej odpowiedzialności domenowej
-
-## Inwentarz funkcjonalności i testów
-
-Pełna lista wszystkiego, co Noteeli umie, oraz status pokrycia testami żyje
-w pliku [`functionalities.md`](./functionalities.md) w korzeniu repo. Plik
-jest zorganizowany domenowo (auth, storage, file tree, editors, themes, …)
-i każdą cechę oznacza jako:
-
-- ✅ — pokryta testem automatycznym (z nazwą testu)
-- ⚠️ — częściowo pokryta (np. tylko happy path)
-- ❌ — bez testu
-- 🌐 — funkcjonalność wyłącznie frontendowa, bez sensownego testu serwisowego
-
-Reguła: **przy każdej zmianie kodu aktualizuj ten dokument**. Dodajesz feature
-— dodaj wiersz. Piszesz test pokrywający istniejący wiersz — zmień status na
-✅ i wpisz nazwę testu. Usuwasz feature — usuń wiersz.
-
-## Strategia testowa
-
-Aktualnie testy żyją w `tests/` i są to testy serwisowe (poziom
-`PreferencesService` / `WorkspaceService`) używające `tmp_path`. Każdy test
-buduje świeży backend `LocalStorageBackend` i operuje na izolowanym katalogu.
+## Where things go
+
+- **Routing** — under each domain's `router.py`. Routers stay thin: they
+  decode the HTTP layer and call the domain service.
+- **Domain logic** — under `service.py` of each domain. This is where
+  invariants, validation, and business rules live.
+- **Data schemas** — in `schemas.py` of each domain (Pydantic v2). One
+  module per domain keeps the public surface small.
+- **Storage** — abstracted behind `StorageBackend` (`workspace/storage.py`)
+  with implementations for local filesystem, SFTP, and Google Drive.
+  Services never touch `pathlib.Path` directly.
+- **SQLite access** — only through `PreferencesRepository`. Routers
+  must never run SQL.
+- **Templates** — Mako, scoped to their domain in `views/`. Only
+  `app/views/base.mako` is shared.
+- **Frontend** — single `static/app.js`, no build step. CDN-loaded
+  libraries (Toast UI, JSONEditor, CodeMirror, Mermaid).
+
+## Things to avoid
+
+- going back to one global `templates/` directory for all views
+- piling all the logic into `app.js` if the UI grows more complex
+- direct SQLite access from routers
+- mixing auth and workspace concerns
+- creating a `utils.py` without a clear domain owner
+
+## Functionality inventory and tests
+
+The full list of what Noteeli does, and the test-coverage status of
+every feature, lives in [`functionalities.md`](./functionalities.md)
+at the repo root. The file is organised by domain (auth, storage,
+file tree, editors, themes, …) and marks each feature as:
+
+- ✅ — covered by an automated test (with the test name)
+- ⚠️ — partially covered (e.g. only the happy path)
+- ❌ — no test
+- 🌐 — frontend-only, no service-level test possible
+
+**Rule: update this document with every code change.** Add a row when
+you add a feature, flip the status to ✅ when you write a test, delete
+the row when you remove a feature.
+
+## Testing strategy
+
+Tests live in `tests/` and run at the service level (`PreferencesService`
+/ `WorkspaceService`) using `tmp_path`. Each test builds a fresh
+`LocalStorageBackend` against an isolated directory.
 
 ```bash
-pdm run test            # kanoniczna komenda
-pytest tests/           # to samo
+pdm run test            # canonical command
+pytest tests/           # equivalent
 ```
 
-### Kiedy pisać test
+### When to write a test
 
-- **Bug fix → test regresyjny**, zawsze. Jeśli błąd dało się wprowadzić raz,
-  da się drugi raz.
-- **Nowa funkcjonalność backendowa → test serwisowy.** Routing dostaje testy
-  integracyjne, gdy logika jest nietrywialna (auth, sanitizacja).
-- **Funkcjonalność czysto frontendowa** zostaje na razie bez automatów —
-  zaplanowanie harnessu Playwright/Selenium to oddzielny projekt.
+- **Bug fix → regression test, always.** If the bug could be introduced
+  once, it can be introduced again.
+- **New backend feature → service-level test.** Routers get integration
+  tests when the logic isn't trivial (auth, sanitisation).
+- **Pure frontend behaviour** stays uncovered for now — designing a
+  Playwright/Selenium harness is its own project.
 
-### Co testujemy w pierwszej kolejności
+### What to test first
 
-Tabela "Coverage gaps" w `functionalities.md` jest priorytetową kolejką
-braków. W skrócie, najważniejsze niepokryte powierzchnie to:
+The "Coverage gaps" section in `functionalities.md` is the prioritised
+queue. The shortlist of currently unprotected surfaces:
 
-1. zachowanie rozszerzenia przy zmianie nazwy (regresja `pic.png → pic2.md`)
-2. blokada delete poza content-rootem (path-traversal w `delete_item`)
-3. guard `require_api_access` na wszystkich endpointach
-4. backendy SFTP i Google Drive (przynajmniej z mockami)
-5. routing typu pliku w edytorze (markdown / json / code / text)
+1. SFTP and Google Drive storage backends (with mocks)
+2. drag-and-drop image copy in the editor (Playwright)
+3. autosave debouncing (Playwright)
+4. cursor reset after `setMarkdown` (Playwright)
+5. tree scope (focus on a folder) — frontend localStorage state
 
-### Jak nie psuć testów
+### Don't break the suite
 
-- nie modyfikuj globalnego stanu (cache SFTP, pliki poza `tmp_path`)
-- nie zakładaj kolejności uruchomień
-- używaj `tmp_path` zamiast `mktemp` ręcznego — pytest sprząta
-- każdy test buduje własną instancję serwisu (nie współdziel state'u)
+- avoid global state mutation (SFTP cache, files outside `tmp_path`)
+- don't depend on test-execution order
+- use `tmp_path` instead of manual `mktemp` — pytest handles cleanup
+- each test builds its own service instance — never share state

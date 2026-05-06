@@ -26,7 +26,7 @@ class AppPreferences(BaseModel):
     autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
-    language: Language = "pl"
+    language: Language = "en"
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -44,7 +44,7 @@ class UpdatePreferencesRequest(BaseModel):
     autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
-    language: Language = "pl"
+    language: Language = "en"
 
 
 class SavedPreferencesProfile(BaseModel):
@@ -65,7 +65,7 @@ class SavedPreferencesProfile(BaseModel):
     autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
-    language: Language = "pl"
+    language: Language = "en"
 
 
 class SavedPreferencesProfilesResponse(BaseModel):

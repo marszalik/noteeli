@@ -8,43 +8,44 @@ the codebase and the automated test suite. Use it as the canonical answer to
 
 The most-used features, by everyday name. Each links to its detail row.
 
-### Codzienne pisanie
+### Daily writing
 
-- **Edytor WYSIWYG dla Markdowna** → [§6 Editors](#6-editors)
-- **Automatyczny zapis (autosave)** → [§5 Reading & saving](#5-reading--saving-documents) ("Auto-save (debounced, configurable)")
-- **Ręczny zapis z Ctrl+S / przyciskiem** → [§5 Reading & saving](#5-reading--saving-documents)
-- **Wstawianie / dodawanie obrazka** → [§7 Embedded assets & images](#7-embedded-assets--images) (paste, drag-drop, Add image button)
-- **Drag-drop obrazka z drzewa do edytora** → [§7](#7-embedded-assets--images) ("Drag image from sidebar tree → embed in editor")
-- **Auto-kopia obrazka do skonfigurowanej lokalizacji (Obsidian-style)** → [§7](#7-embedded-assets--images)
+- **WYSIWYG Markdown editor** → [§6 Editors](#6-editors)
+- **Auto-save (debounced)** → [§5 Reading & saving](#5-reading--saving-documents)
+- **Manual save (Ctrl+S / button)** → [§5 Reading & saving](#5-reading--saving-documents)
+- **Inserting / pasting / dragging an image** → [§7 Embedded assets & images](#7-embedded-assets--images)
+- **Drag image from the file tree into the editor** → [§7](#7-embedded-assets--images)
+- **Auto-copy dragged image into the configured location (Obsidian-style)** → [§7](#7-embedded-assets--images)
 
-### Nawigacja po notatkach
+### Navigating notes
 
-- **Skupienie na folderze ("focus na folderze")** → [§3 File tree](#3-file-tree--navigation) ("Tree scope")
-- **Drzewo plików z ikonami per typ** → [§3](#3-file-tree--navigation)
-- **Pokaż / ukryj pliki ukryte** → [§3](#3-file-tree--navigation)
-- **Drag-drop plików w drzewie (przesuwanie / sortowanie)** → [§4 File CRUD](#4-file-crud)
-- **Pamiętaj ostatnio otwarty plik** → [§3](#3-file-tree--navigation)
+- **Focus on a folder (tree scope)** → [§3 File tree](#3-file-tree--navigation)
+- **File tree with type-aware icons** → [§3](#3-file-tree--navigation)
+- **Show / hide dotfiles** → [§3](#3-file-tree--navigation)
+- **Drag-drop in the tree (move / reorder)** → [§4 File CRUD](#4-file-crud)
+- **Remember the last opened file across reloads** → [§3](#3-file-tree--navigation)
 
-### Nowy plik / folder
+### New file / folder
 
-- **Nowy plik / nowy folder z menu kontekstowego lub paska bocznego** → [§4 File CRUD](#4-file-crud)
-- **Zmiana nazwy z zachowaniem rozszerzenia** → [§4](#4-file-crud)
-- **Usuwanie z potwierdzeniem dwuklikiem** → [§4](#4-file-crud)
-- **Pobieranie pliku / folderu jako ZIP** → [§8 Upload & download](#8-file-upload--download)
+- **New file / new folder from the context menu or sidebar toolbar** → [§4 File CRUD](#4-file-crud)
+- **Rename preserves the original extension** → [§4](#4-file-crud)
+- **Delete with double-click confirmation** → [§4](#4-file-crud)
+- **Download a file or a folder as ZIP** → [§8 Upload & download](#8-file-upload--download)
 
-### Konfiguracja
+### Configuration
 
-- **5 motywów (Light / Dark / Noteeli / Webnote / Obsidian)** → [§13 Themes](#13-themes--visual-styling)
-- **5 języków UI (pl / en / es / de / ru)** → [§16 i18n](#16-internationalisation)
-- **Profile ustawień (zestawy)** → [§11 Preference profiles](#11-preference-profiles-saved-sets)
-- **Edycja kodu z kolorowaniem składni** → [§6 Editors](#6-editors) (CodeMirror)
-- **Edycja JSON w trybie formularza** → [§6](#6-editors)
+- **5 themes (Light / Dark / Noteeli / Webnote / Obsidian)** → [§13 Themes](#13-themes--visual-styling)
+- **5 UI languages (en / pl / es / de / ru)** → [§16 i18n](#16-internationalisation)
+- **Saved preference profiles** → [§11 Preference profiles](#11-preference-profiles-saved-sets)
+- **Code editor with syntax highlighting** → [§6 Editors](#6-editors) (CodeMirror)
+- **JSON editor in form mode** → [§6](#6-editors)
 
-### Współpraca / dystrybucja
+### Distribution
 
-- **PWA — instalacja jako apka** → [§17 PWA](#17-pwa-support)
-- **Przełączanie źródła notatek (lokalne / SFTP / Google Drive)** → [§2 Storage backends](#2-storage-backends)
-- **Wersjonowanie + linki do release notes** → [§18 Versioning & releases](#18-versioning--releases)
+- **PWA — installable as an app** → [§17 PWA](#17-pwa-support)
+- **Switch the notes source (local / SFTP / Google Drive)** → [§2 Storage backends](#2-storage-backends)
+- **Versioning + release-notes links** → [§19 Versioning & releases](#19-versioning--releases)
+- **Read-only public demo** → [§18 Demo mode](#18-demo-mode-public-showcase)
 
 ## Legend
 
@@ -276,7 +277,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | `--demo` CLI flag and `NOTEELI_DEMO_MODE=1` env var | ✅ (covered indirectly via service-level demo tests) | `app/run.py`, `app/core/config.py` |
 | Service-layer write guard (`_block_if_demo`) on save/create/rename/delete/move/upload/reorder/prefs/profiles | ✅ `test_demo_mode_blocks_save_document`, `..._create_item`, `..._rename`, `..._delete`, `..._move`, `..._upload`, `..._update_preferences`, `..._browsed_directory_creation` | every mutator gets the guard |
 | Reading still works in demo mode | ✅ `test_demo_mode_allows_reading` | tree, file content, previews |
-| Auto-login as "Gość demo" (no `/login` round-trip) | ❌ | `AuthService.get_current_user` early return |
+| Auto-login as "Demo guest" (no `/login` round-trip) | ❌ | `AuthService.get_current_user` early return |
 | Sticky banner in the UI | 🌐 | template branch on `demo_mode` |
 | Hide write-only UI (Save, New file/folder, Upload, Profiles tab, kebab menu) | 🌐 | `.app-shell.is-demo` CSS overrides |
 | Bundled `demo-content/` tree copied into content root on startup | 🌐 | `_seed_demo_content_if_needed` in `app/main.py` |

@@ -1,39 +1,39 @@
-# Diagramy w Noteeli
+# Diagrams in Noteeli
 
-Noteeli renderuje **Mermaid** (lokalnie, po stronie klienta) oraz
-**PlantUML** (przez publiczny renderer plantuml.com).
+Noteeli renders **Mermaid** (locally, in the browser) and **PlantUML**
+(via the public plantuml.com renderer).
 
-## Schemat blokowy (flowchart)
+## Flowchart
 
 ```mermaid
 flowchart LR
-    A[Klient] -->|HTTP| B(Nginx)
-    B --> C{Domena?}
+    A[Client] -->|HTTP| B(Nginx)
+    B --> C{Domain?}
     C -->|app.noteeli.com| D[Noteeli prod :8090]
-    C -->|demo.noteeli.com| E[Noteeli demo :8091]
+    C -->|demo.noteeli.com| E[Noteeli demo :8092]
     D --> F[(SQLite)]
-    D --> G[(Pliki .md)]
+    D --> G[(Markdown files)]
     E --> H[(Demo content)]
 ```
 
-## Sekwencja
+## Sequence
 
 ```mermaid
 sequenceDiagram
-    participant U as Użytkownik
+    participant U as User
     participant N as Noteeli
     participant S as Storage
-    U->>N: Otwórz notatkę
+    U->>N: Open note
     N->>S: read_text(path)
-    S-->>N: zawartość markdown
+    S-->>N: markdown content
     N-->>U: WYSIWYG render
-    U->>N: Edycja (autosave)
+    U->>N: Edit (autosave)
     N->>S: write_text(path, content)
     S-->>N: OK
-    N-->>U: ✓ Zapisano
+    N-->>U: ✓ Saved
 ```
 
-## Diagram ER
+## ER diagram
 
 ```mermaid
 erDiagram
@@ -59,7 +59,7 @@ erDiagram
 
 ```mermaid
 gantt
-    title Roadmap Noteeli
+    title Noteeli roadmap
     dateFormat YYYY-MM-DD
     section Core
     MVP                 :done,   m1, 2026-01-01, 30d
@@ -71,7 +71,7 @@ gantt
     iPad polishing      :        t3, after t2, 14d
 ```
 
-## PlantUML — opcjonalnie
+## PlantUML — optional
 
 ```plantuml
 @startuml
@@ -86,6 +86,6 @@ N -> User: tree JSON
 @enduml
 ```
 
-> 💡 Gdy edytujesz dokument w trybie WYSIWYG, diagramy renderują się
-> na żywo. Pole `mermaid` w nagłówku bloku kodu mówi edytorowi,
-> że ma to zrenderować jako diagram zamiast pokazywać kod.
+> 💡 When you edit a document in WYSIWYG mode, diagrams render live.
+> The `mermaid` language hint on a code block tells the editor to
+> render it as a diagram instead of showing the source.

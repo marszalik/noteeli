@@ -45,14 +45,14 @@ class AuthService:
         if self.settings.demo_mode:
             return {
                 "email": "demo@noteeli",
-                "name": "Gość demo",
+                "name": "Demo guest",
                 "is_local": True,
                 "is_demo": True,
             }
         if self.is_local_request(request):
             return {
                 "email": "local@noteeli",
-                "name": "Lokalny dostep",
+                "name": "Local access",
                 "is_local": True,
             }
         return request.session.get("user")

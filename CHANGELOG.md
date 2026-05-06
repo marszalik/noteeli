@@ -17,7 +17,7 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   a public read-only showcase: every mutating service method (save,
   create, rename, delete, move, upload, reorder, preference update,
   profile mgmt) raises `DemoReadOnlyError` → 403 with a friendly
-  message. Auth is bypassed (auto-login as "Gość demo"), the bundled
+  message. Auth is bypassed (auto-login as "Demo guest"), the bundled
   `demo-content/` tree is copied into the configured content root on
   startup so the demo always boots from a clean state, and the
   frontend hides every write-only button (Save, New file/folder,

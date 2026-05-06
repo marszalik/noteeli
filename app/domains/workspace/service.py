@@ -72,8 +72,8 @@ class WorkspaceService:
         smell."""
         if self.settings.demo_mode:
             raise DemoReadOnlyError(
-                "Tryb demo: ta operacja jest wyłączona. "
-                "Pobierz Noteeli i uruchom u siebie, żeby zachować zmiany."
+                "Demo mode: this operation is disabled. "
+                "Download Noteeli and run it locally to keep your changes."
             )
 
     @property

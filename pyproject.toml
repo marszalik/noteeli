@@ -1,7 +1,7 @@
 [project]
 name = "noteeli"
 version = "1.0.0"
-description = "Uproszczony webowy notatnik Markdown inspirowany Obsidianem."
+description = "A simple web-based Markdown notebook inspired by Obsidian."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
