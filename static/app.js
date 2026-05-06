@@ -4006,10 +4006,18 @@ if (shell) {
   showEditorMode();
   attachDiagramToolbarButtons();
   toggleOverlay({ empty: true, unsupported: false });
-  loadPreferences()
-    .then(() => loadPreferenceProfiles())
-    .then(() => loadTree({ autoSelect: true }))
-    .catch((error) => setStatus(error.message, true));
+  // Public viewer ships only tree + file URLs. Skip preferences and
+  // profile loading — those endpoints don't exist on the public surface,
+  // and the defaults are fine for read-only browsing.
+  if (config.isPublic) {
+    loadTree({ autoSelect: true })
+      .catch((error) => setStatus(error.message, true));
+  } else {
+    loadPreferences()
+      .then(() => loadPreferenceProfiles())
+      .then(() => loadTree({ autoSelect: true }))
+      .catch((error) => setStatus(error.message, true));
+  }
 }
 
 // ---------------------------------------------------------------------------
