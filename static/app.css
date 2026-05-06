@@ -586,9 +586,63 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-demo .settings-tab[data-tab="profiles"],
 .app-shell.is-demo [data-panel="profiles"],
 .app-shell.is-demo .upload-stage,
-.app-shell.is-demo .tree-row-menu {
+.app-shell.is-demo .tree-row-menu,
+.app-shell.is-public #save-button,
+.app-shell.is-public #new-file,
+.app-shell.is-public #new-directory,
+.app-shell.is-public #save-settings,
+.app-shell.is-public #save-profile,
+.app-shell.is-public #cancel-profile-edit,
+.app-shell.is-public .settings-tab[data-tab="profiles"],
+.app-shell.is-public [data-panel="profiles"],
+.app-shell.is-public .upload-stage,
+.app-shell.is-public .tree-row-menu,
+.app-shell.is-public #toggle-preference-profiles,
+.app-shell.is-public #open-settings,
+.app-shell.is-public .editor-mode-toggle {
   display: none !important;
 }
+
+/* Public view banner — green, less alarming than the demo amber. */
+.public-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0.55rem 1rem;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  color: #052e16;
+  font-size: 0.88rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+}
+.public-banner a {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+body:has(.public-banner) .app-shell {
+  height: calc(100vh - 2.4rem);
+  height: calc(100dvh - 2.4rem);
+}
+
+/* Globe badge on tree rows that have been published. */
+.tree-row-publish-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+.tree-row-publish-badge svg { width: 13px; height: 13px; }
+.tree-row-publish-badge:hover { opacity: 1; }
+.tree-row-menu + .tree-row-publish-badge,
+.tree-row-publish-badge + .tree-row-menu { margin-left: 0.15rem; }
 .app-shell.is-demo .editor-mode-toggle {
   opacity: 0.65;
 }

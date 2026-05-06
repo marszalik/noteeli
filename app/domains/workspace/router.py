@@ -71,6 +71,8 @@ async def workspace_page(request: Request):
             "createDirectoryUrl": str(request.url_for("workspace_create_directory_api")),
             "previewUrl": str(request.url_for("workspace_file_preview_api")),
             "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
+            "publishUrl": str(request.url_for("publish_create_api")),
+            "publishListUrl": str(request.url_for("publish_list_api")),
         }
     )
     return render_template(

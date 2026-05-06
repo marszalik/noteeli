@@ -14,6 +14,10 @@
 </%def>
 
 <%def name="content()">
+<%
+    is_public = bool(context.get('public_view'))
+    public_view = context.get('public_view')
+%>
   % if demo_mode:
   <div class="demo-banner" role="status">
     <strong data-i18n="demo_banner_label">Demo mode</strong>
@@ -22,14 +26,23 @@
     <span data-i18n="demo_banner_suffix">to write and keep your own notes.</span>
   </div>
   % endif
+  % if is_public:
+  <div class="public-banner" role="status">
+    <strong>Public view</strong>
+    — read-only.
+    <a href="https://noteeli.com" target="_blank" rel="noopener">Get Noteeli</a>
+    to publish your own notes.
+  </div>
+  % endif
 
   <div
-    class="app-shell ${'is-demo' if demo_mode else ''}"
+    class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''}"
     data-config='${frontend_config | n}'
     data-theme-mode="${preferences.theme_mode}"
     data-editor-font-size="${preferences.editor_font_size}"
     data-language="${preferences.language}"
     ${'data-demo="1"' if demo_mode else '' | n}
+    ${'data-public="1"' if is_public else '' | n}
   >
     <aside class="sidebar" id="sidebar">
       <div class="brand-block">

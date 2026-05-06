@@ -312,6 +312,11 @@ class WorkspaceService:
 
     def rename_item(self, path: str, new_name: str) -> CreatedItem:
         self._block_if_demo()
+        try:
+            from app.domains.publish.service import PublishService
+            PublishService(self.settings).cleanup_for_removed_path(path)
+        except Exception:
+            pass
         backend = self._get_backend()
         src_rel = self._resolve_path(path, backend)
         kind = "directory" if backend.is_dir(src_rel) else "file"
@@ -341,6 +346,15 @@ class WorkspaceService:
 
     def delete_item(self, path: str) -> None:
         self._block_if_demo()
+        # Drop any publish entries that pointed at this path (or any
+        # descendant) so the public URL stops resolving immediately
+        # instead of 404'ing later.
+        try:
+            from app.domains.publish.service import PublishService
+            PublishService(self.settings).cleanup_for_removed_path(path)
+        except Exception:
+            # Cleanup is best-effort — never block a delete.
+            pass
         backend = self._get_backend()
         rel = self._resolve_path(path, backend)
         backend.delete(rel)

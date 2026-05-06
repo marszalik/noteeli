@@ -13,6 +13,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Publish / Unpublish for files and folders.** Right-click any tree
+  row → "Publish" mints a public URL of the form `/{id}/{slug}`
+  served by the same Noteeli instance (no `node_nr` indirection
+  beyond the auto-generated id, slug is derived from the basename
+  with diacritics folded). The page renders the regular workspace UI
+  in read-only mode — sidebar scoped to the published path, no save,
+  no upload, no settings, no profiles, no edit toolbar — and is
+  reachable without authentication. Folders expose every descendant
+  through scoped `/api/public/{tree,file,preview}` routes; published
+  files only expose themselves. Path traversal beyond the published
+  scope returns 403. A globe badge marks published rows in the
+  authenticated tree, with "Copy public link" and "Unpublish" in the
+  context menu. Renaming or deleting a path automatically drops any
+  publish entry that pointed at it. Demo mode blocks publish/unpublish.
 - **Demo mode** (`--demo` flag, `NOTEELI_DEMO_MODE=1`). The app runs as
   a public read-only showcase: every mutating service method (save,
   create, rename, delete, move, upload, reorder, preference update,

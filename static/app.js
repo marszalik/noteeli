@@ -98,6 +98,11 @@ if (shell) {
   const expandedDirectories = new Set([""]);
   let treeData = null;
   let preferences = null;
+  // path -> publish_id, path -> slug — refreshed via /api/publish.
+  // Used by the tree renderer to show a globe badge on published rows
+  // and by the context menu to switch between Publish and Unpublish.
+  let publishedPaths = {};
+  let publishedSlugs = {};
   let preferenceProfiles = [];
   let editingPreferenceProfileId = null;
   let profileFormGdriveCredentials = "";
@@ -1066,6 +1071,8 @@ if (shell) {
       demo_banner_text: "— żadne zmiany nie zostaną zapisane.",
       demo_banner_cta: "Pobierz Noteeli",
       demo_banner_suffix: "żeby pisać i zapisywać własne notatki.",
+      ctx_publish: "Publikuj", ctx_unpublish: "Cofnij publikację", ctx_copy_link: "Kopiuj link publiczny",
+      st_published: "Opublikowano", st_unpublished: "Cofnięto publikację", st_link_copied: "Skopiowano",
       ctx_open: "Otwórz", ctx_collapse: "Zwiń", ctx_expand: "Rozwiń",
       ctx_scope: "Skup się na folderze", ctx_upload: "Wgraj tutaj",
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
@@ -1196,6 +1203,8 @@ if (shell) {
       demo_banner_text: "— no changes will be saved.",
       demo_banner_cta: "Get Noteeli",
       demo_banner_suffix: "to write and keep your own notes.",
+      ctx_publish: "Publish", ctx_unpublish: "Unpublish", ctx_copy_link: "Copy public link",
+      st_published: "Published", st_unpublished: "Unpublished", st_link_copied: "Link copied",
       ctx_open: "Open", ctx_collapse: "Collapse", ctx_expand: "Expand",
       ctx_scope: "Focus on this folder", ctx_upload: "Upload here",
       ctx_new_file: "New file", ctx_new_dir: "New folder",
@@ -1326,6 +1335,8 @@ if (shell) {
       demo_banner_text: "— no se guardará ningún cambio.",
       demo_banner_cta: "Descarga Noteeli",
       demo_banner_suffix: "para escribir y guardar tus propias notas.",
+      ctx_publish: "Publicar", ctx_unpublish: "Despublicar", ctx_copy_link: "Copiar enlace público",
+      st_published: "Publicado", st_unpublished: "Despublicado", st_link_copied: "Enlace copiado",
       ctx_open: "Abrir", ctx_collapse: "Contraer", ctx_expand: "Expandir",
       ctx_scope: "Enfocar esta carpeta", ctx_upload: "Subir aquí",
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
@@ -1456,6 +1467,8 @@ if (shell) {
       demo_banner_text: "— Änderungen werden nicht gespeichert.",
       demo_banner_cta: "Noteeli herunterladen",
       demo_banner_suffix: ", um eigene Notizen zu schreiben und zu speichern.",
+      ctx_publish: "Veröffentlichen", ctx_unpublish: "Veröffentlichung aufheben", ctx_copy_link: "Öffentlichen Link kopieren",
+      st_published: "Veröffentlicht", st_unpublished: "Veröffentlichung aufgehoben", st_link_copied: "Link kopiert",
       ctx_open: "Öffnen", ctx_collapse: "Einklappen", ctx_expand: "Aufklappen",
       ctx_scope: "Auf diesen Ordner fokussieren", ctx_upload: "Hier hochladen",
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
@@ -1586,6 +1599,8 @@ if (shell) {
       demo_banner_text: "— изменения не сохраняются.",
       demo_banner_cta: "Скачать Noteeli",
       demo_banner_suffix: ", чтобы писать и хранить свои заметки.",
+      ctx_publish: "Опубликовать", ctx_unpublish: "Отменить публикацию", ctx_copy_link: "Скопировать публичную ссылку",
+      st_published: "Опубликовано", st_unpublished: "Публикация отменена", st_link_copied: "Ссылка скопирована",
       ctx_open: "Открыть", ctx_collapse: "Свернуть", ctx_expand: "Развернуть",
       ctx_scope: "Сфокусироваться на папке", ctx_upload: "Загрузить сюда",
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
@@ -2568,6 +2583,9 @@ if (shell) {
     refresh: "M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
     delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
     confirm: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+    publish: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z",
+    unpublish: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+    copyLink: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
   };
 
   function createContextMenuButton(label, iconD, onClick, tone = "default", skipClose = false) {
@@ -2683,6 +2701,51 @@ if (shell) {
         openRenameModal(node);
       }),
     );
+    // Publish / Unpublish / Copy public link
+    const publishedId = publishedPaths[node.path];
+    if (publishedId) {
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_copy_link"), CONTEXT_ICONS.copyLink, async () => {
+          const url = `${window.location.origin}/${publishedId}/${publishedSlugs[publishedId]}`;
+          try {
+            await navigator.clipboard.writeText(url);
+            setStatus(`${t("st_link_copied")}: ${url}`);
+          } catch {
+            setStatus(t("st_path_copy_fail"), true);
+          }
+        }),
+      );
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_unpublish"), CONTEXT_ICONS.unpublish, async () => {
+          try {
+            await requestJson(`${config.publishUrl}/${publishedId}`, { method: "DELETE" });
+            await refreshPublishedItems();
+            renderTree(treeData);
+            setStatus(t("st_unpublished"));
+          } catch (err) {
+            setStatus(err.message, true);
+          }
+        }, "muted"),
+      );
+    } else {
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_publish"), CONTEXT_ICONS.publish, async () => {
+          try {
+            const created = await requestJson(config.publishUrl, {
+              method: "POST",
+              body: JSON.stringify({ path: node.path, kind: node.kind }),
+            });
+            await refreshPublishedItems();
+            renderTree(treeData);
+            const url = `${window.location.origin}${created.public_url}`;
+            try { await navigator.clipboard.writeText(url); } catch {}
+            setStatus(`${t("st_published")}: ${url}`);
+          } catch (err) {
+            setStatus(err.message, true);
+          }
+        }),
+      );
+    }
     treeContextMenu.appendChild(
       createContextMenuButton(t("ctx_refresh"), CONTEXT_ICONS.refresh, async () => {
         await loadTree();
@@ -3086,6 +3149,23 @@ if (shell) {
     row.appendChild(btn);
   }
 
+  function appendPublishBadge(row, node) {
+    const id = publishedPaths[node.path];
+    if (!id) return;
+    const badge = document.createElement("a");
+    badge.className = "tree-row-publish-badge";
+    badge.href = `/${id}/${publishedSlugs[id] || ""}`;
+    badge.target = "_blank";
+    badge.rel = "noopener";
+    badge.title = `Public: ${window.location.origin}/${id}/${publishedSlugs[id] || ""}`;
+    badge.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>'
+      + '</svg>';
+    badge.addEventListener("click", (e) => e.stopPropagation());
+    badge.addEventListener("mousedown", (e) => e.stopPropagation());
+    row.appendChild(badge);
+  }
+
   function makeSvgIcon(d) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -3204,6 +3284,7 @@ if (shell) {
         renderTree(treeData);
       });
       row.appendChild(label);
+      appendPublishBadge(row, node);
       row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
       addLongPressContextMenu(row, node);
       appendRowKebabMenu(row, node);
@@ -3241,6 +3322,7 @@ if (shell) {
       loadFile(node.path);
     });
     row.appendChild(fileButton);
+    appendPublishBadge(row, node);
     row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
     addLongPressContextMenu(row, node);
     appendRowKebabMenu(row, node);
@@ -3289,10 +3371,28 @@ if (shell) {
     treeRoot.appendChild(list);
   }
 
+  async function refreshPublishedItems() {
+    if (!config.publishListUrl) return;
+    try {
+      const data = await requestJson(config.publishListUrl, { method: "GET" });
+      publishedPaths = {};
+      publishedSlugs = {};
+      for (const item of data.items || []) {
+        publishedPaths[item.path] = item.id;
+        publishedSlugs[item.id] = item.slug;
+      }
+    } catch {
+      // Non-fatal — just don't show badges this round.
+    }
+  }
+
   async function loadTree({ autoSelect = false } = {}) {
     closeTreeContextMenu();
     setStatus(t("st_refreshing_tree"));
     treeData = await requestJson(config.treeUrl, { method: "GET" });
+    // Pull the latest publish list in parallel — slow-running, OK to
+    // happen after the first paint.
+    refreshPublishedItems();
     if (scopedRootPath && !findDirectoryNode(treeData, scopedRootPath)) {
       scopedRootPath = "";
       applyTreeScopeState();

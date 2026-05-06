@@ -283,7 +283,30 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Bundled `demo-content/` tree copied into content root on startup | 🌐 | `_seed_demo_content_if_needed` in `app/main.py` |
 | Friendly 403 with `{detail, demo: true}` JSON | ❌ | global `DemoReadOnlyError` handler in `app/main.py` |
 
-## 19. Versioning & releases
+## 19. Public publish
+
+| Feature | Status | Notes |
+|---|---|---|
+| Publish a file or a folder under `/{id}/{slug}` | ✅ `test_publish_creates_an_item_and_returns_public_url`, `test_publish_directory` | `PublishService.publish` |
+| Slug generation (drops extension, ASCII-folds diacritics) | ✅ `test_slugify_strips_extension_and_diacritics` | `PublishService.slugify` |
+| Reject duplicate publish of the same path | ✅ `test_publish_rejects_duplicate_path` | |
+| Unpublish | ✅ `test_unpublish_removes_the_entry`, `test_unpublish_404_for_unknown_id` | |
+| List published items (used by tree to render globe badges + dispatch context-menu actions) | ✅ `test_list_returns_recently_published` | |
+| Path scoping for files (only the published file is reachable) | ✅ `test_is_in_scope_for_file` | `PublishService.is_in_scope` |
+| Path scoping for directories (descendants ok, siblings rejected) | ✅ `test_is_in_scope_for_directory` | |
+| Cleanup on rename/delete (drops publish entries whose target is gone) | ✅ `test_cleanup_for_removed_path_drops_descendants` | called from `WorkspaceService.{rename,delete}_item` |
+| `POST /api/publish` requires auth | ✅ `test_publish_api_requires_auth` | |
+| Public viewer page works without auth (`GET /{id}/{slug}`) | ✅ `test_published_view_works_without_auth` | renders read-only `index.mako` |
+| Public scoped tree/file APIs work without auth | ✅ `test_published_view_works_without_auth` | `/api/public/tree`, `/api/public/file` |
+| Public APIs reject path-traversal beyond the published item | ✅ `test_public_routes_block_path_traversal` | 403 on out-of-scope `path` |
+| Public viewer redirects to canonical slug on mismatch | ✅ `test_public_view_redirects_wrong_slug` | 301 |
+| Public viewer 404 for unknown id | ✅ `test_public_view_404_for_unknown_id` | |
+| Frontend: globe badge on published tree rows | 🌐 | `appendPublishBadge` |
+| Frontend: Publish / Unpublish / Copy-public-link entries in the context menu | 🌐 | `renderTreeContextMenu` |
+| Frontend: read-only public view (banner + write UI hidden via `body[data-public]`) | 🌐 | `.app-shell.is-public` CSS scope |
+| Demo mode blocks publish/unpublish at the API layer | ✅ (route-level guard, 403) | `if get_settings().demo_mode` in router |
+
+## 20. Versioning & releases
 
 | Feature | Status | Notes |
 |---|---|---|
