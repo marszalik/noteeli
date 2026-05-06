@@ -587,10 +587,7 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-demo [data-panel="profiles"],
 .app-shell.is-demo .upload-stage,
 .app-shell.is-demo .tree-row-menu,
-/* Public read-only viewer: drop the entire topbar (zoom, settings,
-   profiles, login chip, edit-mode toggle). Nothing in it is useful
-   when the user can't edit. */
-.app-shell.is-public .workspace-topbar,
+/* Public read-only viewer: hide the per-component buttons. */
 .app-shell.is-public #save-button,
 .app-shell.is-public #new-file,
 .app-shell.is-public #new-directory,
@@ -601,11 +598,14 @@ body[data-theme="noteeli"] .alert-error {
   display: none !important;
 }
 
-/* Toast UI computes the content area's height as
-   (parent_height - toolbar_height) at init. If we set display:none on
-   the toolbar after the editor has already booted, the content area
-   collapses to ~36 px. Instead, keep the toolbar in the layout but
-   shrink it to zero — the editor's measurements stay valid. */
+/* The workspace panel uses `display: grid; grid-template-rows: auto
+   1fr auto` (topbar / editor-stage / statusbar). Setting display:none
+   on the topbar pulls editor-stage into the auto-sized first row and
+   the 1fr lands on the statusbar — net effect: editor collapses to
+   0 px. Keep the topbar in the grid flow but visually empty. Same
+   trick for Toast UI's toolbar (sized once at init, can't be removed
+   afterwards without breaking the inner content height). */
+.app-shell.is-public .workspace-topbar,
 .app-shell.is-public .toastui-editor-defaultUI-toolbar,
 .app-shell.is-public .toastui-editor-toolbar {
   height: 0 !important;
@@ -613,6 +613,7 @@ body[data-theme="noteeli"] .alert-error {
   padding: 0 !important;
   border: 0 !important;
   overflow: hidden !important;
+  visibility: hidden !important;
 }
 
 /* Public view banner — green, less alarming than the demo amber. */
