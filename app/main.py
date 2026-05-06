@@ -42,10 +42,31 @@ def _seed_demo_content_if_needed(settings) -> None:
             shutil.copy2(entry, dst)
 
 
+def _seed_demo_preferences_if_needed(settings) -> None:
+    """Demo's initial UI: English + Webnote theme. Writes straight to
+    the preferences SQLite (which lives in /tmp on the demo box and is
+    wiped on every service restart), so visitors always land on the
+    same first-impression view regardless of what previous visitors
+    might have clicked."""
+    if not settings.demo_mode:
+        return
+    from app.domains.preferences.repository import PreferencesRepository
+
+    repo = PreferencesRepository(settings)
+    # We bypass the WorkspaceService write guard on purpose — this
+    # runs as part of process startup, not a user request.
+    repo.update_app_preferences(
+        language="en",
+        theme_mode="webnote",
+        content_root=str(settings.content_root),
+    )
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     settings.ensure_runtime_dirs()
     _seed_demo_content_if_needed(settings)
+    _seed_demo_preferences_if_needed(settings)
 
     app = FastAPI(title=settings.app_name)
     app.add_middleware(
