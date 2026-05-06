@@ -1521,6 +1521,61 @@ body[data-theme="noteeli"] .modal-actions {
   transform: translateY(-1px);
 }
 
+/* Row = apply-button + small × delete on the right. */
+.profiles-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.profiles-dropdown-row .profiles-dropdown-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.profiles-dropdown-delete {
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.profiles-dropdown-delete:hover {
+  opacity: 1;
+  color: var(--warning);
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.profiles-dropdown-delete svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Footer: quick "save current as new profile" input + button. */
+.profiles-dropdown-footer {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.profiles-dropdown-footer .settings-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.86rem;
+}
+
+.profiles-dropdown-footer .button {
+  flex-shrink: 0;
+}
+
 .profiles-dropdown-empty {
   padding: 0.75rem 0.8rem;
   font-size: 0.86rem;

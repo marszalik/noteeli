@@ -16,6 +16,8 @@ if (shell) {
   const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
   const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
   const preferenceProfilesList = document.getElementById("preference-profiles-list");
+  const profileQuickNameInput = document.getElementById("profile-quick-name");
+  const profileQuickSaveButton = document.getElementById("profile-quick-save");
   const openSettingsButton = document.getElementById("open-settings");
   const closeSettingsButton = document.getElementById("close-settings");
   const cancelSettingsButton = document.getElementById("cancel-settings");
@@ -1034,7 +1036,9 @@ if (shell) {
       save_changes: "Zapisz zmiany", edit: "Edytuj", delete_action: "Usuń",
       profile_hint: "Zapisuje aktualne pola formularza jako profil.",
       editing_profile_prefix: "Edytujesz",
-      no_profiles_hint: "Brak zapisanych zestawów. Utwórz pierwszy profil w ustawieniach.",
+      no_profiles_hint: "Brak zapisanych zestawów. Wpisz nazwę poniżej, żeby zapisać aktualne ustawienia jako profil.",
+      save_new_profile_placeholder: "Zapisz aktualne jako nowy profil…", save_action: "Zapisz",
+      quick_start: "Szybki start", saved_profiles: "Zapisane profile",
       no_profiles_list: "Brak zapisanych profili.",
       label_source: "Źródło notatek", source_local: "Lokalny dysk",
       label_notes_dir: "Katalog notatek", browse: "Przeglądaj",
@@ -1166,7 +1170,9 @@ if (shell) {
       save_changes: "Save changes", edit: "Edit", delete_action: "Delete",
       profile_hint: "Saves the current form fields as a quick-switch profile.",
       editing_profile_prefix: "Editing",
-      no_profiles_hint: "No saved profiles yet. Create your first profile in settings.",
+      no_profiles_hint: "No saved profiles yet. Type a name below to save the current settings as a profile.",
+      save_new_profile_placeholder: "Save current as new profile…", save_action: "Save",
+      quick_start: "Quick start", saved_profiles: "Saved profiles",
       no_profiles_list: "No saved profiles.",
       label_source: "Notes source", source_local: "Local disk",
       label_notes_dir: "Notes directory", browse: "Browse",
@@ -1298,7 +1304,9 @@ if (shell) {
       save_changes: "Guardar cambios", edit: "Editar", delete_action: "Eliminar",
       profile_hint: "Guarda los campos actuales como perfil de cambio rápido.",
       editing_profile_prefix: "Editando",
-      no_profiles_hint: "No hay perfiles guardados. Crea el primero en los ajustes.",
+      no_profiles_hint: "No hay perfiles guardados. Escribe un nombre abajo para guardar la configuración actual.",
+      save_new_profile_placeholder: "Guardar como nuevo perfil…", save_action: "Guardar",
+      quick_start: "Inicio rápido", saved_profiles: "Perfiles guardados",
       no_profiles_list: "No hay perfiles guardados.",
       label_source: "Fuente de notas", source_local: "Disco local",
       label_notes_dir: "Directorio de notas", browse: "Explorar",
@@ -1430,7 +1438,9 @@ if (shell) {
       save_changes: "Änderungen speichern", edit: "Bearbeiten", delete_action: "Löschen",
       profile_hint: "Speichert die aktuellen Felder als Schnellwechsel-Profil.",
       editing_profile_prefix: "Bearbeitung von",
-      no_profiles_hint: "Keine gespeicherten Profile. Erstelle das erste Profil in den Einstellungen.",
+      no_profiles_hint: "Noch keine Profile. Gib unten einen Namen ein, um die aktuellen Einstellungen zu speichern.",
+      save_new_profile_placeholder: "Aktuelle Einstellungen als neues Profil…", save_action: "Speichern",
+      quick_start: "Schnellstart", saved_profiles: "Gespeicherte Profile",
       no_profiles_list: "Keine gespeicherten Profile.",
       label_source: "Notizenquelle", source_local: "Lokale Festplatte",
       label_notes_dir: "Notizenverzeichnis", browse: "Durchsuchen",
@@ -1562,7 +1572,9 @@ if (shell) {
       save_changes: "Сохранить изменения", edit: "Редактировать", delete_action: "Удалить",
       profile_hint: "Сохраняет текущие поля как профиль быстрого переключения.",
       editing_profile_prefix: "Редактирование",
-      no_profiles_hint: "Нет сохранённых профилей. Создайте первый профиль в настройках.",
+      no_profiles_hint: "Нет сохранённых профилей. Введите имя ниже, чтобы сохранить текущие настройки как профиль.",
+      save_new_profile_placeholder: "Сохранить текущее как новый профиль…", save_action: "Сохранить",
+      quick_start: "Быстрый старт", saved_profiles: "Сохранённые профили",
       no_profiles_list: "Нет сохранённых профилей.",
       label_source: "Источник заметок", source_local: "Локальный диск",
       label_notes_dir: "Каталог заметок", browse: "Обзор",
@@ -1704,6 +1716,12 @@ if (shell) {
     document.querySelectorAll("[data-i18n-opt]").forEach((el) => {
       const key = el.dataset.i18nOpt;
       if (t[key] !== undefined) el.textContent = t[key];
+    });
+
+    // Translate placeholders on inputs with [data-i18n-placeholder]
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      const key = el.dataset.i18nPlaceholder;
+      if (t[key] !== undefined) el.placeholder = t[key];
     });
 
     // Update dynamic text nodes that are set by JS
@@ -2373,20 +2391,46 @@ if (shell) {
     }
 
     preferenceProfiles.forEach((profile) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "profiles-dropdown-item";
+      // Each profile row: a flex container with the apply-button on the
+      // left (takes most of the width) and a small × delete button on
+      // the right.
+      const row = document.createElement("div");
+      row.className = "profiles-dropdown-row";
+
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "profiles-dropdown-item";
       const title = document.createElement("strong");
       title.textContent = profile.name;
       const summary = document.createElement("span");
       summary.textContent = getProfileSummary(profile);
-      button.append(title, summary);
-      button.addEventListener("click", () => applyPreferenceProfile(profile.id, profile.name));
-      preferenceProfilesList.appendChild(button);
+      apply.append(title, summary);
+      apply.addEventListener("click", () => applyPreferenceProfile(profile.id, profile.name));
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "profiles-dropdown-delete icon-button icon-button-small";
+      del.title = t("ctx_delete");
+      del.setAttribute("aria-label", t("ctx_delete"));
+      del.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+        + '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>'
+        + '</svg>';
+      del.addEventListener("click", (event) => {
+        event.stopPropagation();
+        deletePreferenceProfile(profile);
+      });
+
+      row.append(apply, del);
+      preferenceProfilesList.appendChild(row);
     });
   }
 
+  // The settings-modal profile list was removed when profile management
+  // moved into the topbar dropdown. Keep the function as a no-op so the
+  // existing call sites don't have to be hunted down.
   function renderSettingsPreferenceProfiles() {
+    return;
+    /* legacy below — kept for reference until removal in next cleanup
     if (!settingsProfileList) {
       return;
     }
@@ -2434,6 +2478,7 @@ if (shell) {
       row.append(info, actions);
       settingsProfileList.appendChild(row);
     });
+    */
   }
 
   async function loadPreferenceProfiles() {
@@ -2447,25 +2492,26 @@ if (shell) {
   }
 
   async function saveCurrentPreferenceProfile() {
-    const profileName = profileNameInput?.value.trim() || "";
+    // Reads from the topbar dropdown's quick-save input. The whole
+    // edit-an-existing-profile flow was scrapped — users can delete
+    // and resave instead, much simpler.
+    const input = profileQuickNameInput;
+    const profileName = input?.value.trim() || "";
     if (!profileName) {
       setStatus(t("st_profile_name_required"), true);
-      profileNameInput?.focus();
+      input?.focus();
       return;
     }
 
     try {
-      const isEditing = editingPreferenceProfileId !== null;
-      setStatus(isEditing ? t("st_updating_profile") : t("st_saving_profile"));
-      const url = isEditing ? `${config.preferenceProfilesUrl}/${editingPreferenceProfileId}` : config.preferenceProfilesUrl;
-      const method = isEditing ? "PUT" : "POST";
-      const profile = await requestJson(url, {
-        method,
+      setStatus(t("st_saving_profile"));
+      const profile = await requestJson(config.preferenceProfilesUrl, {
+        method: "POST",
         body: JSON.stringify(buildProfilePayload({ name: profileName })),
       });
       await loadPreferenceProfiles();
-      resetProfileEditor();
-      setStatus(isEditing ? `${t("st_profile_updated")}: ${profile.name}.` : `${t("st_profile_saved")}: ${profile.name}.`);
+      if (input) input.value = "";
+      setStatus(`${t("st_profile_saved")}: ${profile.name}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -3889,8 +3935,15 @@ if (shell) {
   openSettingsButton.addEventListener("click", openSettingsModal);
   closeSettingsButton.addEventListener("click", closeSettingsModal);
   cancelSettingsButton.addEventListener("click", closeSettingsModal);
-  saveProfileButton?.addEventListener("click", saveCurrentPreferenceProfile);
-  cancelProfileEditButton?.addEventListener("click", () => resetProfileEditor({ resetForm: true }));
+  // Legacy settings-tab profile UI was removed; quick-save input
+  // in the topbar dropdown drives profile creation now.
+  profileQuickSaveButton?.addEventListener("click", saveCurrentPreferenceProfile);
+  profileQuickNameInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveCurrentPreferenceProfile();
+    }
+  });
   browseContentRootButton.addEventListener("click", openDirectoryBrowser);
   closeDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);
   cancelDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);

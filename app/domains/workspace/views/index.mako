@@ -113,10 +113,25 @@
             </button>
             <div id="preference-profiles-dropdown" class="profiles-dropdown hidden" aria-hidden="true">
               <div class="profiles-dropdown-header">
-                <div class="label">Quick start</div>
-                <strong>Saved profiles</strong>
+                <div class="label" data-i18n="quick_start">Quick start</div>
+                <strong data-i18n="saved_profiles">Saved profiles</strong>
               </div>
               <div id="preference-profiles-list" class="profiles-dropdown-list"></div>
+              <div class="profiles-dropdown-footer">
+                <input
+                  id="profile-quick-name"
+                  type="text"
+                  class="settings-input"
+                  data-i18n-placeholder="save_new_profile_placeholder"
+                  placeholder="Save current as new profile…"
+                />
+                <button
+                  id="profile-quick-save"
+                  type="button"
+                  class="button button-primary button-sm"
+                  data-i18n="save_action"
+                >Save</button>
+              </div>
             </div>
           </div>
           <div class="editor-zoom">
@@ -223,7 +238,6 @@
           <button class="settings-tab" type="button" data-tab="appearance" role="tab" data-i18n="group_appearance">Wyglad</button>
           <button class="settings-tab" type="button" data-tab="editor" role="tab" data-i18n="group_editor">Edytor</button>
           <button class="settings-tab" type="button" data-tab="images" role="tab" data-i18n="group_images">Obrazki</button>
-          <button class="settings-tab" type="button" data-tab="profiles" role="tab" data-i18n="group_profiles">Profile</button>
         </nav>
 
         <div class="settings-tab-content">
@@ -365,21 +379,6 @@
             </div>
           </section>
 
-          <section class="settings-tab-panel hidden" data-panel="profiles" role="tabpanel">
-            <div class="settings-profile-panel-header">
-              <div>
-                <div class="label" data-i18n="label_profiles">Profile</div>
-                <strong id="profile-editor-title" data-i18n="profile_new">Nowy profil</strong>
-              </div>
-              <button id="cancel-profile-edit" class="button button-secondary hidden" type="button" data-i18n="cancel_edit">Cancel edit</button>
-            </div>
-            <div class="settings-path-row">
-              <input id="profile-name-input" class="settings-input" type="text" placeholder="e.g. Work SFTP or Local projects" />
-              <button id="save-profile" class="button button-secondary settings-browse-button" type="button" data-i18n="save_profile">Save profile</button>
-            </div>
-            <p class="muted small-note" data-i18n="profile_hint">Zapisuje aktualne pola formularza jako profil do szybkiego przelaczania z gornego menu.</p>
-            <div id="settings-profile-list" class="settings-profile-list"></div>
-          </section>
         </div>
       </div>
 
