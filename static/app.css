@@ -588,11 +588,9 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-demo .upload-stage,
 .app-shell.is-demo .tree-row-menu,
 /* Public read-only viewer: drop the entire topbar (zoom, settings,
-   profiles, login chip, edit-mode toggle) and the Toast UI editor
-   toolbar. Nothing in either is useful when the user can't edit. */
+   profiles, login chip, edit-mode toggle). Nothing in it is useful
+   when the user can't edit. */
 .app-shell.is-public .workspace-topbar,
-.app-shell.is-public .toastui-editor-defaultUI-toolbar,
-.app-shell.is-public .toastui-editor-toolbar,
 .app-shell.is-public #save-button,
 .app-shell.is-public #new-file,
 .app-shell.is-public #new-directory,
@@ -601,6 +599,20 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-public .upload-stage,
 .app-shell.is-public .tree-row-menu {
   display: none !important;
+}
+
+/* Toast UI computes the content area's height as
+   (parent_height - toolbar_height) at init. If we set display:none on
+   the toolbar after the editor has already booted, the content area
+   collapses to ~36 px. Instead, keep the toolbar in the layout but
+   shrink it to zero — the editor's measurements stay valid. */
+.app-shell.is-public .toastui-editor-defaultUI-toolbar,
+.app-shell.is-public .toastui-editor-toolbar {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Public view banner — green, less alarming than the demo amber. */
