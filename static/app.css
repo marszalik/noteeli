@@ -587,19 +587,19 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-demo [data-panel="profiles"],
 .app-shell.is-demo .upload-stage,
 .app-shell.is-demo .tree-row-menu,
+/* Public read-only viewer: drop the entire topbar (zoom, settings,
+   profiles, login chip, edit-mode toggle) and the Toast UI editor
+   toolbar. Nothing in either is useful when the user can't edit. */
+.app-shell.is-public .workspace-topbar,
+.app-shell.is-public .toastui-editor-defaultUI-toolbar,
+.app-shell.is-public .toastui-editor-toolbar,
 .app-shell.is-public #save-button,
 .app-shell.is-public #new-file,
 .app-shell.is-public #new-directory,
 .app-shell.is-public #save-settings,
 .app-shell.is-public #save-profile,
-.app-shell.is-public #cancel-profile-edit,
-.app-shell.is-public .settings-tab[data-tab="profiles"],
-.app-shell.is-public [data-panel="profiles"],
 .app-shell.is-public .upload-stage,
-.app-shell.is-public .tree-row-menu,
-.app-shell.is-public #toggle-preference-profiles,
-.app-shell.is-public #open-settings,
-.app-shell.is-public .editor-mode-toggle {
+.app-shell.is-public .tree-row-menu {
   display: none !important;
 }
 

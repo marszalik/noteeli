@@ -158,7 +158,11 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
             "is_local": True,
             "is_public": True,
         },
-        content_root=item.path or "/",
+        # Show only the basename of the published item in the sidebar —
+        # leaking the full filesystem path on a public URL would be a
+        # security smell. The basename matches what visitors expect to
+        # see ("psi.md", "FadingSuns") and nothing more.
+        content_root=Path(item.path).name or item.slug,
         preferences=preferences,
         database_path="",
         app_version=app_version,
