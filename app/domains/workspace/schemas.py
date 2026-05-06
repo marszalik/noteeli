@@ -21,6 +21,12 @@ class FileDocument(BaseModel):
     previewable: bool = False
     preview_kind: Literal["image", "pdf", "docx", "xlsx", "pptx"] | None = None
     message: str | None = None
+    # Server-rendered HTML view of `content` (markdown / code / json /
+    # plain text). Populated by the public read-only viewer so the
+    # frontend can drop the rendered HTML into a div without loading
+    # Toast UI, CodeMirror, JSONEditor, etc. Stays None for the
+    # authenticated editor flow.
+    html: str | None = None
 
 
 class SaveFileRequest(BaseModel):

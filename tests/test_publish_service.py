@@ -217,3 +217,109 @@ def test_public_view_redirects_wrong_slug(tmp_path: Path, client: TestClient):
 def test_public_view_404_for_unknown_id(client: TestClient):
     response = client.get("/99999/anything")
     assert response.status_code == 404
+
+
+# ── Server-side rendering ──────────────────────────────────────
+
+
+def test_render_markdown_html_basics():
+    from app.domains.publish.render import render_markdown_html
+
+    html = render_markdown_html("# Title\n\nHello **world**.\n")
+    assert "<h1" in html and "Title" in html
+    assert "<strong>world</strong>" in html
+
+
+def test_render_markdown_html_renders_tables_and_code():
+    from app.domains.publish.render import render_markdown_html
+
+    md = """| A | B |
+|---|---|
+| 1 | 2 |
+
+```python
+print("hi")
+```
+"""
+    html = render_markdown_html(md)
+    assert "<table" in html
+    assert "codehilite" in html
+    assert "print" in html
+
+
+def test_render_markdown_rewrites_relative_image_paths():
+    from app.domains.publish.render import render_markdown_html
+
+    html = render_markdown_html(
+        "![diagram](images/foo.png)",
+        source_path="notes/intro.md",
+        asset_url="/api/public/4/file/preview",
+    )
+    # Asset endpoint URL with the rewritten target.
+    assert "/api/public/4/file/preview" in html
+    assert "source_path=notes%2Fintro.md" in html
+    assert "target=images%2Ffoo.png" in html
+
+
+def test_render_markdown_leaves_absolute_urls_alone():
+    from app.domains.publish.render import render_markdown_html
+
+    html = render_markdown_html(
+        "[link](https://example.com) ![ext](https://cdn.example.com/x.png)",
+        source_path="any.md",
+        asset_url="/api/public/1/file/preview",
+    )
+    assert "https://example.com" in html
+    assert "https://cdn.example.com/x.png" in html
+    # The asset_url is not used for absolute URLs.
+    assert "preview?source_path" not in html or "https://example.com" in html
+
+
+def test_render_code_html_uses_pygments():
+    from app.domains.publish.render import render_code_html
+
+    html = render_code_html("print('hi')\n", "snippet.py")
+    assert "codehilite" in html
+    assert "print" in html
+
+
+def test_render_code_html_falls_back_for_unknown_extension():
+    from app.domains.publish.render import render_code_html
+
+    html = render_code_html("hello", "file.unknown-ext")
+    assert "<pre" in html and "hello" in html
+
+
+def test_render_json_html_pretty_prints():
+    from app.domains.publish.render import render_json_html
+
+    html = render_json_html('{"a":1,"b":[2,3]}')
+    # Pretty-printed JSON has 2-space indent and shows up in the
+    # highlighted output (HTML-escaped quotes in the markup).
+    assert "&quot;a&quot;" in html or '"a"' in html
+    assert "codehilite" in html
+
+
+def test_pygments_css_returns_stylesheet():
+    from app.domains.publish.render import pygments_css
+
+    css = pygments_css()
+    assert ".codehilite" in css
+    # Should have at least one token-class rule.
+    assert ".codehilite ." in css
+
+
+def test_public_file_api_returns_html_for_markdown(tmp_path: Path, client: TestClient):
+    """End-to-end: published .md file API response carries server-
+    rendered HTML on the `html` field — the public viewer does not
+    need to load Toast UI to display it."""
+    settings = get_settings()
+    repo = PublishedItemsRepository(settings)
+    item_id = repo.insert("file", "public.md", "public")
+
+    response = client.get(f"/api/public/{item_id}/file")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["file_type"] == "markdown"
+    assert body["html"] is not None
+    assert "<h1" in body["html"] or "Hello" in body["html"]

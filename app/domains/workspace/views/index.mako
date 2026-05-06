@@ -4,13 +4,20 @@
 <%def name="initial_theme()">${preferences.theme_mode}</%def>
 
 <%def name="head_extra()">
+<%
+    _is_public = bool(context.get('public_view'))
+%>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600&display=swap" />
+% if not _is_public:
   <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+% else:
+  <link rel="stylesheet" href="${request.url_for('publish_pygments_css')}" />
+% endif
 </%def>
 
 <%def name="content()">
@@ -175,6 +182,7 @@
         <div id="editor"></div>
         <div id="json-editor" class="json-editor-panel hidden"></div>
         <div id="code-editor" class="code-editor-panel hidden"></div>
+        <div id="public-content" class="public-content hidden"></div>
 
         <div id="preview-stage" class="file-preview hidden">
           <img id="image-preview" class="file-preview-image hidden" alt="" />
@@ -455,11 +463,16 @@
 </%def>
 
 <%def name="scripts_extra()">
+<%
+    _is_public = bool(context.get('public_view'))
+%>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+% if not _is_public:
   <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9/dist/jsoneditor.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/meta.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/loadmode.min.js"></script>
+% endif
   <script defer src="${request.url_for('static', path='app.js')}?v=${static_version}"></script>
 </%def>

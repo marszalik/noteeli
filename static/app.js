@@ -79,6 +79,7 @@ if (shell) {
   const currentFilePath = document.getElementById("current-file-path");
   const statusMessage = document.getElementById("status-message");
   const editorContainer = document.getElementById("editor");
+  const publicContentContainer = document.getElementById("public-content");
   const jsonEditorContainer = document.getElementById("json-editor");
   const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
@@ -422,7 +423,30 @@ if (shell) {
     }
   }
 
-  const editor = new toastui.Editor({
+  // Public read-only viewer skips the editor init entirely — Toast UI
+  // is not even loaded by the template. The `editor` reference becomes
+  // a no-op stub so the rest of app.js (shared with the auth'd flow)
+  // can call methods unconditionally without crashing. loadFile()
+  // branches on config.isPublic and routes content to publicContent
+  // instead of touching the stub.
+  function _stubEditor() {
+    const noop = () => {};
+    return {
+      on: noop, off: noop,
+      getMarkdown: () => "",
+      setMarkdown: noop,
+      moveCursorToStart: noop,
+      changeMode: noop,
+      focus: noop, blur: noop,
+      isWysiwygMode: () => true,
+      getSelection: () => null,
+      getCurrentModeEditor: () => ({
+        getEditorContainerElement: () => editorContainer,
+      }),
+    };
+  }
+
+  const editor = config.isPublic ? _stubEditor() : new toastui.Editor({
     el: editorContainer,
     height: "100%",
     initialEditType: "wysiwyg",
@@ -3456,6 +3480,57 @@ if (shell) {
     }
   }
 
+  // Public-viewer file display. Server already returns rendered HTML
+  // for editable types (markdown/json/code/text). For previewable
+  // binaries we fall back to <img>/<iframe> pointing at the public
+  // preview endpoint, exactly like the auth'd flow does.
+  function _renderPublicFile(file) {
+    selectedPath = file.path;
+    selectedEditable = false;
+    updateHeader(file.name, file.path);
+
+    // Hide every other stage, show the public-content panel.
+    editorContainer.classList.add("hidden");
+    jsonEditorContainer?.classList.add("hidden");
+    codeEditorContainer?.classList.add("hidden");
+    hidePreview();
+    publicContentContainer.classList.remove("hidden");
+    toggleOverlay({ empty: false, unsupported: false });
+
+    if (file.editable && file.html) {
+      publicContentContainer.innerHTML = file.html;
+      // Re-render Mermaid blocks the server emitted as
+      // <pre><code class="language-mermaid">…</code></pre>.
+      try {
+        publicContentContainer.querySelectorAll("pre > code.language-mermaid").forEach((codeEl) => {
+          const pre = codeEl.parentElement;
+          const code = codeEl.textContent.trim();
+          const wrapper = document.createElement("div");
+          wrapper.className = "mermaid-diagram";
+          wrapper.textContent = code;
+          pre.replaceWith(wrapper);
+        });
+        if (window.mermaid) {
+          window.mermaid.run({ querySelector: ".mermaid-diagram" });
+        }
+      } catch {}
+      setStatus(t("st_file_ready"));
+    } else if (file.previewable) {
+      const url = `${config.previewUrl}&path=${encodeURIComponent(file.path)}`;
+      const tag = file.preview_kind === "image"
+        ? `<img src="${url}" alt="${file.name}" class="public-image" />`
+        : file.preview_kind === "pdf"
+        ? `<iframe src="${url}" class="public-pdf" title="${file.name}"></iframe>`
+        : `<iframe src="${url}" class="public-office" sandbox="allow-same-origin" title="${file.name}"></iframe>`;
+      publicContentContainer.innerHTML = tag;
+      setStatus(file.preview_kind === "pdf" ? t("st_pdf_preview") : t("st_image_preview"));
+    } else {
+      publicContentContainer.innerHTML =
+        `<p class="muted">${file.message || t("st_file_not_editable")}</p>`;
+      setStatus(file.message || t("st_file_not_editable"));
+    }
+  }
+
   async function loadFile(path) {
     try {
       if (selectedPath && selectedPath !== path) {
@@ -3465,6 +3540,12 @@ if (shell) {
       const file = await requestJson(`${config.fileUrl}?path=${encodeURIComponent(path)}`, {
         method: "GET",
       });
+
+      // Public read-only viewer: server-rendered HTML straight into a
+      // div. No editor init, no JSON form, no CodeMirror.
+      if (config.isPublic) {
+        return _renderPublicFile(file);
+      }
 
       isApplyingDocument = true;
       selectedPath = file.path;

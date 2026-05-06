@@ -587,34 +587,89 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-demo [data-panel="profiles"],
 .app-shell.is-demo .upload-stage,
 .app-shell.is-demo .tree-row-menu,
-/* Public read-only viewer: hide the per-component buttons. */
+/* Public read-only viewer: drop write-only UI. Toast UI / JSONEditor /
+   CodeMirror don't even load in public mode (template branches), so
+   no toolbar-collapse hacks are needed any more. */
+.app-shell.is-public .workspace-topbar,
 .app-shell.is-public #save-button,
 .app-shell.is-public #new-file,
 .app-shell.is-public #new-directory,
 .app-shell.is-public #save-settings,
 .app-shell.is-public #save-profile,
 .app-shell.is-public .upload-stage,
-.app-shell.is-public .tree-row-menu {
+.app-shell.is-public .tree-row-menu,
+.app-shell.is-public #editor,
+.app-shell.is-public #json-editor,
+.app-shell.is-public #code-editor {
   display: none !important;
 }
 
-/* The workspace panel uses `display: grid; grid-template-rows: auto
-   1fr auto` (topbar / editor-stage / statusbar). Setting display:none
-   on the topbar pulls editor-stage into the auto-sized first row and
-   the 1fr lands on the statusbar — net effect: editor collapses to
-   0 px. Keep the topbar in the grid flow but visually empty. Same
-   trick for Toast UI's toolbar (sized once at init, can't be removed
-   afterwards without breaking the inner content height). */
-.app-shell.is-public .workspace-topbar,
-.app-shell.is-public .toastui-editor-defaultUI-toolbar,
-.app-shell.is-public .toastui-editor-toolbar {
-  height: 0 !important;
-  min-height: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  overflow: hidden !important;
-  visibility: hidden !important;
+/* Server-rendered markdown / code / json container used in public
+   view. Mimics the look of the auth'd WYSIWYG output but is just
+   plain HTML — no editor chrome. */
+.public-content {
+  height: 100%;
+  overflow: auto;
+  padding: 1.5rem 2rem;
+  color: var(--text);
+  background: transparent;
+  line-height: 1.65;
 }
+
+.public-content > *:first-child { margin-top: 0; }
+.public-content h1 { font-size: 1.85rem; margin: 1.4em 0 0.5em; line-height: 1.2; }
+.public-content h2 { font-size: 1.45rem; margin: 1.3em 0 0.5em; }
+.public-content h3 { font-size: 1.2rem; margin: 1.1em 0 0.4em; }
+.public-content h4, .public-content h5, .public-content h6 {
+  font-size: 1rem; margin: 1em 0 0.4em;
+}
+.public-content p { margin: 0.7em 0; }
+.public-content ul, .public-content ol { padding-left: 1.7em; margin: 0.6em 0; }
+.public-content li { margin: 0.25em 0; }
+.public-content blockquote {
+  margin: 1em 0; padding: 0.4em 1em;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted); border-radius: 0 6px 6px 0;
+  background: var(--surface);
+}
+.public-content code {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.88em;
+  background: var(--surface); padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.public-content pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.public-content pre code { background: transparent; padding: 0; font-size: 0.86em; }
+.public-content table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.92em;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.public-content th, .public-content td {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.public-content thead, .public-content tr:first-child { background: var(--surface); }
+.public-content img { max-width: 100%; height: auto; border-radius: 4px; }
+.public-content a { color: var(--accent); text-decoration: underline; }
+.public-content hr { border: 0; height: 1px; background: var(--line); margin: 2em 0; }
+.public-image, .public-pdf, .public-office {
+  width: 100%; height: 100%; min-height: 70vh;
+  border: 0; border-radius: 8px;
+}
+.public-content .mermaid-diagram { margin: 1em 0; text-align: center; }
 
 /* Public view banner — green, less alarming than the demo amber. */
 .public-banner {

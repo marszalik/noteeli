@@ -12,7 +12,7 @@ import mimetypes
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app import __version__ as app_version
 from app.core.config import get_settings
@@ -145,6 +145,7 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
         "embeddedAssetUrl": str(
             request.url_for("publish_public_file_preview_api", id=item_id)
         ),
+        "pygmentsCssUrl": str(request.url_for("publish_pygments_css")),
         "isPublic": True,
     }
 
@@ -169,6 +170,26 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
         demo_mode=False,
         public_view=item,
         frontend_config=json.dumps(public_config),
+    )
+
+
+# ── Public CSS ──────────────────────────────────────────────────
+
+
+@router.get(
+    "/api/public/pygments.css",
+    name="publish_pygments_css",
+)
+async def publish_pygments_css() -> Response:
+    """Pygments stylesheet for the syntax-highlighted code blocks
+    rendered server-side. Cached aggressively — the body only changes
+    when Pygments itself is upgraded."""
+    from app.domains.publish import render as _render
+
+    return Response(
+        content=_render.pygments_css(),
+        media_type="text/css",
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 
@@ -220,7 +241,7 @@ async def publish_public_tree_api(id: int):
     response_model=FileDocument,
     name="publish_public_file_api",
 )
-async def publish_public_file_api(id: int, path: str = ""):
+async def publish_public_file_api(request: Request, id: int, path: str = ""):
     try:
         item = _publish_service().find_by_id(id)
     except PublishedItemNotFoundError as exc:
@@ -238,9 +259,34 @@ async def publish_public_file_api(id: int, path: str = ""):
             detail="That path is not part of the published item.",
         )
     try:
-        return _workspace_service().read_document(path)
+        document = _workspace_service().read_document(path)
     except (InvalidPathError, DocumentNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Server-render the content so the public viewer can drop the HTML
+    # straight into a <div> instead of bringing up Toast UI / CodeMirror /
+    # JSONEditor on a read-only page.
+    from app.domains.publish import render as _render
+
+    if document.editable:
+        asset_url = str(
+            request.url_for("publish_public_file_preview_api", id=id)
+        )
+        if document.file_type == "markdown":
+            document.html = _render.render_markdown_html(
+                document.content,
+                source_path=document.path,
+                asset_url=asset_url,
+            )
+        elif document.file_type == "json":
+            document.html = _render.render_json_html(document.content)
+        else:
+            # Code / text fallback — Pygments by extension if known,
+            # plain <pre> otherwise.
+            document.html = _render.render_code_html(
+                document.content, document.name
+            )
+    return document
 
 
 @router.get(
