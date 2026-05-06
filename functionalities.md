@@ -78,7 +78,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Feature | Status | Notes |
 |---|---|---|
 | Local filesystem storage | ⚠️ | every workspace test uses `LocalStorageBackend` (default backend) |
-| SFTP / SSH storage | ❌ | `SFTPStorageBackend`, `invalidate_sftp_cache` |
+| SFTP / SSH storage | ✅ `tests/test_sftp_backend.py` (15 tests covering exists/is_file/is_dir, read & write text/bytes round-trip, list_children, browse_dirs, create dir & file, rename, delete file, recursive directory delete, rglob_files, root_display) | `SFTPStorageBackend` exercised end-to-end against a paramiko fake that delegates to a real `tmp_path` |
 | Google Drive storage | ❌ | `GoogleDriveStorageBackend` |
 | Storage backend selection from `source_type` preference | ❌ | `build_backend()` factory |
 | SFTP password persisted in SQLite (warning surfaced in UI) | ❌ | preferences hint |
@@ -300,17 +300,21 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 
 ```
 tests/
-├── test_workspace_service.py        — 34 tests (file CRUD, tree, preview, embed,
+├── test_workspace_service.py        — 47 tests (file CRUD, tree, preview, embed,
 │                                       upload/download, rename, delete, path safety,
-│                                       editor file-type routing, JSON round-trip)
+│                                       editor file-type routing, JSON round-trip,
+│                                       office previews docx/xlsx/pptx, demo mode)
 ├── test_directory_browser_service.py —  3 tests (browser modal backend)
 ├── test_preferences_service.py      —  4 tests (fallback to default root,
 │                                       update fields, source-type switching, content-root norm.)
 ├── test_preference_profiles.py      —  3 tests (save/list/apply, update, delete)
-└── test_auth_guard.py               — 11 tests (every workspace API endpoint
-                                        gets 401 from non-local hosts; HTML root
-                                        redirects to /login; local-host bypass)
-                                       — 59 tests total (workspace + browser + prefs + profiles + auth)
+├── test_auth_guard.py               — 11 tests (every workspace API endpoint
+│                                       gets 401 from non-local hosts; HTML root
+│                                       redirects to /login; local-host bypass)
+└── test_sftp_backend.py             — 15 tests (exists/is_file/is_dir, read &
+                                        write round-trips, listing, browse_dirs,
+                                        create/rename/delete, rglob, root_display)
+                                       — 85 tests total
 ```
 
 ## Coverage gaps (priority order)
@@ -319,8 +323,8 @@ These are the largest "if it broke, the user would notice" surfaces with **no**
 automated coverage. Each one is a candidate for the next batch of tests.
 
 ### Storage backends
-1. **SFTP backend** — at minimum, a fake-SFTP integration test (e.g. paramiko stub) covering exists/list/read/write/rename.
-2. **Google Drive backend** — likely mock-only.
+1. ~~**SFTP backend**~~ ✅ done — 15 tests via a paramiko fake that delegates to `tmp_path`.
+2. **Google Drive backend** — likely mock-only (still pending).
 
 ### Editor / frontend (would benefit from a Playwright or Selenium harness)
 3. **Drag-and-drop image copy** — Obsidian-style auto-copy when source isn't in target dir.
