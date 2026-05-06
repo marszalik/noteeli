@@ -139,12 +139,12 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
     # Build the frontend config to point every API call at the public,
     # scoped routes — same template, restricted backend.
     public_config = {
-        "treeUrl": str(request.url_for("publish_public_tree_api")) + f"?id={item_id}",
-        "fileUrl": str(request.url_for("publish_public_file_api")) + f"?id={item_id}",
-        "previewUrl": str(request.url_for("publish_public_file_preview_api"))
-        + f"?id={item_id}",
-        "embeddedAssetUrl": str(request.url_for("publish_public_file_preview_api"))
-        + f"?id={item_id}",
+        "treeUrl": str(request.url_for("publish_public_tree_api", id=item_id)),
+        "fileUrl": str(request.url_for("publish_public_file_api", id=item_id)),
+        "previewUrl": str(request.url_for("publish_public_file_preview_api", id=item_id)),
+        "embeddedAssetUrl": str(
+            request.url_for("publish_public_file_preview_api", id=item_id)
+        ),
         "isPublic": True,
     }
 
@@ -172,7 +172,7 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
 
 
 @router.get(
-    "/api/public/tree",
+    "/api/public/{id}/tree",
     response_model=TreeNode,
     name="publish_public_tree_api",
 )
@@ -212,7 +212,7 @@ async def publish_public_tree_api(id: int):
 
 
 @router.get(
-    "/api/public/file",
+    "/api/public/{id}/file",
     response_model=FileDocument,
     name="publish_public_file_api",
 )
@@ -240,7 +240,7 @@ async def publish_public_file_api(id: int, path: str = ""):
 
 
 @router.get(
-    "/api/public/file/preview",
+    "/api/public/{id}/file/preview",
     name="publish_public_file_preview_api",
 )
 async def publish_public_file_preview_api(

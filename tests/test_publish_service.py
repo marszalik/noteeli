@@ -183,13 +183,13 @@ def test_published_view_works_without_auth(tmp_path: Path, client: TestClient):
     assert b"Public view" in page.content
 
     # The scoped tree API also works without auth.
-    tree = client.get(f"/api/public/tree?id={item_id}")
+    tree = client.get(f"/api/public/{item_id}/tree")
     assert tree.status_code == 200
     body = tree.json()
     assert body["kind"] == "directory"
 
     # And the file content endpoint.
-    file_resp = client.get(f"/api/public/file?id={item_id}")
+    file_resp = client.get(f"/api/public/{item_id}/file")
     assert file_resp.status_code == 200
     assert "# Hello" in file_resp.json()["content"]
 
@@ -200,7 +200,7 @@ def test_public_routes_block_path_traversal(tmp_path: Path, client: TestClient):
     item_id = repo.insert("file", "public.md", "public")
 
     # Asking for a sibling file that wasn't published → 403
-    response = client.get(f"/api/public/file?id={item_id}&path=shared/doc.md")
+    response = client.get(f"/api/public/{item_id}/file?path=shared/doc.md")
     assert response.status_code == 403
 
 
