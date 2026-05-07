@@ -2,6 +2,25 @@
 
 <%def name="page_title()">Subscribe — Noteeli</%def>
 
+<%def name="head_extra()">
+  % if paddle_client_token:
+  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+  <script>
+    Paddle.Initialize({
+      token: '${paddle_client_token}',
+      % if paddle_environment == 'sandbox':
+      environment: 'sandbox',
+      % endif
+      eventCallback: function(data) {
+        if (data.name === 'checkout.completed') {
+          window.location.href = '${success_url}';
+        }
+      }
+    });
+  </script>
+  % endif
+</%def>
+
 <%def name="content()">
 <div class="subscribe-shell">
   <div class="subscribe-card">

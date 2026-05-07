@@ -47,11 +47,14 @@ async def subscribe_page(request: Request):
     if user_id and _billing_service().is_subscription_active(user_id):
         return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
 
+    settings = get_settings()
     return render_template(
         "domains/billing/views/subscribe.mako",
         request,
         user_email=user.get("email", ""),
-        plan_price="€5",
+        paddle_client_token=settings.paddle_client_token,
+        paddle_environment=settings.paddle_environment,
+        success_url=str(request.url_for("billing_success")),
     )
 
 
