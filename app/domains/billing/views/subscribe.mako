@@ -69,6 +69,11 @@
       Payments handled by <a href="https://paddle.com" target="_blank" rel="noopener">Paddle</a>.
       Cancel any time — no lock-in.
     </p>
+    <p class="subscribe-legal-links">
+      <a href="https://noteeli.com/terms" target="_blank" rel="noopener">Terms</a>
+      <a href="https://noteeli.com/privacy" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://noteeli.com/refund" target="_blank" rel="noopener">Refunds</a>
+    </p>
   </div>
 </div>
 </%def>

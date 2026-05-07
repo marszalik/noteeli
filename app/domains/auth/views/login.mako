@@ -55,6 +55,11 @@
           </details>
         % endif
       </div>
+      <p class="login-legal-links">
+        <a href="https://noteeli.com/terms" target="_blank" rel="noopener">Terms</a>
+        <a href="https://noteeli.com/privacy" target="_blank" rel="noopener">Privacy</a>
+        <a href="https://noteeli.com/contact" target="_blank" rel="noopener">Contact</a>
+      </p>
     </div>
   </main>
 </%def>
