@@ -61,6 +61,8 @@ class AuthService:
         user = self.get_current_user(request)
         if user is None:
             raise HTTPException(status_code=401, detail="Authentication required.")
+        if self.settings.hosted_mode and not user.get("subscription_active"):
+            raise HTTPException(status_code=402, detail="Subscription required.")
         return user
 
     def google_is_configured(self) -> bool:
@@ -71,11 +73,15 @@ class AuthService:
         return bool(self.settings.allowed_google_emails.strip())
 
     def google_email_is_allowed(self, email: str) -> bool:
-        """Return True only if the email is on the explicit allowlist.
+        """Return True if the email may log in.
 
-        If NOTEELI_ALLOWED_GOOGLE_EMAILS is empty, nobody is allowed —
-        the login page shows a hint to edit .env.
+        In hosted mode any verified Google account is allowed — subscription
+        gating happens after login, not at the email-allowlist level.
+        If NOTEELI_ALLOWED_GOOGLE_EMAILS is empty in self-hosted mode,
+        nobody is allowed (the login page shows a hint to edit .env).
         """
+        if self.settings.hosted_mode:
+            return bool(email)   # any non-empty email is fine
         raw = self.settings.allowed_google_emails.strip()
         if not raw:
             return False

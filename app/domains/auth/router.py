@@ -63,13 +63,28 @@ async def auth_google_callback(request: Request):
     if not auth_service.google_email_is_allowed(email):
         return _login_template(request, error_message=f"Access denied for {email}.")
 
-    request.session["user"] = {
+    session_user: dict = {
         "sub": userinfo.get("sub"),
         "email": email,
         "name": userinfo.get("name"),
         "picture": userinfo.get("picture"),
         "is_local": False,
     }
+
+    # In hosted mode: create/update the DB user and check subscription.
+    if _settings.hosted_mode:
+        from app.domains.billing.service import BillingService
+        billing = BillingService(_settings)
+        db_id = billing.get_or_create_user(userinfo.get("sub", ""), email)
+        session_user["db_id"] = db_id
+        session_user["subscription_active"] = billing.is_subscription_active(db_id)
+
+    request.session["user"] = session_user
+
+    # Hosted mode without an active subscription → paywall.
+    if _settings.hosted_mode and not session_user.get("subscription_active"):
+        return RedirectResponse(url=request.url_for("subscribe_page"), status_code=303)
+
     return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
 
 

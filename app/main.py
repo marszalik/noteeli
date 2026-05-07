@@ -5,6 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
 from app.domains.auth.router import router as auth_router
+from app.domains.billing.router import router as billing_router
 from app.domains.publish.router import router as publish_router
 from app.domains.workspace.router import router as workspace_router
 from app.domains.workspace.service import DemoReadOnlyError
@@ -79,11 +80,17 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(settings.static_dir)), name="static")
 
     app.include_router(auth_router)
+    app.include_router(billing_router)
     app.include_router(workspace_router)
     # Publish routes are registered last so that more-specific paths
     # like /login and /api/* always win over the catch-all /{id}/{slug}
     # public viewer route.
     app.include_router(publish_router)
+
+    # Hosted mode: initialise billing DB tables on startup.
+    if settings.hosted_mode:
+        from app.domains.billing.repository import BillingRepository
+        BillingRepository(settings)  # _ensure_schema() runs in __init__
 
     # Demo mode: any service-layer write raises DemoReadOnlyError. Catch
     # it here so every endpoint that calls a guarded method automatically

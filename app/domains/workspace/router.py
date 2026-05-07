@@ -52,6 +52,10 @@ async def workspace_page(request: Request):
     if user is None:
         return RedirectResponse(url=request.url_for("login_page"), status_code=303)
 
+    # Hosted mode: gate on subscription.
+    if settings.hosted_mode and not user.get("subscription_active"):
+        return RedirectResponse(url=request.url_for("subscribe_page"), status_code=303)
+
     preferences = workspace_service.get_preferences()
     frontend_config = json.dumps(
         {

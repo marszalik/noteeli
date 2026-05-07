@@ -3930,3 +3930,136 @@ body[data-theme="obsidian"] .tree-icon-audio   { color: #5fb8a8; }
 body[data-theme="obsidian"] .tree-icon-video   { color: #d878a8; }
 body[data-theme="obsidian"] .tree-icon-text    { color: #98a2b3; }
 body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
+
+/* ── Subscribe / paywall page ────────────────────────────────────── */
+
+.subscribe-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.subscribe-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subscribe-logo img {
+  border-radius: 12px;
+}
+
+.subscribe-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.subscribe-tagline {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.subscribe-plan {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: left;
+}
+
+.subscribe-plan-name {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.subscribe-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.subscribe-plan-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.subscribe-plan-period {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.subscribe-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subscribe-features li {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding-left: 1.4em;
+  position: relative;
+}
+
+.subscribe-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.subscribe-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.subscribe-btn:hover {
+  opacity: 0.88;
+}
+
+.subscribe-account {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.subscribe-footer {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.subscribe-footer a {
+  color: var(--accent);
+}

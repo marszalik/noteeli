@@ -28,6 +28,21 @@ class Settings(BaseSettings):
     # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
     demo_mode: bool = False
 
+    # ── Hosted / SaaS mode ──────────────────────────────────────────────
+    # When True:
+    #   - any Google account may log in (no allowed_google_emails check)
+    #   - subscription is required to access the workspace
+    #   - local-filesystem storage backend is hidden
+    # Toggle via NOTEELI_HOSTED_MODE=1.
+    hosted_mode: bool = False
+
+    # Paddle Billing (https://developer.paddle.com)
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    paddle_price_id: str = ""          # e.g. pri_01kr271nvqa591dbrehd141g79
+    # "sandbox" → sandbox-api.paddle.com  |  "live" → api.paddle.com
+    paddle_environment: str = "sandbox"
+
     model_config = SettingsConfigDict(
         env_prefix="NOTEELI_",
         env_file=".env",
