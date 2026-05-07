@@ -8,9 +8,6 @@
   <script>
     Paddle.Initialize({
       token: '${paddle_client_token}',
-      % if paddle_environment == 'sandbox':
-      environment: 'sandbox',
-      % endif
       eventCallback: function(data) {
         if (data.name === 'checkout.completed') {
           window.location.href = '${success_url}';
