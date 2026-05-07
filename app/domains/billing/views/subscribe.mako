@@ -6,6 +6,9 @@
   % if paddle_client_token:
   <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
   <script>
+    % if paddle_environment == 'sandbox':
+    Paddle.Environment.set('sandbox');
+    % endif
     Paddle.Initialize({
       token: '${paddle_client_token}',
       eventCallback: function(data) {
