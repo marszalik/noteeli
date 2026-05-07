@@ -51,7 +51,7 @@ async def subscribe_page(request: Request):
         "domains/billing/views/subscribe.mako",
         request,
         user_email=user.get("email", ""),
-        plan_price="$9",           # update when price is confirmed
+        plan_price="€5",
     )
 
 

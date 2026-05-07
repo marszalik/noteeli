@@ -14,7 +14,7 @@
     <div class="subscribe-plan">
       <div class="subscribe-plan-name">Pro</div>
       <div class="subscribe-plan-price">
-        <span class="subscribe-plan-amount">${plan_price}</span>
+        <span class="subscribe-plan-amount">€5</span>
         <span class="subscribe-plan-period">/ month</span>
       </div>
       <ul class="subscribe-features">
