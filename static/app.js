@@ -131,6 +131,9 @@ if (shell) {
   let lastEditorSelection = null;
   let editorDirty = false;
   let isApplyingDocument = false;
+  // Pending URL swaps from background image copies: { [mdPath]: { [oldRef]: newRef } }.
+  // Applied at save time so the editor view is never re-rendered mid-edit.
+  const pendingEmbedSwaps = {};
   let autosaveTimer = null;
   let autosaveInFlight = false;
   let autosaveQueued = false;
@@ -613,12 +616,10 @@ if (shell) {
           const created = result.created_items?.[0];
 
           if (created) {
-            // Swap the temporary embed URL for the permanent copied-file URL.
+            // Queue the ref swap so it's applied on the next save without
+            // re-rendering the editor (which would cause a visible flash).
             const finalRef = computeInsertRef(sourceMdPath, created.path);
-            const finalUrl = getEmbeddedAssetUrl(sourceMdPath, finalRef);
-            const current = editor.getMarkdown();
-            const updated = current.replaceAll(immediateUrl, finalUrl);
-            if (updated !== current) editor.setMarkdown(updated, false);
+            (pendingEmbedSwaps[sourceMdPath] ??= {})[immediateRef] = finalRef;
             loadTree();
             setStatus(`${t("st_image_added")}: ${created.name}`);
           }
@@ -1937,7 +1938,15 @@ if (shell) {
     if (!markdown || !config.embeddedAssetUrl) return markdown;
     const base = config.embeddedAssetUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(base + "\\?source_path=[^&)\\s]+&target=([^)\\s]+)", "g");
-    return markdown.replace(re, (_, encodedTarget) => decodeURIComponent(encodedTarget));
+    let result = markdown.replace(re, (_, encodedTarget) => decodeURIComponent(encodedTarget));
+    // Apply any pending ref swaps from background image copies (original → assets copy).
+    // Consuming them here means the editor is never re-rendered mid-edit.
+    const swaps = pendingEmbedSwaps[selectedPath];
+    if (swaps) {
+      for (const [from, to] of Object.entries(swaps)) result = result.replaceAll(from, to);
+      delete pendingEmbedSwaps[selectedPath];
+    }
+    return result;
   }
 
   function normalizeEmbedTarget(target) {
