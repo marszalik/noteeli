@@ -34,7 +34,14 @@ class PaddleClient:
         success_url: str,
         customer_id: str | None = None,
     ) -> str:
-        """Create a Paddle transaction and return the hosted checkout URL."""
+        """Create a Paddle transaction and return the hosted checkout URL.
+
+        Tries with a custom success_url first.  If Paddle rejects the domain
+        (transaction_checkout_url_domain_is_not_approved) it retries without
+        the custom URL so the user at least reaches the Paddle checkout page.
+        Add the app domain to Paddle's Approved Domains to get the full
+        success-URL redirect back into the app.
+        """
         payload: dict = {
             "items": [{"price_id": self._price_id, "quantity": 1}],
             "checkout": {"url": success_url},
@@ -51,6 +58,18 @@ class PaddleClient:
                 json=payload,
                 timeout=15,
             )
+            if resp.status_code == 400:
+                body = resp.json()
+                if body.get("error", {}).get("code") == "transaction_checkout_url_domain_is_not_approved":
+                    # Retry without custom success URL — Paddle will use
+                    # the Default Payment Link domain instead.
+                    payload.pop("checkout", None)
+                    resp = await client.post(
+                        f"{self._base}/transactions",
+                        headers=self._headers(),
+                        json=payload,
+                        timeout=15,
+                    )
             resp.raise_for_status()
             data = resp.json()
 
