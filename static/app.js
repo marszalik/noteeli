@@ -563,7 +563,7 @@ if (shell) {
   // Accepts drags originating from tree rows (dragState is set).
   // Builds a markdown snippet appropriate for the file type and inserts it.
 
-  async function buildSidebarDropSnippet(droppedPath) {
+  function buildSidebarDropSnippet(droppedPath) {
     if (!selectedPath) return null;
     const name = droppedPath.split("/").pop();
     const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
@@ -575,57 +575,62 @@ if (shell) {
       return `[${name}](${ref})`;
     }
 
-    // Images: if the source isn't already in the configured upload location
-    // (same dir as the .md, or the configured subdir), copy it over by
-    // re-fetching the bytes and uploading via the existing upload endpoint.
-    // This restores the Obsidian-style "drop and the image follows the note"
-    // behaviour without needing a dedicated copy endpoint server-side.
+    const altName = name.replace(/\.[^.]+$/, "");
     const fileDir = getParentPath(selectedPath);
     const subdir = (preferences?.image_upload_subdir || "assets").trim();
     const useSubdir = preferences?.image_upload_mode === "subdir" && !!subdir;
     const targetDir = useSubdir ? (fileDir ? `${fileDir}/${subdir}` : subdir) : fileDir;
     const sourceDir = getParentPath(droppedPath);
 
-    let embedPath = droppedPath;
+    // Optimistic insert: show the image immediately via its current path.
+    // The copy to the target location happens in the background; once done,
+    // the temporary URL is swapped for the permanent one.
+    const immediateRef = computeInsertRef(selectedPath, droppedPath);
+    const immediateUrl = getEmbeddedAssetUrl(selectedPath, immediateRef);
+
     if (sourceDir !== targetDir) {
-      try {
-        const previewUrl = `${config.previewUrl}?path=${encodeURIComponent(droppedPath)}`;
-        const resp = await fetch(previewUrl, { credentials: "include" });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const blob = await resp.blob();
+      // Capture selectedPath now — it may change while the copy runs.
+      const sourceMdPath = selectedPath;
 
-        if (useSubdir) {
-          // Best-effort: create the subdir, ignore "already exists" errors
-          await requestJson(config.createUrl, {
-            method: "POST",
-            body: JSON.stringify({ parent_path: fileDir, name: subdir, kind: "directory" }),
-          }).catch(() => {});
-        }
+      (async () => {
+        try {
+          const blob = await fetch(
+            `${config.previewUrl}?path=${encodeURIComponent(droppedPath)}`,
+            { credentials: "include" },
+          ).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.blob(); });
 
-        const formData = new FormData();
-        formData.append("parent_path", targetDir);
-        formData.append("files", blob, name);
-        const result = await requestMultipart(config.uploadUrl, formData);
-        const created = result.created_items?.[0];
-        if (created) {
-          embedPath = created.path;
-          loadTree();
-          setStatus(`${t("st_image_added")}: ${created.name}`);
+          if (useSubdir) {
+            await requestJson(config.createUrl, {
+              method: "POST",
+              body: JSON.stringify({ parent_path: fileDir, name: subdir, kind: "directory" }),
+            }).catch(() => {});
+          }
+
+          const form = new FormData();
+          form.append("parent_path", targetDir);
+          form.append("files", blob, name);
+          const result = await requestMultipart(config.uploadUrl, form);
+          const created = result.created_items?.[0];
+
+          if (created) {
+            // Swap the temporary embed URL for the permanent copied-file URL.
+            const finalRef = computeInsertRef(sourceMdPath, created.path);
+            const finalUrl = getEmbeddedAssetUrl(sourceMdPath, finalRef);
+            const current = editor.getMarkdown();
+            const updated = current.replaceAll(immediateUrl, finalUrl);
+            if (updated !== current) editor.setMarkdown(updated, false);
+            loadTree();
+            setStatus(`${t("st_image_added")}: ${created.name}`);
+          }
+          // If upload was skipped (same name already exists at target) the
+          // image stays embedded via the original path — still a valid link.
+        } catch (_err) {
+          setStatus(t("st_image_fail"), true);
         }
-        // If the upload was skipped (e.g. a file with the same name already
-        // exists at the target), fall back to embedding the source path —
-        // user keeps a working link either way.
-      } catch (err) {
-        // On any failure (network, permission), still produce a usable embed
-        // pointing at the source so the drop isn't lost.
-        setStatus(t("st_image_fail"), true);
-      }
+      })();
     }
 
-    const ref = computeInsertRef(selectedPath, embedPath);
-    const assetUrl = getEmbeddedAssetUrl(selectedPath, ref);
-    const altName = name.replace(/\.[^.]+$/, "");
-    return `![${altName}](${assetUrl})`;
+    return `![${altName}](${immediateUrl})`;
   }
 
   // ── JSON Editor (jsoneditor by josdejong) ─────────────────────────────────
@@ -754,16 +759,14 @@ if (shell) {
     }
   });
 
-  editorStage.addEventListener("drop", async (event) => {
+  editorStage.addEventListener("drop", (event) => {
     editorStage.classList.remove("is-drop-target-link");
     if (!dragState || dragState.kind === "directory") return;
     if (!selectedPath || !selectedEditable) return;
     event.preventDefault();
     event.stopPropagation();
-    // Capture path now — dragState gets cleared on dragend before the async copy
-    // step finishes.
     const droppedPath = dragState.path;
-    const snippet = await buildSidebarDropSnippet(droppedPath);
+    const snippet = buildSidebarDropSnippet(droppedPath);
     if (snippet) {
       insertEditorSnippet(snippet);
       scheduleWysiwygDiagramRender();
