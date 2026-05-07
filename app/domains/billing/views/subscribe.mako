@@ -14,6 +14,14 @@
         }
       }
     });
+
+    function openPaddleCheckout() {
+      Paddle.Checkout.open({
+        items: [{ priceId: '${paddle_price_id}', quantity: 1 }],
+        customer: { email: '${user_email}' },
+        successUrl: '${success_url}'
+      });
+    }
   </script>
   % endif
 </%def>
@@ -42,11 +50,13 @@
       </ul>
     </div>
 
-    <form method="post" action="${request.url_for('billing_checkout')}">
-      <button type="submit" class="subscribe-btn">
-        Subscribe with Paddle
-      </button>
-    </form>
+    % if paddle_client_token:
+    <button type="button" class="subscribe-btn" onclick="openPaddleCheckout()">
+      Subscribe with Paddle
+    </button>
+    % else:
+    <p class="subscribe-account" style="color:var(--muted)">Billing not configured yet.</p>
+    % endif
 
     % if user_email:
     <p class="subscribe-account">Logged in as <strong>${user_email}</strong></p>
