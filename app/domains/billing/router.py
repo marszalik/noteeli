@@ -54,6 +54,7 @@ async def subscribe_page(request: Request):
         user_email=user.get("email", ""),
         paddle_client_token=settings.paddle_client_token,
         paddle_price_id=settings.paddle_price_id,
+        paddle_environment=settings.paddle_environment,
         success_url=str(request.url_for("billing_success")),
     )
 
