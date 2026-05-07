@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${self.page_title()}</title>
     <link rel="icon" type="image/svg+xml" href="${request.url_for('static', path='favicon.svg')}" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.webmanifest?v=${static_version}" />
     <meta name="theme-color" content="#08111a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
