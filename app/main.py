@@ -103,12 +103,24 @@ def create_app() -> FastAPI:
             headers={"Service-Worker-Allowed": "/"},
         )
 
-    # PWA: web app manifest
+    # PWA: web app manifest — served dynamically so icon URLs carry a
+    # ?v= cache-buster. Without this Cloudflare (or any CDN) serves
+    # stale icons indefinitely even after the PNGs are updated.
     @app.get("/manifest.webmanifest", include_in_schema=False)
     async def web_manifest():
-        return FileResponse(
-            settings.static_dir / "manifest.webmanifest",
+        import json as _json
+        from app.core.templates import _static_version
+        raw = (settings.static_dir / "manifest.webmanifest").read_text()
+        data = _json.loads(raw)
+        v = _static_version()
+        for icon in data.get("icons", []):
+            src = icon.get("src", "")
+            if "?" not in src:
+                icon["src"] = f"{src}?v={v}"
+        return JSONResponse(
+            content=data,
             media_type="application/manifest+json",
+            headers={"Cache-Control": "no-store"},
         )
 
     return app

@@ -18,12 +18,17 @@ def _static_version() -> int:
     Recomputed on every request — cheap (just two stat() calls) and means any
     CSS/JS change is immediately visible without a server restart."""
     static_dir = settings.static_dir
+    candidates = [
+        static_dir / "app.css",
+        static_dir / "app.js",
+        static_dir / "icon-192.png",
+        static_dir / "icon-512.png",
+        static_dir / "apple-touch-icon.png",
+        static_dir / "favicon.svg",
+    ]
     try:
-        return max(
-            int((static_dir / "app.css").stat().st_mtime),
-            int((static_dir / "app.js").stat().st_mtime),
-        )
-    except OSError:
+        return max(int(p.stat().st_mtime) for p in candidates if p.exists())
+    except (OSError, ValueError):
         return 0
 
 
