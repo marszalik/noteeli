@@ -3130,7 +3130,11 @@ if (shell) {
         kind: node.kind,
       };
       row.classList.add("is-dragging");
-      event.dataTransfer.effectAllowed = "move";
+      // "all" lets the editor-stage drop use "link" (embed reference) while
+      // tree-to-tree drops still use "move". Chrome 124+ enforces that
+      // dropEffect must be a subset of effectAllowed, so "move" alone would
+      // silently block the editor drop.
+      event.dataTransfer.effectAllowed = "all";
       event.dataTransfer.setData("text/plain", node.path);
     });
 
