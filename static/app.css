@@ -340,6 +340,16 @@ body[data-theme="noteeli"] .button-secondary:hover {
   user-select: none;
 }
 
+.login-logo {
+  margin-bottom: 8px;
+}
+
+.login-tagline {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 6px 0 0;
+}
+
 .login-wordmark {
   margin: 0;
   font-size: clamp(4rem, 14vw, 9rem);

@@ -5,7 +5,11 @@
 <%def name="content()">
   <main class="login-shell">
     <div class="login-center">
-      <h1 class="login-wordmark">NoteEli</h1>
+      <div class="login-logo">
+        <img src="${request.url_for('static', path='favicon.svg')}" alt="Noteeli" width="40" height="40" />
+      </div>
+      <h1 class="login-wordmark">Noteeli</h1>
+      <p class="login-tagline">Sign up or log in with your Google account</p>
 
       <div class="login-actions">
         % if error_message:
