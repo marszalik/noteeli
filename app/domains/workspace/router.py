@@ -78,6 +78,7 @@ async def workspace_page(request: Request):
             "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
             "publishUrl": str(request.url_for("publish_create_api")),
             "publishListUrl": str(request.url_for("publish_list_api")),
+            "sftpTestUrl": str(request.url_for("workspace_sftp_test_api")),
         }
     )
     return render_template(
@@ -298,6 +299,40 @@ async def workspace_create_directory_api(request: Request, payload: CreateDirect
 async def workspace_preferences_api(request: Request):
     auth_service.require_api_access(request)
     return workspace_service.get_preferences()
+
+
+@router.post("/api/sftp/test", name="workspace_sftp_test_api")
+async def workspace_sftp_test_api(request: Request):
+    """Validate SFTP credentials by attempting a connection + remote path
+    listing. Returns {ok: True} on success or {ok: False, error: "..."}."""
+    auth_service.require_api_access(request)
+    body = await request.json()
+
+    try:
+        import paramiko
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(
+                hostname=body.get("host", ""),
+                port=int(body.get("port", 22)),
+                username=body.get("username", ""),
+                password=body.get("password", ""),
+                timeout=10,
+                allow_agent=False,
+                look_for_keys=False,
+            )
+            sftp = ssh.open_sftp()
+            try:
+                remote_path = (body.get("path", "/") or "/").rstrip("/") or "/"
+                sftp.listdir(remote_path)
+            finally:
+                sftp.close()
+        finally:
+            ssh.close()
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
 @router.put("/api/preferences", response_model=AppPreferences, name="workspace_update_preferences_api")

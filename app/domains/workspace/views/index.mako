@@ -286,6 +286,11 @@
               <label class="settings-label" data-i18n="label_remote_path" for="sftp-path-input">Sciezka zdalna</label>
               <input id="sftp-path-input" class="settings-input" type="text" value="${preferences.sftp_path}" placeholder="e.g. /home/alex/notes" />
               <p class="muted small-note" data-i18n="sftp_password_hint">Haslo przechowywane jest w lokalnej bazie SQLite.</p>
+
+              <button id="sftp-connect-button" type="button" class="button button-primary" style="margin-top:12px">
+                Connect to SFTP
+              </button>
+              <p id="sftp-connect-status" class="muted small-note"></p>
             </div>
 
             <div id="gdrive-source-section" ${'class="hidden"' if preferences.source_type != 'gdrive' else '' | n}>

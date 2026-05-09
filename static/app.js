@@ -4147,6 +4147,47 @@ if (shell) {
   saveButton.addEventListener("click", saveFile);
   saveSettingsButton.addEventListener("click", saveSettings);
 
+  // ── SFTP connect button ─────────────────────────────────────────
+  const sftpConnectBtn = document.getElementById("sftp-connect-button");
+  const sftpConnectStatus = document.getElementById("sftp-connect-status");
+  sftpConnectBtn?.addEventListener("click", async () => {
+    if (!config.sftpTestUrl) return;
+    sftpConnectBtn.disabled = true;
+    sftpConnectStatus.textContent = "Testing connection…";
+    sftpConnectStatus.style.color = "";
+    const payload = {
+      host: sftpHostInput?.value || "",
+      port: parseInt(sftpPortInput?.value || "22", 10),
+      username: sftpUsernameInput?.value || "",
+      password: sftpPasswordInput?.value || "",
+      path: sftpPathInput?.value || "/",
+    };
+    try {
+      const result = await requestJson(config.sftpTestUrl, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (!result.ok) {
+        sftpConnectStatus.textContent = `Connection failed: ${result.error || "unknown error"}`;
+        sftpConnectStatus.style.color = "var(--accent)";
+        sftpConnectBtn.disabled = false;
+        return;
+      }
+      sftpConnectStatus.textContent = "✓ Connected. Switching workspace…";
+      // Force source_type to sftp and persist + reload tree.
+      if (sourceTypeSelect) sourceTypeSelect.value = "sftp";
+      await persistPreferences({ source_type: "sftp" });
+      closeSettingsModal?.();
+      await resetWorkspaceAfterPreferencesChange();
+      sftpConnectStatus.textContent = "✓ Connected.";
+    } catch (err) {
+      sftpConnectStatus.textContent = `Error: ${err.message || err}`;
+      sftpConnectStatus.style.color = "var(--accent)";
+    } finally {
+      sftpConnectBtn.disabled = false;
+    }
+  });
+
   applyTheme(shell.dataset.themeMode || "light");
   applyEditorFontSize(shell.dataset.editorFontSize || "16");
   applyLanguage(shell.dataset.language || "pl");
