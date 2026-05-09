@@ -81,9 +81,10 @@ async def auth_google_callback(request: Request):
 
     request.session["user"] = session_user
 
-    # Hosted mode without an active subscription → paywall.
+    # Hosted mode without an active subscription → paywall (admins bypass).
     if _settings.hosted_mode and not session_user.get("subscription_active"):
-        return RedirectResponse(url=request.url_for("subscribe_page"), status_code=303)
+        if not auth_service.is_admin(session_user.get("email", "")):
+            return RedirectResponse(url=request.url_for("subscribe_page"), status_code=303)
 
     return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
 

@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     #   - local-filesystem storage backend is hidden
     # Toggle via NOTEELI_HOSTED_MODE=1.
     hosted_mode: bool = False
+    # Comma-separated admin emails — bypass subscription check, can access /admin.
+    admin_emails: str = ""
 
     # Paddle Billing (https://developer.paddle.com)
     paddle_api_key: str = ""

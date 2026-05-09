@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
+from app.domains.admin.router import router as admin_router
 from app.domains.auth.router import router as auth_router
 from app.domains.billing.router import router as billing_router
 from app.domains.publish.router import router as publish_router
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     )
     app.mount("/static", StaticFiles(directory=str(settings.static_dir)), name="static")
 
+    app.include_router(admin_router)
     app.include_router(auth_router)
     app.include_router(billing_router)
     app.include_router(workspace_router)

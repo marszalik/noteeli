@@ -57,12 +57,19 @@ class AuthService:
             }
         return request.session.get("user")
 
+    def is_admin(self, email: str) -> bool:
+        raw = self.settings.admin_emails.strip()
+        if not raw:
+            return False
+        return email.strip().lower() in {e.strip().lower() for e in raw.split(",") if e.strip()}
+
     def require_api_access(self, request: Request) -> dict:
         user = self.get_current_user(request)
         if user is None:
             raise HTTPException(status_code=401, detail="Authentication required.")
         if self.settings.hosted_mode and not user.get("subscription_active"):
-            raise HTTPException(status_code=402, detail="Subscription required.")
+            if not self.is_admin(user.get("email", "")):
+                raise HTTPException(status_code=402, detail="Subscription required.")
         return user
 
     def google_is_configured(self) -> bool:
