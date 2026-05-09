@@ -164,6 +164,10 @@ async def auth_gdrive_start(request: Request):
     )
     authorization_url, state = flow.authorization_url(access_type="offline", prompt="consent")
     request.session["gdrive_oauth_state"] = state
+    # PKCE: store the code_verifier so we can reuse it in the callback,
+    # otherwise Google rejects the token exchange with "Missing code verifier".
+    if getattr(flow, "code_verifier", None):
+        request.session["gdrive_code_verifier"] = flow.code_verifier
     return RedirectResponse(authorization_url)
 
 
@@ -193,6 +197,11 @@ async def auth_gdrive_callback(request: Request):
         state=state,
         redirect_uri=callback_url,
     )
+
+    # Restore PKCE code_verifier saved when we initiated the flow.
+    code_verifier = request.session.pop("gdrive_code_verifier", None)
+    if code_verifier:
+        flow.code_verifier = code_verifier
 
     # Reconstruct the authorization_response using the canonical public URL
     # so it matches the redirect_uri exactly regardless of what the reverse
