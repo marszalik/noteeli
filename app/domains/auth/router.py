@@ -47,6 +47,9 @@ async def auth_google_login(request: Request):
 
 @router.get("/auth/google/callback", name="auth_google_callback")
 async def auth_google_callback(request: Request):
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
     client = auth_service.get_google_client()
     if client is None:
         raise HTTPException(status_code=500, detail="Google OAuth is not configured.")
@@ -58,6 +61,9 @@ async def auth_google_callback(request: Request):
             userinfo = await client.parse_id_token(request, token)
     except OAuthError as exc:
         return _login_template(request, error_message=f"Login failed: {exc.error}")
+    except Exception as exc:
+        _log.exception("Unexpected error during Google OAuth token exchange")
+        return _login_template(request, error_message=f"Login error: {type(exc).__name__}: {exc}")
 
     email = userinfo.get("email", "")
     if not auth_service.google_email_is_allowed(email):
@@ -73,11 +79,15 @@ async def auth_google_callback(request: Request):
 
     # In hosted mode: create/update the DB user and check subscription.
     if _settings.hosted_mode:
-        from app.domains.billing.service import BillingService
-        billing = BillingService(_settings)
-        db_id = billing.get_or_create_user(userinfo.get("sub", ""), email)
-        session_user["db_id"] = db_id
-        session_user["subscription_active"] = billing.is_subscription_active(db_id)
+        try:
+            from app.domains.billing.service import BillingService
+            billing = BillingService(_settings)
+            db_id = billing.get_or_create_user(userinfo.get("sub", ""), email)
+            session_user["db_id"] = db_id
+            session_user["subscription_active"] = billing.is_subscription_active(db_id)
+        except Exception as exc:
+            _log.exception("Error during hosted-mode user lookup for %s", email)
+            return _login_template(request, error_message=f"Account setup error: {type(exc).__name__}: {exc}")
 
     request.session["user"] = session_user
 
