@@ -182,7 +182,22 @@ async def auth_gdrive_callback(request: Request):
         redirect_uri=callback_url,
     )
 
-    flow.fetch_token(authorization_response=str(request.url))
+    # Reconstruct the authorization_response using the canonical public URL
+    # so it matches the redirect_uri exactly regardless of what the reverse
+    # proxy reports as request.url (which may be http://127.0.0.1:...).
+    authorization_response = f"{callback_url}?{request.url.query}"
+
+    import os as _os
+    # Allow oauthlib to proceed even if the scheme appears as http (proxy strips TLS).
+    _os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+
+    try:
+        flow.fetch_token(authorization_response=authorization_response)
+    except Exception as exc:
+        import logging as _log
+        _log.getLogger(__name__).exception("GDrive token exchange failed")
+        return RedirectResponse(url=f"/?gdrive_error={type(exc).__name__}", status_code=303)
+
     creds = flow.credentials
 
     creds_json = json.dumps({
