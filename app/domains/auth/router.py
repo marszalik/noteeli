@@ -129,6 +129,17 @@ async def logout_action(request: Request):
 # Google Drive OAuth – grant access to Drive (separate scope from login)
 # ---------------------------------------------------------------------------
 
+def _gdrive_callback_url(request: Request) -> str:
+    """Return the canonical redirect URI for the GDrive OAuth callback.
+
+    Prefers NOTEELI_APP_URL so the URI is stable regardless of proxy
+    header behaviour.  Falls back to url_for when app_url is not set.
+    """
+    if _settings.app_url:
+        return _settings.app_url.rstrip("/") + "/auth/gdrive/callback"
+    return str(request.url_for("auth_gdrive_callback"))
+
+
 @router.get("/auth/gdrive", name="auth_gdrive_start")
 async def auth_gdrive_start(request: Request):
     user = auth_service.get_current_user(request)
@@ -137,6 +148,7 @@ async def auth_gdrive_start(request: Request):
 
     from google_auth_oauthlib.flow import Flow
 
+    callback_url = _gdrive_callback_url(request)
     flow = Flow.from_client_config(
         {
             "web": {
@@ -144,11 +156,11 @@ async def auth_gdrive_start(request: Request):
                 "client_secret": _settings.google_client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [str(request.url_for("auth_gdrive_callback"))],
+                "redirect_uris": [callback_url],
             }
         },
         scopes=["https://www.googleapis.com/auth/drive"],
-        redirect_uri=str(request.url_for("auth_gdrive_callback")),
+        redirect_uri=callback_url,
     )
     authorization_url, state = flow.authorization_url(access_type="offline", prompt="consent")
     request.session["gdrive_oauth_state"] = state
@@ -165,7 +177,7 @@ async def auth_gdrive_callback(request: Request):
     from app.domains.preferences.repository import PreferencesRepository
 
     state = request.session.get("gdrive_oauth_state")
-    callback_url = str(request.url_for("auth_gdrive_callback"))
+    callback_url = _gdrive_callback_url(request)
 
     flow = Flow.from_client_config(
         {

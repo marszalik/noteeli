@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     hosted_mode: bool = False
     # Comma-separated admin emails — bypass subscription check, can access /admin.
     admin_emails: str = ""
+    # Canonical public URL of the app (used to build OAuth redirect URIs).
+    # Must be set when running behind a reverse proxy.
+    # Example: https://app.noteeli.com
+    app_url: str = ""
 
     # Paddle Billing (https://developer.paddle.com)
     paddle_api_key: str = ""
