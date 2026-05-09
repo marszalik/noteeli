@@ -2,7 +2,7 @@ import json
 
 from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.config import get_settings
 from app.core.templates import render_template
@@ -207,8 +207,14 @@ async def auth_gdrive_callback(request: Request):
         flow.fetch_token(authorization_response=authorization_response)
     except Exception as exc:
         import logging as _log
+        from urllib.parse import quote_plus
         _log.getLogger(__name__).exception("GDrive token exchange failed")
-        return RedirectResponse(url=f"/?gdrive_error={type(exc).__name__}", status_code=303)
+        # Try to extract the descriptive part of the error
+        msg = str(exc) or type(exc).__name__
+        return RedirectResponse(
+            url=f"/?gdrive_error={quote_plus(msg[:200])}",
+            status_code=303,
+        )
 
     creds = flow.credentials
 
@@ -222,4 +228,111 @@ async def auth_gdrive_callback(request: Request):
     repo = PreferencesRepository(_settings)
     repo.update_app_preferences(gdrive_credentials=creds_json)
 
+    # Send the user to the folder picker so they can choose which Drive
+    # folder will be the content root.
+    return RedirectResponse(url="/auth/gdrive/folder", status_code=303)
+
+
+@router.get("/auth/gdrive/folder", name="auth_gdrive_folder_picker")
+async def auth_gdrive_folder_picker(request: Request):
+    """Render a simple page that lists Drive folders and lets the user
+    pick one as the workspace content root."""
+    user = auth_service.get_current_user(request)
+    if user is None:
+        return RedirectResponse(url=request.url_for("login_page"), status_code=303)
+
+    from app.domains.preferences.repository import PreferencesRepository
+    from googleapiclient.discovery import build
+    from google.oauth2.credentials import Credentials
+
+    repo = PreferencesRepository(_settings)
+    prefs = repo.get_app_preferences()
+    creds_json = getattr(prefs, "gdrive_credentials", None)
+    if not creds_json:
+        return RedirectResponse(url="/auth/gdrive", status_code=303)
+
+    creds_data = json.loads(creds_json)
+    creds = Credentials(
+        token=creds_data.get("token"),
+        refresh_token=creds_data.get("refresh_token"),
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=creds_data.get("client_id"),
+        client_secret=creds_data.get("client_secret"),
+    )
+
+    parent_id = request.query_params.get("parent", "root")
+    try:
+        service = build("drive", "v3", credentials=creds)
+        results = service.files().list(
+            q=f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            pageSize=200,
+            fields="files(id, name)",
+            orderBy="name",
+        ).execute()
+        folders = results.get("files", [])
+    except Exception as exc:
+        return RedirectResponse(url=f"/?gdrive_error=List+folders+failed", status_code=303)
+
+    rows = ""
+    for f in folders:
+        rows += (
+            f'<li><a class="row" href="?parent={f["id"]}">📁 {f["name"]}</a>'
+            f' <form method="post" action="/auth/gdrive/folder/select" style="display:inline">'
+            f'<input type="hidden" name="folder_id" value="{f["id"]}"/>'
+            f'<input type="hidden" name="folder_name" value="{f["name"]}"/>'
+            f'<button class="pick" type="submit">Use this folder</button></form></li>'
+        )
+
+    parent_link = ""
+    if parent_id != "root":
+        parent_link = '<a class="back" href="?parent=root">← Back to My Drive</a>'
+
+    html = f"""<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pick a Drive folder — Noteeli</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:"IBM Plex Sans",system-ui,sans-serif;background:#08111a;color:#edf3f8;padding:32px;max-width:700px;margin:0 auto}}
+h1{{font-size:1.4rem;font-weight:700;margin-bottom:8px}}
+.lead{{color:#9db0c2;margin-bottom:24px;font-size:.95rem}}
+.back{{color:#f2b01d;text-decoration:none;font-size:.85rem;margin-bottom:16px;display:inline-block}}
+ul{{list-style:none;display:flex;flex-direction:column;gap:8px}}
+li{{display:flex;justify-content:space-between;align-items:center;background:#0d1824;border:1px solid rgba(140,188,234,.14);border-radius:8px;padding:12px 16px}}
+li:hover{{border-color:rgba(140,188,234,.3)}}
+.row{{color:#edf3f8;text-decoration:none;flex:1;font-size:.95rem}}
+.row:hover{{color:#f2b01d}}
+.pick{{background:#f2b01d;color:#08111a;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.85rem}}
+.pick:hover{{opacity:.88}}
+.empty{{color:#9db0c2;text-align:center;padding:40px}}
+</style></head>
+<body>
+<h1>Pick a Google Drive folder</h1>
+<p class="lead">This folder will become your Noteeli workspace. You can change it later in Settings.</p>
+{parent_link}
+<ul>
+{rows or '<li class="empty">No subfolders here. Click "Use this folder" on a folder above, or open one to look inside.</li>'}
+</ul>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/auth/gdrive/folder/select", name="auth_gdrive_folder_select")
+async def auth_gdrive_folder_select(request: Request):
+    user = auth_service.get_current_user(request)
+    if user is None:
+        return RedirectResponse(url=request.url_for("login_page"), status_code=303)
+
+    form = await request.form()
+    folder_id = str(form.get("folder_id", "")).strip()
+    folder_name = str(form.get("folder_name", "")).strip()
+    if not folder_id:
+        return RedirectResponse(url="/auth/gdrive/folder", status_code=303)
+
+    from app.domains.preferences.repository import PreferencesRepository
+    repo = PreferencesRepository(_settings)
+    repo.update_app_preferences(
+        gdrive_folder_id=folder_id,
+        source_type="gdrive",
+    )
     return RedirectResponse(url="/?gdrive_connected=1", status_code=303)
