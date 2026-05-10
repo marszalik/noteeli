@@ -373,6 +373,7 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
         sftp_port=payload.sftp_port,
         sftp_username=payload.sftp_username,
         sftp_password=payload.sftp_password,
+        sftp_remember_password=payload.sftp_remember_password,
         sftp_path=payload.sftp_path,
         gdrive_folder_id=payload.gdrive_folder_id,
         autosave_enabled=payload.autosave_enabled,

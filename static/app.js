@@ -55,6 +55,7 @@ if (shell) {
   const sftpPortInput = document.getElementById("sftp-port-input");
   const sftpUsernameInput = document.getElementById("sftp-username-input");
   const sftpPasswordInput = document.getElementById("sftp-password-input");
+  const sftpRememberInput = document.getElementById("sftp-remember-input");
   const sftpPathInput = document.getElementById("sftp-path-input");
   const gdriveFolderIdInput = document.getElementById("gdrive-folder-id-input");
   const sortModeSelect = document.getElementById("sort-mode-select");
@@ -1081,7 +1082,7 @@ if (shell) {
       label_notes_dir: "Katalog notatek", browse: "Przeglądaj",
       label_port: "Port", label_user: "Użytkownik",
       label_password: "Hasło", label_remote_path: "Ścieżka zdalna",
-      sftp_password_hint: "Hasło przechowywane w lokalnej bazie SQLite.",
+      sftp_password_hint: "Bez zaznaczenia \"Zapamiętaj\" hasło nie jest zapisywane.", sftp_remember_label: "Zapamiętaj hasło (zaszyfrowane w bazie)",
       gdrive_connected: "Google Drive: połączono",
       gdrive_disconnected: "Google Drive: brak autoryzacji",
       gdrive_reconnect: "Połącz ponownie", gdrive_authorize: "Autoryzuj Drive",
@@ -1216,7 +1217,7 @@ if (shell) {
       label_notes_dir: "Notes directory", browse: "Browse",
       label_port: "Port", label_user: "Username",
       label_password: "Password", label_remote_path: "Remote path",
-      sftp_password_hint: "Password is stored in the local SQLite database.",
+      sftp_password_hint: "If you don't tick \"Remember\", the password is asked each session and never stored.", sftp_remember_label: "Remember password (encrypted in DB)",
       gdrive_connected: "Google Drive: connected",
       gdrive_disconnected: "Google Drive: not authorized",
       gdrive_reconnect: "Reconnect", gdrive_authorize: "Authorize Drive",
@@ -1351,7 +1352,7 @@ if (shell) {
       label_notes_dir: "Directorio de notas", browse: "Explorar",
       label_port: "Puerto", label_user: "Usuario",
       label_password: "Contraseña", label_remote_path: "Ruta remota",
-      sftp_password_hint: "La contraseña se almacena en la base de datos SQLite local.",
+      sftp_password_hint: "Sin marcar \"Recordar\" la contraseña no se guarda.", sftp_remember_label: "Recordar contraseña (cifrada en la BD)",
       gdrive_connected: "Google Drive: conectado",
       gdrive_disconnected: "Google Drive: no autorizado",
       gdrive_reconnect: "Reconectar", gdrive_authorize: "Autorizar Drive",
@@ -1486,7 +1487,7 @@ if (shell) {
       label_notes_dir: "Notizenverzeichnis", browse: "Durchsuchen",
       label_port: "Port", label_user: "Benutzer",
       label_password: "Passwort", label_remote_path: "Remotepfad",
-      sftp_password_hint: "Passwort wird in der lokalen SQLite-Datenbank gespeichert.",
+      sftp_password_hint: "Ohne \"Merken\" wird das Passwort nicht gespeichert.", sftp_remember_label: "Passwort merken (verschlüsselt in DB)",
       gdrive_connected: "Google Drive: verbunden",
       gdrive_disconnected: "Google Drive: nicht autorisiert",
       gdrive_reconnect: "Erneut verbinden", gdrive_authorize: "Drive autorisieren",
@@ -1621,7 +1622,7 @@ if (shell) {
       label_notes_dir: "Каталог заметок", browse: "Обзор",
       label_port: "Порт", label_user: "Пользователь",
       label_password: "Пароль", label_remote_path: "Удалённый путь",
-      sftp_password_hint: "Пароль хранится в локальной базе данных SQLite.",
+      sftp_password_hint: "Без флажка \"Запомнить\" пароль не сохраняется.", sftp_remember_label: "Запомнить пароль (зашифровано в БД)",
       gdrive_connected: "Google Drive: подключён",
       gdrive_disconnected: "Google Drive: нет авторизации",
       gdrive_reconnect: "Переподключить", gdrive_authorize: "Авторизовать Drive",
@@ -2316,6 +2317,7 @@ if (shell) {
       sftp_port: parseInt(sftpPortInput?.value || "22", 10),
       sftp_username: sftpUsernameInput?.value || "",
       sftp_password: sftpPasswordInput?.value || "",
+      sftp_remember_password: Boolean(sftpRememberInput?.checked),
       sftp_path: sftpPathInput?.value || "/",
       gdrive_folder_id: gdriveFolderIdInput?.value || "root",
       sort_mode: sortModeSelect.value,
@@ -2335,7 +2337,15 @@ if (shell) {
     if (sftpHostInput) sftpHostInput.value = nextPreferences.sftp_host || "";
     if (sftpPortInput) sftpPortInput.value = nextPreferences.sftp_port || 22;
     if (sftpUsernameInput) sftpUsernameInput.value = nextPreferences.sftp_username || "";
-    if (sftpPasswordInput) sftpPasswordInput.value = nextPreferences.sftp_password || "";
+    // SECURITY: never echo the stored password back into the form.
+    // Empty input means "keep existing"; placeholder hints if one is saved.
+    if (sftpPasswordInput) {
+      sftpPasswordInput.value = "";
+      sftpPasswordInput.placeholder = nextPreferences.has_stored_sftp_password
+        ? "•••••• (saved — leave blank to keep)"
+        : "Required";
+    }
+    if (sftpRememberInput) sftpRememberInput.checked = Boolean(nextPreferences.sftp_remember_password);
     if (sftpPathInput) sftpPathInput.value = nextPreferences.sftp_path || "/";
     if (gdriveFolderIdInput) gdriveFolderIdInput.value = nextPreferences.gdrive_folder_id || "root";
     sortModeSelect.value = nextPreferences.sort_mode;

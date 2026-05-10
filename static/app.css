@@ -4155,3 +4155,22 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
   background: rgba(242, 176, 29, 0.14);
 }
 .profiles-dropdown-update svg { width: 13px; height: 13px; }
+
+/* Settings: inline checkbox label with text */
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+  margin: 8px 0 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.settings-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}

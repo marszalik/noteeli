@@ -30,6 +30,7 @@ class PreferencesRepository:
             ("sftp_port", "22"),
             ("sftp_username", ""),
             ("sftp_password", ""),
+            ("sftp_remember_password", "false"),
             ("sftp_path", "/"),
             ("gdrive_folder_id", "root"),
             ("gdrive_credentials", ""),
@@ -103,6 +104,7 @@ class PreferencesRepository:
         sftp_port: int | None = None,
         sftp_username: str | None = None,
         sftp_password: str | None = None,
+        sftp_remember_password: bool | None = None,
         sftp_path: str | None = None,
         gdrive_folder_id: str | None = None,
         gdrive_credentials: str | None = None,
@@ -114,6 +116,7 @@ class PreferencesRepository:
         image_upload_subdir: str | None = None,
         language: Language | None = None,
     ) -> AppPreferences:
+        from app.core.crypto import encrypt_secret
         updates: list[tuple[str, str]] = []
         if source_type is not None:
             updates.append(("source_type", source_type))
@@ -125,8 +128,22 @@ class PreferencesRepository:
             updates.append(("sftp_port", str(sftp_port)))
         if sftp_username is not None:
             updates.append(("sftp_username", sftp_username))
-        if sftp_password is not None:
-            updates.append(("sftp_password", sftp_password))
+        # Password handling:
+        #   - If sftp_remember_password=False → never persist; clear DB.
+        #   - If True and sftp_password non-empty → encrypt and store.
+        #   - If True and sftp_password empty → keep existing.
+        if sftp_remember_password is False:
+            updates.append(("sftp_password", ""))
+            updates.append(("sftp_remember_password", "false"))
+        elif sftp_remember_password is True:
+            updates.append(("sftp_remember_password", "true"))
+            if sftp_password:
+                updates.append(("sftp_password", encrypt_secret(sftp_password)))
+            # else: no entry → existing encrypted value retained
+        else:
+            # sftp_remember_password not provided → only update password if explicitly given
+            if sftp_password:
+                updates.append(("sftp_password", encrypt_secret(sftp_password)))
         if sftp_path is not None:
             updates.append(("sftp_path", sftp_path))
         if gdrive_folder_id is not None:
@@ -291,13 +308,18 @@ class PreferencesRepository:
             )
 
     def _preferences_from_values(self, values: dict) -> AppPreferences:
+        from app.core.crypto import decrypt_secret
+        stored_pass = values.get("sftp_password", "")
+        decrypted_pass = decrypt_secret(stored_pass) if stored_pass else ""
         return AppPreferences(
             source_type=values.get("source_type", "local"),
             content_root=values.get("content_root", str(self.settings.content_root)),
             sftp_host=values.get("sftp_host", ""),
             sftp_port=int(values.get("sftp_port", "22")),
             sftp_username=values.get("sftp_username", ""),
-            sftp_password=values.get("sftp_password", ""),
+            sftp_password=decrypted_pass,
+            has_stored_sftp_password=bool(decrypted_pass),
+            sftp_remember_password=self._coerce_bool(values.get("sftp_remember_password", False)),
             sftp_path=values.get("sftp_path", "/"),
             gdrive_folder_id=values.get("gdrive_folder_id", "root"),
             gdrive_credentials=values.get("gdrive_credentials", ""),
