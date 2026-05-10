@@ -2350,10 +2350,22 @@ if (shell) {
     profileFormGdriveCredentials = nextPreferences.gdrive_credentials || "";
   }
 
+  function computeRootDisplay(p) {
+    const src = p.source_type || "local";
+    if (src === "sftp") {
+      const user = p.sftp_username || "";
+      const host = p.sftp_host || "";
+      const path = p.sftp_path || "/";
+      return host ? `sftp://${user ? user + "@" : ""}${host}${path}` : "SFTP";
+    }
+    if (src === "gdrive") return "Google Drive";
+    return p.content_root || "";
+  }
+
   function applyPreferencesToUi(nextPreferences) {
     preferences = nextPreferences;
     applyPreferencesToForm(nextPreferences);
-    contentRootDisplay.textContent = preferences.content_root;
+    contentRootDisplay.textContent = computeRootDisplay(preferences);
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
     applyLanguage(preferences.language || "pl");
