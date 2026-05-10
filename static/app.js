@@ -678,17 +678,22 @@ if (shell) {
   function initCodeEditor() {
     if (codeEditor) return;
     CodeMirror.modeURL = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CODEMIRROR_VERSION}/mode/%N/%N.min.js`;
+    const initialTheme = getCodeMirrorTheme();
+    ensureCodeThemeLoaded(initialTheme);
     codeEditor = CodeMirror(codeEditorContainer, {
       value: "",
       lineNumbers: true,
       indentUnit: 2,
       tabSize: 2,
       lineWrapping: false,
-      theme: getCodeMirrorTheme(),
+      theme: initialTheme,
     });
     codeEditor.on("change", () => {
       markEditorDirty();
     });
+    // setOption reapplies the theme class reliably — the constructor
+    // option occasionally drops it depending on CSS load timing.
+    codeEditor.setOption("theme", initialTheme);
   }
 
   function applyCodeEditorTheme() {
