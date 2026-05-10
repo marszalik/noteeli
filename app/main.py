@@ -82,6 +82,11 @@ def create_app() -> FastAPI:
     if settings.hosted_mode and settings.session_cookie_domain:
         _session_kwargs["domain"] = settings.session_cookie_domain
     app.add_middleware(SessionMiddleware, **_session_kwargs)
+    # Pageview analytics — shared DB with noteeli.com. No-op in self-host
+    # (hosted_mode=False), so it's safe to leave enabled unconditionally.
+    if settings.hosted_mode:
+        from app.domains.analytics.middleware import PageviewMiddleware
+        app.add_middleware(PageviewMiddleware, default_domain="app.noteeli.com")
     app.mount("/static", StaticFiles(directory=str(settings.static_dir)), name="static")
 
     app.include_router(auth_router)
