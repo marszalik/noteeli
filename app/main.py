@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.domains.auth.router import router as auth_router
 from app.domains.publish.router import router as publish_router
 from app.domains.workspace.router import router as workspace_router
-from app.domains.workspace.service import DemoReadOnlyError
+from app.domains.workspace.service import DemoReadOnlyError, StorageNotConfiguredError
 
 
 def _seed_demo_content_if_needed(settings) -> None:
@@ -98,6 +98,13 @@ def create_app() -> FastAPI:
     @app.exception_handler(DemoReadOnlyError)
     async def _demo_readonly_handler(request: Request, exc: DemoReadOnlyError):
         return JSONResponse(status_code=403, content={"detail": str(exc), "demo": True})
+
+    @app.exception_handler(StorageNotConfiguredError)
+    async def _storage_not_configured_handler(request: Request, exc: StorageNotConfiguredError):
+        return JSONResponse(
+            status_code=412,
+            content={"detail": str(exc), "needs_storage_setup": True},
+        )
 
     # PWA: service worker must be served from the root scope so it can
     # intercept all same-origin requests (scope = /).

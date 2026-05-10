@@ -38,6 +38,12 @@ class DemoReadOnlyError(WorkspaceError):
     """Raised when a write operation is attempted while demo mode is on."""
 
 
+class StorageNotConfiguredError(WorkspaceError):
+    """Hosted mode: user has no SFTP/GDrive backend configured.
+    Local filesystem is forbidden — would expose the operator's server."""
+    pass
+
+
 class ItemAlreadyExistsError(WorkspaceError):
     """Raised when the target file or directory already exists."""
 
@@ -61,7 +67,15 @@ class WorkspaceService:
         self.preferences_service = PreferencesService(self.settings, self.preferences_repository)
 
     def _get_backend(self) -> StorageBackend:
-        return build_backend(self.preferences_service.get_preferences())
+        prefs = self.preferences_service.get_preferences()
+        # SECURITY: in hosted mode, refuse local filesystem entirely.
+        # The operator's server must never be exposed to paid users.
+        if self.settings.hosted_mode and getattr(prefs, "source_type", "local") == "local":
+            raise StorageNotConfiguredError(
+                "Hosted mode requires SFTP or Google Drive storage. "
+                "Local filesystem is not available."
+            )
+        return build_backend(prefs)
 
     def _block_if_demo(self) -> None:
         """Refuse every mutation when running as a public demo. Called
@@ -103,6 +117,13 @@ class WorkspaceService:
         language: str = "pl",
     ) -> AppPreferences:
         self._block_if_demo()
+        # SECURITY: hosted mode never accepts source_type=local — would
+        # let a paying user point the workspace at our server filesystem.
+        if self.settings.hosted_mode and source_type == "local":
+            raise StorageNotConfiguredError(
+                "Local filesystem is not available in hosted mode. "
+                "Please choose SFTP or Google Drive."
+            )
         invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
             content_root=content_root,

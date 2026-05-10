@@ -35,6 +35,7 @@ from app.domains.workspace.service import (
     DocumentNotFoundError,
     ItemAlreadyExistsError,
     InvalidPathError,
+    StorageNotConfiguredError,
     UnsupportedFileTypeError,
     WorkspaceService,
 )
@@ -62,6 +63,24 @@ async def workspace_page(request: Request):
             )
 
     preferences = workspace_service.get_preferences()
+
+    # In hosted mode, force SFTP/GDrive: source_type=local is forbidden.
+    # If the user lands here without storage configured, flip to a sane
+    # default ('gdrive', no folder yet) so the UI can guide them through
+    # picking a backend in Settings instead of failing on tree load.
+    if (
+        settings.hosted_mode
+        and getattr(preferences, "source_type", "local") == "local"
+    ):
+        # We DON'T persist this — just present the user with the right
+        # Settings dropdown selection. Their actual prefs stay 'local'
+        # in DB until they configure properly. The API guards prevent
+        # any local-backed reads.
+        preferences = preferences.model_copy(update={"source_type": "gdrive"})
+        needs_storage_setup = True
+    else:
+        needs_storage_setup = False
+
     frontend_config = json.dumps(
         {
             "treeUrl": str(request.url_for("workspace_tree_api")),
@@ -94,6 +113,8 @@ async def workspace_page(request: Request):
         database_path=str(settings.database_path),
         app_version=app_version,
         demo_mode=settings.demo_mode,
+        hosted_mode=settings.hosted_mode,
+        needs_storage_setup=needs_storage_setup,
         frontend_config=frontend_config,
     )
 

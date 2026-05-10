@@ -4161,6 +4161,9 @@ if (shell) {
   saveButton.addEventListener("click", saveFile);
   saveSettingsButton.addEventListener("click", saveSettings);
 
+  // Hosted-mode onboarding: "Welcome" banner has a Settings link.
+  document.getElementById("open-settings-from-banner")?.addEventListener("click", openSettingsModal);
+
   // ── SFTP connect button ─────────────────────────────────────────
   const sftpConnectBtn = document.getElementById("sftp-connect-button");
   const sftpConnectStatus = document.getElementById("sftp-connect-status");

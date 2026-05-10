@@ -41,6 +41,15 @@
     to publish your own notes.
   </div>
   % endif
+  % if context.get('needs_storage_setup'):
+  <div class="setup-banner" role="status">
+    <strong>Welcome — one more step.</strong>
+    Choose where Noteeli should store your notes:
+    open <button id="open-settings-from-banner" class="setup-banner-link">Settings</button>
+    and configure either <strong>SFTP</strong> or <strong>Google Drive</strong>.
+    Your notes stay in storage you control.
+  </div>
+  % endif
 
   <div
     class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''}"
@@ -252,12 +261,14 @@
           <section class="settings-tab-panel" data-panel="source" role="tabpanel">
             <label class="settings-label" data-i18n="label_source" for="source-type-select">Zrodlo notatek</label>
             <select id="source-type-select" class="settings-input">
+              % if not hosted_mode:
               <option value="local" data-i18n-opt="source_local" ${'selected' if preferences.source_type == 'local' else ''}>Lokalny dysk</option>
+              % endif
               <option value="sftp" ${'selected' if preferences.source_type == 'sftp' else ''}>SFTP / SSH</option>
               <option value="gdrive" ${'selected' if preferences.source_type == 'gdrive' else ''}>Google Drive</option>
             </select>
 
-            <div id="local-source-section" ${'class="hidden"' if preferences.source_type != 'local' else '' | n}>
+            <div id="local-source-section" ${'class="hidden"' if hosted_mode or preferences.source_type != 'local' else '' | n}>
               <label class="settings-label" data-i18n="label_notes_dir" for="content-root-input">Katalog notatek</label>
               <div class="settings-path-row">
                 <input id="content-root-input" class="settings-input" type="text" value="${preferences.content_root}" />

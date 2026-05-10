@@ -4094,3 +4094,25 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
 .login-legal-links a:hover {
   color: var(--text);
 }
+
+/* ── Setup banner (hosted-mode user without SFTP/GDrive yet) ──── */
+
+.setup-banner {
+  background: linear-gradient(180deg, rgba(242, 176, 29, 0.18), rgba(242, 176, 29, 0.08));
+  border-bottom: 1px solid rgba(242, 176, 29, 0.4);
+  color: var(--text);
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  text-align: center;
+}
+.setup-banner strong { color: var(--accent); }
+.setup-banner-link {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+.setup-banner-link:hover { color: var(--accent-soft); }
