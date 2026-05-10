@@ -4074,35 +4074,7 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
   color: var(--accent);
 }
 
-/* ── Legal links in statusbar and subscribe/login pages ─────── */
-
-.statusbar-legal {
-  margin-left: auto;
-  display: flex;
-  gap: 12px;
-  font-size: 0.75rem;
-}
-
-.statusbar-legal a,
-.subscribe-legal-links a,
-.login-legal-links a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.statusbar-legal a:hover,
-.subscribe-legal-links a:hover,
-.login-legal-links a:hover {
-  color: var(--text);
-}
-
-.subscribe-legal-links {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  font-size: 0.8rem;
-  margin: 0;
-}
+/* ── Legal links on the self-host login page ────────────────── */
 
 .login-legal-links {
   display: flex;
@@ -4112,4 +4084,13 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+}
+
+.login-legal-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.login-legal-links a:hover {
+  color: var(--text);
 }

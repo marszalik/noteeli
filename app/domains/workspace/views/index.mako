@@ -224,11 +224,6 @@
 
       <footer class="statusbar">
         <span id="status-message">Gotowe.</span>
-        <span class="statusbar-legal">
-          <a href="https://noteeli.com/terms" target="_blank" rel="noopener">Terms</a>
-          <a href="https://noteeli.com/privacy" target="_blank" rel="noopener">Privacy</a>
-          <a href="https://noteeli.com/refund" target="_blank" rel="noopener">Refunds</a>
-        </span>
       </footer>
     </main>
   </div>
