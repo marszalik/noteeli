@@ -31,3 +31,8 @@ tests/__pycache__/
 # Coverage reports
 coverage/
 htmlcov/
+
+# SQLite databases
+*.sqlite3
+.noteeli/
+
