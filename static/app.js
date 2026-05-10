@@ -4270,8 +4270,11 @@ if (shell) {
   saveButton.addEventListener("click", saveFile);
   saveSettingsButton.addEventListener("click", saveSettings);
 
-  // Hosted-mode onboarding: "Welcome" banner has a Settings link.
-  document.getElementById("open-settings-from-banner")?.addEventListener("click", openSettingsModal);
+  // Hosted-mode onboarding: "Welcome" banner opens the Source tab in Settings.
+  document.getElementById("open-settings-from-banner")?.addEventListener("click", () => {
+    openSettingsModal();
+    setActiveSettingsTab("source");
+  });
 
   // ── SFTP connect button ─────────────────────────────────────────
   const sftpConnectBtn = document.getElementById("sftp-connect-button");
