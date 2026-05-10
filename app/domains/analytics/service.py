@@ -59,6 +59,30 @@ def _visitor_hash(ip: str, user_agent: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
+_schema_ready = False
+
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS pageviews (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain        TEXT    NOT NULL,
+            path          TEXT    NOT NULL,
+            referrer      TEXT,
+            visitor_hash  TEXT,
+            user_id       INTEGER,
+            created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_pv_time        ON pageviews (created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_pv_domain_path ON pageviews (domain, path);
+        CREATE INDEX IF NOT EXISTS idx_pv_visitor     ON pageviews (visitor_hash, created_at);
+    """)
+    _schema_ready = True
+
+
 @contextmanager
 def _connect() -> Generator[sqlite3.Connection, None, None]:
     settings = get_settings()
@@ -67,6 +91,7 @@ def _connect() -> Generator[sqlite3.Connection, None, None]:
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    _ensure_schema(conn)
     try:
         yield conn
         conn.commit()
