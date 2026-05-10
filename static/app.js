@@ -657,6 +657,8 @@ if (shell) {
   function getCodeMirrorTheme() {
     const stored = localStorage.getItem("code-theme");
     if (stored && stored !== "auto") return stored;
+    // Demo: default to a real syntax-highlighted dark theme out of the box.
+    if (shell?.dataset.demo === "1") return "dracula";
     const theme = preferences?.theme_mode || shell.dataset.themeMode || "light";
     return theme === "light" ? "default" : "material-darker";
   }

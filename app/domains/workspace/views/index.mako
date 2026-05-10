@@ -32,13 +32,6 @@
     <a href="https://noteeli.com" target="_blank" rel="noopener" data-i18n="demo_banner_cta">Get Noteeli</a>
     <span data-i18n="demo_banner_suffix">to write and keep your own notes.</span>
   </div>
-  <script>
-    // Demo defaults — set once per browser, user can still change them in Settings.
-    (function() {
-      if (!localStorage.getItem("code-theme"))     localStorage.setItem("code-theme", "dracula");
-      if (!localStorage.getItem("markdown-style")) localStorage.setItem("markdown-style", "default");
-    })();
-  </script>
   % endif
   % if is_public:
   <div class="public-banner" role="status">
