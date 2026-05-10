@@ -27,6 +27,14 @@ def _login_template(request: Request, error_message: str | None = None):
 
 @router.get("/login", name="login_page")
 async def login_page(request: Request):
+    # Hosted mode: login lives entirely on noteeli.com. The session cookie
+    # set there is shared with this subdomain, so we just bounce.
+    if _settings.hosted_mode:
+        return_to = str(request.url_for("workspace_page"))
+        return RedirectResponse(
+            url=f"{_settings.portal_url}/login?return_to={return_to}",
+            status_code=303,
+        )
     if auth_service.get_current_user(request):
         return RedirectResponse(url=request.url_for("workspace_page"), status_code=303)
     return _login_template(request)
@@ -121,6 +129,10 @@ async def auth_password_login(
 @router.post("/logout", name="logout_action")
 async def logout_action(request: Request):
     request.session.pop("user", None)
+    if _settings.hosted_mode:
+        # Hosted mode: noteeli.com clears the session (cookie is on .noteeli.com),
+        # so just send the user there.
+        return RedirectResponse(url=f"{_settings.portal_url}/logout", status_code=303)
     destination = request.url_for("workspace_page") if auth_service.is_local_request(request) else request.url_for("login_page")
     return RedirectResponse(url=destination, status_code=303)
 

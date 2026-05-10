@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     paddle_client_token: str = ""      # client-side token for Paddle.js
     # "sandbox" → sandbox-api.paddle.com  |  "live" → api.paddle.com
     paddle_environment: str = "sandbox"
+    # Cookie domain for shared session with noteeli.com — set to ".noteeli.com"
+    # in production so both apps see the same login state.
+    session_cookie_domain: str = ""
+    # Public URL of the portal (noteeli.com) — used for redirect-to-login.
+    portal_url: str = "https://noteeli.com"
 
     model_config = SettingsConfigDict(
         env_prefix="NOTEELI_",
