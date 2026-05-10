@@ -244,7 +244,7 @@ class WorkspaceService:
 
     def build_tree(self) -> TreeNode:
         prefs = self.get_preferences()
-        backend = build_backend(prefs)
+        backend = self._get_backend()  # routes through hosted-mode security check
         display = backend.root_display
         root_name = display.rstrip("/").rsplit("/", 1)[-1] or display
         return self._build_directory_node("", root_name, prefs.sort_mode, backend)

@@ -887,6 +887,18 @@ _mega_cache: dict[tuple, MegaStorageBackend] = {}
 def build_backend(prefs) -> StorageBackend:
     source_type = getattr(prefs, "source_type", "local")
 
+    # SECURITY: in hosted mode, never instantiate the local-filesystem
+    # backend. Even if a caller passes prefs with source_type='local',
+    # we refuse here as a final guard. Defense in depth — if a future
+    # code path forgets to check hosted_mode, this still saves us.
+    if source_type == "local":
+        from app.core.config import get_settings
+        if get_settings().hosted_mode:
+            from app.domains.workspace.service import StorageNotConfiguredError
+            raise StorageNotConfiguredError(
+                "Local filesystem is not available in hosted mode."
+            )
+
     if source_type == "sftp":
         key = (prefs.sftp_host, prefs.sftp_port, prefs.sftp_username, prefs.sftp_password, prefs.sftp_path)
         if key not in _sftp_cache:
