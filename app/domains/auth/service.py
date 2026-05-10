@@ -41,13 +41,15 @@ class AuthService:
         # Demo mode: every request gets a synthetic guest user, no login
         # page, no session lookup. Combined with the service-layer write
         # guard (DemoReadOnlyError) this is safe — the user can browse
-        # but every mutation is rejected.
+        # but every mutation is rejected. We mark subscription_active so
+        # demo bypasses the hosted-mode paywall too.
         if self.settings.demo_mode:
             return {
                 "email": "demo@noteeli",
                 "name": "Demo guest",
                 "is_local": True,
                 "is_demo": True,
+                "subscription_active": True,
             }
         if self.is_local_request(request):
             return {
