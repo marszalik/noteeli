@@ -104,11 +104,22 @@ async def workspace_page(request: Request):
             "sftpTestUrl": str(request.url_for("workspace_sftp_test_api")),
         }
     )
+    # When storage isn't configured yet (hosted onboarding), don't even
+    # try to instantiate the backend — root_display would raise.
+    if needs_storage_setup:
+        content_root_label = "(not configured)"
+    else:
+        try:
+            content_root_label = workspace_service.root_display
+        except StorageNotConfiguredError:
+            content_root_label = "(not configured)"
+            needs_storage_setup = True
+
     return render_template(
         "domains/workspace/views/index.mako",
         request,
         user=user,
-        content_root=workspace_service.root_display,
+        content_root=content_root_label,
         preferences=preferences,
         database_path=str(settings.database_path),
         app_version=app_version,
