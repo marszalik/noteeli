@@ -357,3 +357,140 @@ async def auth_gdrive_folder_select(request: Request):
         source_type="gdrive",
     )
     return RedirectResponse(url="/?gdrive_connected=1", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# SFTP folder picker — mirrors the Google Drive flow above.
+# Reads stored SFTP creds from prefs (decrypted), browses remote dirs.
+# ---------------------------------------------------------------------------
+
+@router.get("/auth/sftp/folder", name="auth_sftp_folder_picker")
+async def auth_sftp_folder_picker(request: Request):
+    user = auth_service.get_current_user(request)
+    if user is None:
+        return RedirectResponse(url=request.url_for("login_page"), status_code=303)
+
+    from app.domains.preferences.repository import PreferencesRepository
+    repo = PreferencesRepository(_settings)
+    prefs = repo.get_app_preferences()
+
+    if not prefs.sftp_host:
+        return RedirectResponse(url="/", status_code=303)
+
+    parent = request.query_params.get("parent") or (prefs.sftp_path or "/")
+    parent = parent.rstrip("/") or "/"
+
+    # We need a real password — either freshly entered (in session) or
+    # decrypted from DB (sftp_remember_password=true).
+    password = request.session.get("sftp_session_password") or prefs.sftp_password
+    if not password:
+        # Bounce back to settings — they need to re-enter and click Connect.
+        return RedirectResponse(url="/?sftp_password_required=1", status_code=303)
+
+    # List subdirs
+    try:
+        import paramiko
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(
+                hostname=prefs.sftp_host,
+                port=prefs.sftp_port,
+                username=prefs.sftp_username,
+                password=password,
+                timeout=10,
+                allow_agent=False,
+                look_for_keys=False,
+            )
+            sftp = ssh.open_sftp()
+            try:
+                entries = sftp.listdir_attr(parent)
+            finally:
+                sftp.close()
+        finally:
+            ssh.close()
+    except Exception as exc:
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"/?sftp_error={quote_plus(str(exc)[:200])}", status_code=303)
+
+    import stat as _stat
+    folders = sorted(
+        [e.filename for e in entries if _stat.S_ISDIR(e.st_mode) and not e.filename.startswith(".")]
+    )
+
+    rows = ""
+    for name in folders:
+        sub_path = (parent + "/" + name).replace("//", "/") if parent != "/" else "/" + name
+        rows += (
+            f'<li><a class="row" href="?parent={sub_path}">📁 {name}</a>'
+            f' <form method="post" action="/auth/sftp/folder/select" style="display:inline">'
+            f'<input type="hidden" name="folder_path" value="{sub_path}"/>'
+            f'<button class="pick" type="submit">Use this folder</button></form></li>'
+        )
+
+    # "Use this folder" for current parent dir as well
+    use_current = (
+        f'<form method="post" action="/auth/sftp/folder/select" style="margin:14px 0">'
+        f'<input type="hidden" name="folder_path" value="{parent}"/>'
+        f'<button class="pick pick-primary" type="submit">Use this folder ({parent})</button></form>'
+    )
+
+    parent_link = ""
+    if parent != "/":
+        up = parent.rsplit("/", 1)[0] or "/"
+        parent_link = f'<a class="back" href="?parent={up}">← Up to {up}</a>'
+
+    html = f"""<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pick an SFTP folder — Noteeli</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:"IBM Plex Sans",system-ui,sans-serif;background:#08111a;color:#edf3f8;padding:32px;max-width:700px;margin:0 auto}}
+h1{{font-size:1.4rem;font-weight:700;margin-bottom:8px}}
+.lead{{color:#9db0c2;margin-bottom:6px;font-size:.95rem}}
+.path{{color:#f2b01d;font-family:"IBM Plex Mono",monospace;font-size:.85rem;margin-bottom:18px}}
+.back{{color:#f2b01d;text-decoration:none;font-size:.85rem;margin-bottom:16px;display:inline-block}}
+ul{{list-style:none;display:flex;flex-direction:column;gap:8px}}
+li{{display:flex;justify-content:space-between;align-items:center;background:#0d1824;border:1px solid rgba(140,188,234,.14);border-radius:8px;padding:12px 16px}}
+li:hover{{border-color:rgba(140,188,234,.3)}}
+.row{{color:#edf3f8;text-decoration:none;flex:1;font-size:.95rem}}
+.row:hover{{color:#f2b01d}}
+.pick{{background:#f2b01d;color:#08111a;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.85rem}}
+.pick:hover{{opacity:.88}}
+.pick-primary{{width:100%;padding:12px 16px;font-size:.95rem}}
+.empty{{color:#9db0c2;text-align:center;padding:40px}}
+</style></head>
+<body>
+<h1>Pick an SFTP folder</h1>
+<p class="lead">This folder will become your Noteeli workspace.</p>
+<p class="path">Current: {parent}</p>
+{parent_link}
+{use_current}
+<ul>
+{rows or '<li class="empty">No subfolders here. Click "Use this folder" above to pick the current one.</li>'}
+</ul>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/auth/sftp/folder/select", name="auth_sftp_folder_select")
+async def auth_sftp_folder_select(request: Request):
+    user = auth_service.get_current_user(request)
+    if user is None:
+        return RedirectResponse(url=request.url_for("login_page"), status_code=303)
+
+    form = await request.form()
+    folder_path = str(form.get("folder_path", "")).strip()
+    if not folder_path:
+        return RedirectResponse(url="/auth/sftp/folder", status_code=303)
+
+    from app.domains.preferences.repository import PreferencesRepository
+    repo = PreferencesRepository(_settings)
+    repo.update_app_preferences(
+        sftp_path=folder_path,
+        source_type="sftp",
+    )
+    # Clear session-stored password — it's done its job.
+    # (User opted out of "remember", so password is gone for next session.)
+    return RedirectResponse(url="/", status_code=303)

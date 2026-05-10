@@ -366,6 +366,11 @@ async def workspace_sftp_test_api(request: Request):
                 sftp.close()
         finally:
             ssh.close()
+        # Stash the verified password in the server session so the next
+        # step (folder picker) can browse without re-prompting. Lives
+        # only for this session — never written to disk unless the user
+        # ticked "Remember password" before saving prefs.
+        request.session["sftp_session_password"] = body.get("password", "")
         return {"ok": True}
     except Exception as exc:
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}

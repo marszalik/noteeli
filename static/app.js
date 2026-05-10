@@ -4302,13 +4302,16 @@ if (shell) {
         sftpConnectBtn.disabled = false;
         return;
       }
-      sftpConnectStatus.textContent = "✓ Connected. Switching workspace…";
-      // Force source_type to sftp and persist + reload tree.
+      sftpConnectStatus.textContent = "✓ Connected. Opening folder picker…";
+      // Persist creds so the folder picker page can use them. The
+      // password is also kept in the SERVER session for this hop —
+      // /api/sftp/test stashes it under sftp_session_password so the
+      // picker can browse without re-asking.
       if (sourceTypeSelect) sourceTypeSelect.value = "sftp";
       await persistPreferences({ source_type: "sftp" });
-      closeSettingsModal?.();
-      await resetWorkspaceAfterPreferencesChange();
-      sftpConnectStatus.textContent = "✓ Connected.";
+      // Hard-redirect into the folder picker; it'll save final sftp_path
+      // and bounce back to "/" when the user chooses a directory.
+      window.location.href = "/auth/sftp/folder";
     } catch (err) {
       sftpConnectStatus.textContent = `Error: ${err.message || err}`;
       sftpConnectStatus.style.color = "var(--accent)";
