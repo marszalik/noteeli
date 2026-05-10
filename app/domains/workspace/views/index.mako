@@ -32,6 +32,13 @@
     <a href="https://noteeli.com" target="_blank" rel="noopener" data-i18n="demo_banner_cta">Get Noteeli</a>
     <span data-i18n="demo_banner_suffix">to write and keep your own notes.</span>
   </div>
+  <script>
+    // Demo defaults — set once per browser, user can still change them in Settings.
+    (function() {
+      if (!localStorage.getItem("code-theme"))     localStorage.setItem("code-theme", "dracula");
+      if (!localStorage.getItem("markdown-style")) localStorage.setItem("markdown-style", "default");
+    })();
+  </script>
   % endif
   % if is_public:
   <div class="public-banner" role="status">
@@ -370,7 +377,7 @@
             <label class="settings-label" data-i18n="label_code_theme" for="code-theme-select">Motyw kolorowania kodu</label>
             <select id="code-theme-select" class="settings-input">
               <option value="auto" data-i18n-opt="code_theme_auto">Automatyczny</option>
-              <option value="default">Default (jasny)</option>
+              <option value="default" data-i18n-opt="code_theme_default">Default (jasny)</option>
               <option value="material-darker">Material Darker (VS Code-like)</option>
               <option value="darcula">Darcula (JetBrains)</option>
               <option value="monokai">Monokai</option>
@@ -378,8 +385,8 @@
               <option value="nord">Nord</option>
               <option value="ayu-dark">Ayu Dark</option>
               <option value="tomorrow-night-eighties">Tomorrow Night</option>
-              <option value="eclipse">Eclipse (jasny)</option>
-              <option value="idea">IntelliJ IDEA (jasny)</option>
+              <option value="eclipse" data-i18n-opt="code_theme_eclipse">Eclipse (jasny)</option>
+              <option value="idea" data-i18n-opt="code_theme_idea">IntelliJ IDEA (jasny)</option>
               <option value="solarized">Solarized</option>
             </select>
 
