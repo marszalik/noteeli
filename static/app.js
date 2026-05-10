@@ -657,10 +657,12 @@ if (shell) {
   function getCodeMirrorTheme() {
     const stored = localStorage.getItem("code-theme");
     if (stored && stored !== "auto") return stored;
-    // Demo: default to a real syntax-highlighted dark theme out of the box.
-    if (shell?.dataset.demo === "1") return "dracula";
+    // Sensible defaults so users see real syntax highlighting out of the
+    // box without having to discover the Settings dropdown:
+    //   - dark app theme  → Dracula (iconic, instantly recognisable)
+    //   - light app theme → Eclipse (proper visible highlighting)
     const theme = preferences?.theme_mode || shell.dataset.themeMode || "light";
-    return theme === "light" ? "default" : "material-darker";
+    return theme === "light" ? "eclipse" : "dracula";
   }
 
   function detectCodeLanguage(path) {
