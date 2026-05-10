@@ -70,10 +70,18 @@ class PreferencesRepository:
                 CREATE TABLE IF NOT EXISTS preference_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL UNIQUE,
-                    payload TEXT NOT NULL
+                    payload TEXT NOT NULL,
+                    sort_index INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
+            # Migration for older DBs that lack sort_index
+            try:
+                connection.execute("SELECT sort_index FROM preference_profiles LIMIT 1")
+            except Exception:
+                connection.execute(
+                    "ALTER TABLE preference_profiles ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0"
+                )
             connection.executemany(
                 "INSERT OR IGNORE INTO app_settings(key, value) VALUES(?, ?)",
                 defaults,
@@ -155,11 +163,22 @@ class PreferencesRepository:
                 """
                 SELECT id, name, payload
                 FROM preference_profiles
-                ORDER BY name COLLATE NOCASE ASC
+                ORDER BY sort_index ASC, name COLLATE NOCASE ASC
                 """
             ).fetchall()
 
         return [self._profile_from_row(row) for row in rows]
+
+    def reorder_profiles(self, ordered_ids: list[int]) -> None:
+        """Apply a new sort_index to each id in the order given."""
+        if not ordered_ids:
+            return
+        with self._connect() as connection:
+            for index, profile_id in enumerate(ordered_ids):
+                connection.execute(
+                    "UPDATE preference_profiles SET sort_index = ? WHERE id = ?",
+                    (index, profile_id),
+                )
 
     def create_profile(self, name: str, preferences: AppPreferences) -> SavedPreferencesProfile:
         payload = json.dumps(preferences.model_dump(), ensure_ascii=False)

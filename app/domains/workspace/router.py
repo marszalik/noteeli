@@ -474,6 +474,20 @@ async def workspace_delete_preference_profile_api(request: Request, profile_id: 
     return {"status": "deleted"}
 
 
+@router.put(
+    "/api/preferences/profiles/order",
+    name="workspace_reorder_preference_profiles_api",
+)
+async def workspace_reorder_preference_profiles_api(request: Request):
+    auth_service.require_api_access(request)
+    body = await request.json()
+    ordered_ids = body.get("ordered_ids") or []
+    if not isinstance(ordered_ids, list) or not all(isinstance(i, int) for i in ordered_ids):
+        raise HTTPException(status_code=400, detail="ordered_ids must be a list of integers.")
+    workspace_service.reorder_preference_profiles(ordered_ids)
+    return {"status": "ok"}
+
+
 @router.post(
     "/api/preferences/profiles/{profile_id}/apply",
     response_model=AppPreferences,

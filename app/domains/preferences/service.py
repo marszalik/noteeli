@@ -183,6 +183,9 @@ class PreferencesService:
         if not deleted:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
 
+    def reorder_profiles(self, ordered_ids: list[int]) -> None:
+        self.repository.reorder_profiles(ordered_ids)
+
     def apply_profile(self, profile_id: int) -> AppPreferences:
         profile_preferences = self.repository.get_profile_preferences(profile_id)
         if profile_preferences is None:

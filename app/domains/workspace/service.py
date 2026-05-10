@@ -237,6 +237,10 @@ class WorkspaceService:
         self._block_if_demo()
         self.preferences_service.delete_profile(profile_id)
 
+    def reorder_preference_profiles(self, ordered_ids: list[int]) -> None:
+        self._block_if_demo()
+        self.preferences_service.reorder_profiles(ordered_ids)
+
     def apply_preference_profile(self, profile_id: int) -> AppPreferences:
         self._block_if_demo()
         invalidate_sftp_cache()

@@ -2453,11 +2453,19 @@ if (shell) {
     }
 
     preferenceProfiles.forEach((profile) => {
-      // Each profile row: a flex container with the apply-button on the
-      // left (takes most of the width) and a small × delete button on
-      // the right.
       const row = document.createElement("div");
       row.className = "profiles-dropdown-row";
+      row.draggable = true;
+      row.dataset.profileId = String(profile.id);
+
+      // ⋮⋮ drag handle
+      const handle = document.createElement("span");
+      handle.className = "profiles-dropdown-drag";
+      handle.title = "Drag to reorder";
+      handle.setAttribute("aria-hidden", "true");
+      handle.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor">'
+        + '<path d="M9 3h2v2H9zM13 3h2v2h-2zM9 7h2v2H9zM13 7h2v2h-2zM9 11h2v2H9zM13 11h2v2h-2zM9 15h2v2H9zM13 15h2v2h-2zM9 19h2v2H9zM13 19h2v2h-2z"/>'
+        + '</svg>';
 
       const apply = document.createElement("button");
       apply.type = "button";
@@ -2468,6 +2476,20 @@ if (shell) {
       summary.textContent = getProfileSummary(profile);
       apply.append(title, summary);
       apply.addEventListener("click", () => applyPreferenceProfile(profile.id, profile.name));
+
+      // Update icon — overwrite this profile with current settings
+      const update = document.createElement("button");
+      update.type = "button";
+      update.className = "profiles-dropdown-update icon-button icon-button-small";
+      update.title = "Update with current settings";
+      update.setAttribute("aria-label", "Update with current settings");
+      update.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+        + '<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>'
+        + '</svg>';
+      update.addEventListener("click", (event) => {
+        event.stopPropagation();
+        updatePreferenceProfile(profile);
+      });
 
       const del = document.createElement("button");
       del.type = "button";
@@ -2482,7 +2504,40 @@ if (shell) {
         deletePreferenceProfile(profile);
       });
 
-      row.append(apply, del);
+      // Drag and drop reorder
+      row.addEventListener("dragstart", (e) => {
+        row.classList.add("is-dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(profile.id));
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("is-dragging");
+        preferenceProfilesList.querySelectorAll(".profiles-dropdown-row")
+          .forEach(r => r.classList.remove("is-drop-target"));
+      });
+      row.addEventListener("dragover", (e) => {
+        const dragging = preferenceProfilesList.querySelector(".is-dragging");
+        if (!dragging || dragging === row) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        row.classList.add("is-drop-target");
+      });
+      row.addEventListener("dragleave", () => row.classList.remove("is-drop-target"));
+      row.addEventListener("drop", (e) => {
+        e.preventDefault();
+        row.classList.remove("is-drop-target");
+        const draggedId = parseInt(e.dataTransfer.getData("text/plain"), 10);
+        if (!draggedId || draggedId === profile.id) return;
+        const fromIdx = preferenceProfiles.findIndex(p => p.id === draggedId);
+        const toIdx   = preferenceProfiles.findIndex(p => p.id === profile.id);
+        if (fromIdx < 0 || toIdx < 0) return;
+        const [moved] = preferenceProfiles.splice(fromIdx, 1);
+        preferenceProfiles.splice(toIdx, 0, moved);
+        renderPreferenceProfiles();
+        reorderPreferenceProfiles(preferenceProfiles.map(p => p.id));
+      });
+
+      row.append(handle, apply, update, del);
       preferenceProfilesList.appendChild(row);
     });
   }
@@ -2576,6 +2631,38 @@ if (shell) {
       setStatus(`${t("st_profile_saved")}: ${profile.name}.`);
     } catch (error) {
       setStatus(error.message, true);
+    }
+  }
+
+  async function updatePreferenceProfile(profile) {
+    // Overwrite an existing profile with the user's CURRENT preferences,
+    // keeping the same id and name. Saves the dance of delete + re-save.
+    if (!window.confirm(`Update "${profile.name}" with current settings?`)) {
+      return;
+    }
+    try {
+      setStatus(t("st_saving_profile"));
+      await requestJson(`${config.preferenceProfilesUrl}/${profile.id}`, {
+        method: "PUT",
+        body: JSON.stringify(buildProfilePayload({ name: profile.name })),
+      });
+      await loadPreferenceProfiles();
+      setStatus(`${t("st_profile_saved")}: ${profile.name}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  async function reorderPreferenceProfiles(orderedIds) {
+    try {
+      await requestJson(`${config.preferenceProfilesUrl}/order`, {
+        method: "PUT",
+        body: JSON.stringify({ ordered_ids: orderedIds }),
+      });
+    } catch (error) {
+      setStatus(error.message, true);
+      // On failure reload to restore order
+      await loadPreferenceProfiles();
     }
   }
 
