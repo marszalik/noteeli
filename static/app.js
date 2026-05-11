@@ -1155,6 +1155,7 @@ if (shell) {
       st_delete_error: "Błąd usuwania.",
       st_deleted: "Usunięto",
       st_delete_fail: "Błąd połączenia przy usuwaniu.",
+      st_request_failed: "Błąd żądania.",
       st_showing_only: "Pokazuję tylko",
       st_upload_prepared: "Przygotowano upload do",
       st_preparing_zip: "Przygotowuję archiwum ZIP...",
@@ -1290,6 +1291,7 @@ if (shell) {
       st_delete_error: "Delete error.",
       st_deleted: "Deleted",
       st_delete_fail: "Connection error while deleting.",
+      st_request_failed: "Request failed.",
       st_showing_only: "Showing only",
       st_upload_prepared: "Upload prepared to",
       st_preparing_zip: "Preparing ZIP archive...",
@@ -1425,6 +1427,7 @@ if (shell) {
       st_delete_error: "Error al eliminar.",
       st_deleted: "Eliminado",
       st_delete_fail: "Error de conexión al eliminar.",
+      st_request_failed: "Error en la solicitud.",
       st_showing_only: "Mostrando solo",
       st_upload_prepared: "Subida preparada a",
       st_preparing_zip: "Preparando archivo ZIP...",
@@ -1560,6 +1563,7 @@ if (shell) {
       st_delete_error: "Fehler beim Löschen.",
       st_deleted: "Gelöscht",
       st_delete_fail: "Verbindungsfehler beim Löschen.",
+      st_request_failed: "Anfrage fehlgeschlagen.",
       st_showing_only: "Zeige nur",
       st_upload_prepared: "Upload vorbereitet nach",
       st_preparing_zip: "ZIP-Archiv wird vorbereitet...",
@@ -1695,6 +1699,7 @@ if (shell) {
       st_delete_error: "Ошибка удаления.",
       st_deleted: "Удалено",
       st_delete_fail: "Ошибка соединения при удалении.",
+      st_request_failed: "Ошибка запроса.",
       st_showing_only: "Показывается только",
       st_upload_prepared: "Загрузка подготовлена в",
       st_preparing_zip: "Подготовка ZIP-архива...",
@@ -2170,7 +2175,7 @@ if (shell) {
     }
 
     if (!response.ok) {
-      let detail = t("st_delete_error");
+      let detail = t("st_request_failed");
       try {
         const payload = await response.json();
         detail = payload.detail || detail;
@@ -2196,7 +2201,7 @@ if (shell) {
     }
 
     if (!response.ok) {
-      let detail = t("st_delete_error");
+      let detail = t("st_request_failed");
       try {
         const payload = await response.json();
         detail = payload.detail || detail;
@@ -4271,10 +4276,18 @@ if (shell) {
   saveSettingsButton.addEventListener("click", saveSettings);
 
   // Hosted-mode onboarding: "Welcome" banner opens the Source tab in Settings.
-  document.getElementById("open-settings-from-banner")?.addEventListener("click", () => {
+  const setupBanner = document.getElementById("open-settings-from-banner");
+  setupBanner?.addEventListener("click", () => {
     openSettingsModal();
     setActiveSettingsTab("source");
   });
+  // First-login UX: if storage isn't configured yet (banner is present),
+  // open the Settings modal on the Source tab immediately so the user
+  // doesn't have to hunt for it. The banner stays as a secondary cue.
+  if (setupBanner) {
+    openSettingsModal();
+    setActiveSettingsTab("source");
+  }
 
   // ── SFTP connect button ─────────────────────────────────────────
   const sftpConnectBtn = document.getElementById("sftp-connect-button");

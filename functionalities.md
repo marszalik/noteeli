@@ -82,6 +82,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Google Drive storage | ❌ | `GoogleDriveStorageBackend` |
 | Storage backend selection from `source_type` preference | ❌ | `build_backend()` factory |
 | SFTP password persisted in SQLite (warning surfaced in UI) | ❌ | preferences hint |
+| SFTP session-password fallback when "Remember" is off | ✅ `test_build_backend_uses_session_password_when_db_password_empty`, `test_build_backend_prefers_db_password_over_session` | `session_sftp_password` ContextVar set by middleware in `app/main.py`, read in `build_backend()` |
 
 ## 3. File tree & navigation
 

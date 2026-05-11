@@ -36,3 +36,8 @@ htmlcov/
 *.sqlite3
 .noteeli/
 
+
+# Sandbox / local env switching (contain secrets)
+.env.sandbox
+.env.production
+switch-env.sh

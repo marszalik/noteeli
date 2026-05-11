@@ -11,6 +11,25 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Onboarding: Settings modal now auto-opens after Google login** when
+  storage isn't configured yet. Previously users only saw a "Welcome"
+  banner with a Settings link and had to click it to start setup.
+- **SFTP authentication failed after picking a folder** when the user
+  opted out of "Remember password". The verified password was kept in
+  the server session for the folder-picker hop, but `build_backend()`
+  read `prefs.sftp_password` (empty) and returned an unauthenticated
+  connection, freezing the workspace on tree load. A request middleware
+  now propagates `request.session["sftp_session_password"]` into a
+  ContextVar that `build_backend()` falls back to when the DB column is
+  empty — so "Remember = no" means "don't persist across sessions",
+  not "fail within this session".
+- **Misleading "Błąd usuwania pliku" (Delete error) on any API failure.**
+  The generic fallback in `requestJson`/`requestMultipart` reused the
+  delete-specific i18n key. Replaced with a dedicated `st_request_failed`
+  key across all five languages.
+
 ## [1.1.0] - 2026-05-07
 
 ### Added

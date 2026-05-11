@@ -24,7 +24,11 @@ from pathlib import Path
 
 import pytest
 
-from app.domains.workspace.storage import SFTPStorageBackend
+from app.domains.workspace.storage import (
+    SFTPStorageBackend,
+    build_backend,
+    session_sftp_password,
+)
 
 
 # ── Fakes ───────────────────────────────────────────────────────
@@ -308,3 +312,42 @@ def test_rglob_files_walks_into_subdirectories(fake_sftp: Path):
 def test_root_display_renders_sftp_url(fake_sftp: Path):
     backend = _build("/srv/notes")
     assert backend.root_display == "sftp://alice@example.com/srv/notes"
+
+
+# ── build_backend session-password fallback ─────────────────────
+
+
+class _Prefs:
+    """Bare-minimum prefs stand-in for build_backend()."""
+    source_type = "sftp"
+    sftp_host = "example.com"
+    sftp_port = 22
+    sftp_username = "alice"
+    sftp_password = ""
+    sftp_path = "/srv/notes"
+
+
+def test_build_backend_uses_session_password_when_db_password_empty():
+    # User opted out of "Remember password" — sftp_password in DB is "".
+    # The middleware sets a session-scoped password; build_backend should
+    # pass it through to the new SFTPStorageBackend instance.
+    token = session_sftp_password.set("from-session")
+    try:
+        backend = build_backend(_Prefs())
+        assert isinstance(backend, SFTPStorageBackend)
+        assert backend._password == "from-session"
+    finally:
+        session_sftp_password.reset(token)
+
+
+def test_build_backend_prefers_db_password_over_session():
+    # If both are present, the persisted (Remember=on) password wins.
+    class P(_Prefs):
+        sftp_password = "from-db"
+
+    token = session_sftp_password.set("from-session")
+    try:
+        backend = build_backend(P())
+        assert backend._password == "from-db"
+    finally:
+        session_sftp_password.reset(token)
