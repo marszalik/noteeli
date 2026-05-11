@@ -113,3 +113,37 @@ def test_update_preferences_normalises_local_content_root(tmp_path: Path):
 
     assert updated.content_root == str(new_root.resolve())
     assert new_root.is_dir()
+
+
+def test_compact_chrome_round_trips(tmp_path):
+    """The Appearance → Compact layout toggle persists and reads back."""
+    from app.core.config import Settings
+    from app.domains.preferences.repository import PreferencesRepository
+    from app.domains.preferences.service import PreferencesService
+
+    settings = Settings(
+        content_root=tmp_path / "notes",
+        data_dir=tmp_path / ".noteeli",
+        session_secret="test",
+        google_client_id="",
+        google_client_secret="",
+    )
+    repo = PreferencesRepository(settings)
+    service = PreferencesService(settings, repo)
+
+    # Default is False
+    assert service.get_preferences().compact_chrome is False
+
+    # Toggle on, persist
+    updated = service.update_preferences(
+        content_root=str(tmp_path / "notes"),
+        sort_mode="alphabetical",
+        theme_mode="noteeli",
+        editor_font_size=14,
+        compact_chrome=True,
+    )
+    assert updated.compact_chrome is True
+
+    # Survives a fresh repo (i.e. it's in SQLite, not just memory)
+    reloaded = PreferencesService(settings, PreferencesRepository(settings)).get_preferences()
+    assert reloaded.compact_chrome is True

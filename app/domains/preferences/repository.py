@@ -40,6 +40,7 @@ class PreferencesRepository:
             ("image_upload_mode", "same_dir"),
             ("image_upload_subdir", "assets"),
             ("language", "pl"),
+            ("compact_chrome", "false"),
         )
         with self._connect() as connection:
             connection.execute(
@@ -113,6 +114,7 @@ class PreferencesRepository:
         image_upload_mode: ImageUploadMode | None = None,
         image_upload_subdir: str | None = None,
         language: Language | None = None,
+        compact_chrome: bool | None = None,
     ) -> AppPreferences:
         from app.core.crypto import encrypt_secret
         updates: list[tuple[str, str]] = []
@@ -151,6 +153,8 @@ class PreferencesRepository:
             updates.append(("image_upload_subdir", image_upload_subdir))
         if language is not None:
             updates.append(("language", language))
+        if compact_chrome is not None:
+            updates.append(("compact_chrome", "true" if compact_chrome else "false"))
 
         if updates:
             with self._connect() as connection:
@@ -316,6 +320,7 @@ class PreferencesRepository:
             image_upload_mode=values.get("image_upload_mode", "same_dir"),
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
             language=values.get("language", "pl"),
+            compact_chrome=self._coerce_bool(values.get("compact_chrome", False)),
         )
 
     def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:

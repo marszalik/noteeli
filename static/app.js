@@ -56,6 +56,7 @@ if (shell) {
   const sftpUsernameInput = document.getElementById("sftp-username-input");
   const sftpPasswordInput = document.getElementById("sftp-password-input");
   const sftpPathInput = document.getElementById("sftp-path-input");
+  const compactChromeInput = document.getElementById("compact-chrome-input");
   const gdriveFolderIdInput = document.getElementById("gdrive-folder-id-input");
   const sortModeSelect = document.getElementById("sort-mode-select");
   const themeModeSelect = document.getElementById("theme-mode-select");
@@ -1096,6 +1097,8 @@ if (shell) {
       label_font_size: "Rozmiar czcionki edytora",
       label_autosave: "Automatyczny zapis",
       autosave_hint: "Zapisuje zmiany po krótkiej pauzie w pisaniu.",
+      label_compact_chrome: "Kompaktowy układ (bez ramek)",
+      compact_chrome_hint: "Usuwa zaokrąglone obramowania paneli i zewnętrzny margines, żeby zyskać miejsce na treść.",
       label_image_upload: "Wstawianie obrazków",
       img_same_dir: "Ten sam katalog co plik MD",
       img_subdir: "Podkatalog o nazwie",
@@ -1233,6 +1236,8 @@ if (shell) {
       label_font_size: "Editor font size",
       label_autosave: "Automatic save",
       autosave_hint: "Saves changes after a short pause while typing.",
+      label_compact_chrome: "Compact layout (no frames)",
+      compact_chrome_hint: "Removes panel borders and outer padding so content fills the viewport.",
       label_image_upload: "Image insertion",
       img_same_dir: "Same directory as MD file",
       img_subdir: "Subdirectory named",
@@ -1370,6 +1375,8 @@ if (shell) {
       label_font_size: "Tamaño de fuente del editor",
       label_autosave: "Guardado automático",
       autosave_hint: "Guarda los cambios tras una breve pausa al escribir.",
+      label_compact_chrome: "Diseño compacto (sin marcos)",
+      compact_chrome_hint: "Elimina bordes y márgenes para que el contenido ocupe toda la pantalla.",
       label_image_upload: "Inserción de imágenes",
       img_same_dir: "Mismo directorio que el archivo MD",
       img_subdir: "Subdirectorio llamado",
@@ -1507,6 +1514,8 @@ if (shell) {
       label_font_size: "Editorschriftgröße",
       label_autosave: "Automatisch speichern",
       autosave_hint: "Speichert Änderungen nach einer kurzen Schreibpause.",
+      label_compact_chrome: "Kompaktes Layout (ohne Rahmen)",
+      compact_chrome_hint: "Entfernt Rahmen und äußeren Rand, damit der Inhalt das Fenster ausfüllt.",
       label_image_upload: "Bildeinfügung",
       img_same_dir: "Gleiches Verzeichnis wie MD-Datei",
       img_subdir: "Unterverzeichnis namens",
@@ -1644,6 +1653,8 @@ if (shell) {
       label_font_size: "Размер шрифта редактора",
       label_autosave: "Автосохранение",
       autosave_hint: "Сохраняет изменения после короткой паузы при вводе.",
+      label_compact_chrome: "Компактный вид (без рамок)",
+      compact_chrome_hint: "Убирает рамки панелей и внешние отступы, чтобы контент занимал весь экран.",
       label_image_upload: "Вставка изображений",
       img_same_dir: "Тот же каталог, что и MD-файл",
       img_subdir: "Подкаталог с именем",
@@ -2332,6 +2343,7 @@ if (shell) {
       theme_mode: themeModeSelect.value,
       editor_font_size: clampFontSize(editorFontSizeInput.value),
       autosave_enabled: Boolean(autosaveEnabledInput?.checked),
+      compact_chrome: Boolean(compactChromeInput?.checked),
       image_upload_mode: imageUploadModeSelect?.value || "same_dir",
       image_upload_subdir: imageUploadSubdirInput?.value?.trim() || "assets",
       language: languageSelect?.value || "pl",
@@ -2359,6 +2371,7 @@ if (shell) {
     themeModeSelect.value = nextPreferences.theme_mode;
     editorFontSizeInput.value = String(nextPreferences.editor_font_size);
     if (autosaveEnabledInput) autosaveEnabledInput.checked = Boolean(nextPreferences.autosave_enabled);
+    if (compactChromeInput) compactChromeInput.checked = Boolean(nextPreferences.compact_chrome);
     if (imageUploadModeSelect) imageUploadModeSelect.value = nextPreferences.image_upload_mode || "same_dir";
     if (imageUploadSubdirInput) imageUploadSubdirInput.value = nextPreferences.image_upload_subdir || "assets";
     if (imageUploadSubdirSection) imageUploadSubdirSection.classList.toggle("hidden", nextPreferences.image_upload_mode !== "subdir");
@@ -2386,8 +2399,21 @@ if (shell) {
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
     applyLanguage(preferences.language || "pl");
+    applyCompactChrome(Boolean(preferences.compact_chrome));
     if (saveButton) saveButton.classList.toggle("hidden", Boolean(preferences.autosave_enabled));
   }
+
+  function applyCompactChrome(enabled) {
+    document.body.dataset.compactChrome = enabled ? "1" : "0";
+    shell.dataset.compactChrome = enabled ? "1" : "0";
+  }
+
+  // Live preview while the Settings modal is open — flip the CSS attribute
+  // immediately on toggle so the user can see the effect before clicking
+  // Save. Persisted value still comes from the form submit.
+  document.getElementById("compact-chrome-input")?.addEventListener("change", (e) => {
+    applyCompactChrome(Boolean(e.target.checked));
+  });
 
   async function loadPreferences() {
     applyPreferencesToUi(await requestJson(config.preferencesUrl, { method: "GET" }));

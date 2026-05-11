@@ -138,6 +138,7 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
+        compact_chrome: bool = False,
     ) -> AppPreferences:
         self._block_if_demo()
         # SECURITY: hosted mode never accepts source_type=local — would
@@ -165,6 +166,7 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
+            compact_chrome=compact_chrome,
         )
 
     def list_preference_profiles(self) -> list[SavedPreferencesProfile]:
@@ -190,6 +192,7 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
+        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         self._block_if_demo()
         return self.preferences_service.create_profile(
@@ -210,6 +213,7 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
+            compact_chrome=compact_chrome,
         )
 
     def update_preference_profile(
@@ -233,6 +237,7 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
+        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         self._block_if_demo()
         return self.preferences_service.update_profile(
@@ -254,6 +259,7 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
+            compact_chrome=compact_chrome,
         )
 
     def delete_preference_profile(self, profile_id: int) -> None:

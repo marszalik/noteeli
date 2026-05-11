@@ -28,6 +28,7 @@ class AppPreferences(BaseModel):
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
+    compact_chrome: bool = False
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -46,6 +47,7 @@ class UpdatePreferencesRequest(BaseModel):
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
+    compact_chrome: bool = False
 
 
 class SavedPreferencesProfile(BaseModel):
@@ -67,6 +69,7 @@ class SavedPreferencesProfile(BaseModel):
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
+    compact_chrome: bool = False
 
 
 class SavedPreferencesProfilesResponse(BaseModel):

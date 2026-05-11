@@ -841,6 +841,35 @@ body[data-theme="noteeli"] .workspace-panel {
     inset 0 1px 0 rgba(191, 219, 254, 0.05);
 }
 
+/* ── Compact chrome (no frames) ──────────────────────────────
+   Settings → Appearance → "Compact layout". Strips the outer padding,
+   inter-panel gap, panel border-radius/border/shadow so content fills
+   the viewport edge-to-edge. The sidebar resize handle anchors to the
+   left edge (no padding to offset). Themes keep their colours; only
+   the framing geometry is flattened. */
+body[data-compact-chrome="1"] .app-shell {
+  padding: 0;
+  gap: 0;
+}
+body[data-compact-chrome="1"] .sidebar,
+body[data-compact-chrome="1"] .workspace-panel {
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+body[data-compact-chrome="1"] .sidebar-resize-handle {
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-w) - 3px);
+  border-radius: 0;
+}
+body[data-compact-chrome="1"] .app-shell.sidebar-overlay .sidebar {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 0;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;

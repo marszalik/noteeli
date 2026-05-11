@@ -400,6 +400,7 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
         image_upload_mode=payload.image_upload_mode,
         image_upload_subdir=payload.image_upload_subdir,
         language=payload.language,
+        compact_chrome=payload.compact_chrome,
     )
 
 
@@ -439,6 +440,7 @@ async def workspace_save_preference_profile_api(request: Request, payload: SaveP
             image_upload_mode=payload.image_upload_mode,
             image_upload_subdir=payload.image_upload_subdir,
             language=payload.language,
+            compact_chrome=payload.compact_chrome,
         )
     except PreferenceProfileConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -475,6 +477,7 @@ async def workspace_update_preference_profile_api(
             image_upload_mode=payload.image_upload_mode,
             image_upload_subdir=payload.image_upload_subdir,
             language=payload.language,
+            compact_chrome=payload.compact_chrome,
         )
     except PreferenceProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

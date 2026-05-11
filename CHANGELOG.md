@@ -11,6 +11,14 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Settings → Appearance → "Compact layout (no frames)"** — toggle that
+  removes the rounded panel borders, drop shadows, and the outer
+  padding/gap around the sidebar and workspace. Live preview while the
+  Settings modal is open; persisted as `compact_chrome` per user.
+  Labels and hint translated to pl/en/es/de/ru.
+
 ### Changed
 
 - **SFTP password is now always persisted (encrypted at rest).** The
