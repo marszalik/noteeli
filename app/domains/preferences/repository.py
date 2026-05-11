@@ -198,7 +198,7 @@ class PreferencesRepository:
                 )
 
     def create_profile(self, name: str, preferences: AppPreferences) -> SavedPreferencesProfile:
-        payload = json.dumps(preferences.model_dump(), ensure_ascii=False)
+        payload = json.dumps(self._encrypted_profile_payload(preferences), ensure_ascii=False)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -226,7 +226,7 @@ class PreferencesRepository:
         name: str,
         preferences: AppPreferences,
     ) -> SavedPreferencesProfile | None:
-        payload = json.dumps(preferences.model_dump(), ensure_ascii=False)
+        payload = json.dumps(self._encrypted_profile_payload(preferences), ensure_ascii=False)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -355,6 +355,18 @@ class PreferencesRepository:
             image_upload_subdir=preferences.image_upload_subdir,
             language=preferences.language,
         )
+
+    def _encrypted_profile_payload(self, preferences: AppPreferences) -> dict:
+        """Serialize profile preferences, encrypting any credentials so the
+        DB never holds plaintext. ``_preferences_from_values`` reverses this
+        on read via ``decrypt_secret``."""
+        from app.core.crypto import encrypt_secret, is_encrypted
+
+        data = preferences.model_dump()
+        raw_password = data.get("sftp_password", "")
+        if raw_password and not is_encrypted(raw_password):
+            data["sftp_password"] = encrypt_secret(raw_password)
+        return data
 
     def _coerce_bool(self, value: object) -> bool:
         if isinstance(value, bool):

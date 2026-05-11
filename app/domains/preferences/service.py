@@ -203,6 +203,7 @@ class PreferencesService:
             sftp_port=profile_preferences.sftp_port,
             sftp_username=profile_preferences.sftp_username,
             sftp_password=profile_preferences.sftp_password,
+            sftp_remember_password=bool(profile_preferences.sftp_password),
             sftp_path=profile_preferences.sftp_path,
             gdrive_folder_id=profile_preferences.gdrive_folder_id,
             gdrive_credentials=profile_preferences.gdrive_credentials,

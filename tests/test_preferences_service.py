@@ -83,6 +83,7 @@ def test_update_preferences_switches_to_sftp_source_type(tmp_path: Path):
         sftp_port=2222,
         sftp_username="eli",
         sftp_password="secret",
+        sftp_remember_password=True,
         sftp_path="/notes",
     )
 
