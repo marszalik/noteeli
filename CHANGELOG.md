@@ -11,6 +11,29 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **SFTP password is now always persisted (encrypted at rest).** The
+  "Remember password" checkbox is gone — it created a fragile transient
+  mode (ContextVar + request middleware) that intermittently failed on
+  hosted instances, and it didn't add real security: the database is
+  already encrypted with Fernet using a key derived from
+  `NOTEELI_SESSION_SECRET`, so a stolen `noteeli.sqlite3` file is useless
+  without the env file. Side effects of this cleanup:
+  - `sftp_remember_password` removed from preferences schema, API
+    payload, repository defaults, and the Source tab UI.
+  - `/api/sftp/test` now persists the verified credentials directly
+    (calls `WorkspaceService.save_sftp_credentials` — new method).
+  - The session-stash `sftp_session_password` is gone, along with the
+    request middleware in `app/main.py` and the ContextVar in
+    `app/domains/workspace/storage.py`. Everyone reads `prefs.sftp_password`.
+  - The SFTP folder-picker page (`/auth/sftp/folder`) drops its session
+    lookup and reads the persisted password.
+- **First-load UX when SFTP is configured but no password is on file:**
+  the Settings modal opens on the Source tab with the password input
+  focused and a clear "Enter your SFTP password to connect" hint, so
+  users no longer see a generic error in the status bar.
+
 ### Fixed
 
 - **Onboarding: Settings modal now auto-opens after Google login** when

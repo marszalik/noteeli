@@ -27,7 +27,6 @@ import pytest
 from app.domains.workspace.storage import (
     SFTPStorageBackend,
     build_backend,
-    session_sftp_password,
 )
 
 
@@ -314,7 +313,7 @@ def test_root_display_renders_sftp_url(fake_sftp: Path):
     assert backend.root_display == "sftp://alice@example.com/srv/notes"
 
 
-# ── build_backend session-password fallback ─────────────────────
+# ── build_backend SFTP password handling ────────────────────────
 
 
 class _Prefs:
@@ -323,31 +322,28 @@ class _Prefs:
     sftp_host = "example.com"
     sftp_port = 22
     sftp_username = "alice"
-    sftp_password = ""
+    sftp_password = "from-db"
     sftp_path = "/srv/notes"
 
 
-def test_build_backend_uses_session_password_when_db_password_empty():
-    # User opted out of "Remember password" — sftp_password in DB is "".
-    # The middleware sets a session-scoped password; build_backend should
-    # pass it through to the new SFTPStorageBackend instance.
-    token = session_sftp_password.set("from-session")
-    try:
-        backend = build_backend(_Prefs())
-        assert isinstance(backend, SFTPStorageBackend)
-        assert backend._password == "from-session"
-    finally:
-        session_sftp_password.reset(token)
+def test_build_backend_uses_password_from_prefs():
+    """Passwords are always persisted (encrypted) on /api/sftp/test success.
+    The backend reads the decrypted password from prefs — no session
+    side-channel."""
+    backend = build_backend(_Prefs())
+    assert isinstance(backend, SFTPStorageBackend)
+    assert backend._password == "from-db"
 
 
-def test_build_backend_prefers_db_password_over_session():
-    # If both are present, the persisted (Remember=on) password wins.
+def test_build_backend_with_empty_password_still_returns_backend():
+    """When the password is missing (fresh hosted-mode session, secret
+    rotated), build_backend still returns an SFTPStorageBackend so the
+    eventual auth error happens in one place. The UI catches the empty
+    state up-front (has_stored_sftp_password=false) and shows the
+    Connect modal before hitting the tree endpoint."""
     class P(_Prefs):
-        sftp_password = "from-db"
+        sftp_password = ""
 
-    token = session_sftp_password.set("from-session")
-    try:
-        backend = build_backend(P())
-        assert backend._password == "from-db"
-    finally:
-        session_sftp_password.reset(token)
+    backend = build_backend(P())
+    assert isinstance(backend, SFTPStorageBackend)
+    assert backend._password == ""

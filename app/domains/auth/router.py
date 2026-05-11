@@ -380,11 +380,10 @@ async def auth_sftp_folder_picker(request: Request):
     parent = request.query_params.get("parent") or (prefs.sftp_path or "/")
     parent = parent.rstrip("/") or "/"
 
-    # We need a real password — either freshly entered (in session) or
-    # decrypted from DB (sftp_remember_password=true).
-    password = request.session.get("sftp_session_password") or prefs.sftp_password
+    # Password is persisted (encrypted) on /api/sftp/test success.
+    password = prefs.sftp_password
     if not password:
-        # Bounce back to settings — they need to re-enter and click Connect.
+        # Bounce back to settings — user needs to click Connect first.
         return RedirectResponse(url="/?sftp_password_required=1", status_code=303)
 
     # List subdirs

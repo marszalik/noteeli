@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-import contextvars
 import stat as _stat
 import tempfile
 import zipfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-
-# Per-request SFTP password set by the session middleware (see app/main.py).
-# When the user opts out of "Remember password", /api/sftp/test stashes the
-# verified password in request.session only — never in the DB. The middleware
-# copies it into this ContextVar so build_backend() can use it for the rest
-# of the session without WorkspaceService needing request access.
-session_sftp_password: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "session_sftp_password", default=""
-)
 
 
 @dataclass
@@ -910,10 +900,11 @@ def build_backend(prefs) -> StorageBackend:
             )
 
     if source_type == "sftp":
-        # If the user opted out of "Remember password", prefs.sftp_password
-        # is empty — fall back to the per-request session password set by
-        # the middleware so the connection still works for this session.
-        password = prefs.sftp_password or session_sftp_password.get()
+        # Password is always persisted (encrypted) on /api/sftp/test success.
+        # If it's empty here, the caller should surface a "needs password"
+        # state to the UI; we still build a backend so SFTPStorageBackend
+        # can raise the explicit auth error if invoked.
+        password = prefs.sftp_password or ""
         key = (prefs.sftp_host, prefs.sftp_port, prefs.sftp_username, password, prefs.sftp_path)
         if key not in _sftp_cache:
             _sftp_cache[key] = SFTPStorageBackend(*key)

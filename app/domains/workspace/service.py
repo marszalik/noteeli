@@ -97,6 +97,29 @@ class WorkspaceService:
     def get_preferences(self) -> AppPreferences:
         return self.preferences_service.get_preferences()
 
+    def save_sftp_credentials(
+        self,
+        *,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        path: str,
+    ) -> AppPreferences:
+        """Persist verified SFTP credentials and switch source_type to 'sftp'.
+        Called from /api/sftp/test after a successful connect. The password
+        is encrypted at rest in the repository layer."""
+        self._block_if_demo()
+        invalidate_sftp_cache()
+        return self.preferences_service.repository.update_app_preferences(
+            source_type="sftp",
+            sftp_host=host,
+            sftp_port=port,
+            sftp_username=username,
+            sftp_password=password,
+            sftp_path=path,
+        )
+
     def update_preferences(
         self,
         content_root: str,
@@ -108,7 +131,6 @@ class WorkspaceService:
         sftp_port: int = 22,
         sftp_username: str = "",
         sftp_password: str = "",
-        sftp_remember_password: bool = False,
         sftp_path: str = "/",
         gdrive_folder_id: str = "root",
         gdrive_credentials: str | None = None,
@@ -136,7 +158,6 @@ class WorkspaceService:
             sftp_port=sftp_port,
             sftp_username=sftp_username,
             sftp_password=sftp_password,
-            sftp_remember_password=sftp_remember_password,
             sftp_path=sftp_path,
             gdrive_folder_id=gdrive_folder_id,
             gdrive_credentials=gdrive_credentials,

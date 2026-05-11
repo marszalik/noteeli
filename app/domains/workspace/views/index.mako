@@ -289,14 +289,9 @@
               <label class="settings-label" data-i18n="label_password" for="sftp-password-input">Haslo</label>
               <input id="sftp-password-input" class="settings-input" type="password" value="" autocomplete="new-password" placeholder="${'•••••• (saved — leave blank to keep)' if preferences.has_stored_sftp_password else 'Required'}" />
 
-              <label class="settings-checkbox-label">
-                <input id="sftp-remember-input" type="checkbox" ${'checked' if preferences.sftp_remember_password else ''} />
-                <span data-i18n="sftp_remember_label">Remember password (encrypted in DB)</span>
-              </label>
-
               <label class="settings-label" data-i18n="label_remote_path" for="sftp-path-input">Sciezka zdalna</label>
               <input id="sftp-path-input" class="settings-input" type="text" value="${preferences.sftp_path}" placeholder="e.g. /home/alex/notes" />
-              <p class="muted small-note" data-i18n="sftp_password_hint">If you don't tick "Remember", the password is asked each session and never stored.</p>
+              <p class="muted small-note" data-i18n="sftp_password_hint">Password is encrypted at rest with a key derived from your session secret.</p>
 
               <button id="sftp-connect-button" type="button" class="button button-primary" style="margin-top:12px">
                 Connect to SFTP

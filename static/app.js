@@ -55,7 +55,6 @@ if (shell) {
   const sftpPortInput = document.getElementById("sftp-port-input");
   const sftpUsernameInput = document.getElementById("sftp-username-input");
   const sftpPasswordInput = document.getElementById("sftp-password-input");
-  const sftpRememberInput = document.getElementById("sftp-remember-input");
   const sftpPathInput = document.getElementById("sftp-path-input");
   const gdriveFolderIdInput = document.getElementById("gdrive-folder-id-input");
   const sortModeSelect = document.getElementById("sort-mode-select");
@@ -1082,7 +1081,8 @@ if (shell) {
       label_notes_dir: "Katalog notatek", browse: "Przeglądaj",
       label_port: "Port", label_user: "Użytkownik",
       label_password: "Hasło", label_remote_path: "Ścieżka zdalna",
-      sftp_password_hint: "Bez zaznaczenia \"Zapamiętaj\" hasło nie jest zapisywane.", sftp_remember_label: "Zapamiętaj hasło (zaszyfrowane w bazie)",
+      sftp_password_hint: "Hasło jest zaszyfrowane kluczem pochodzącym z sekretu sesji.",
+      sftp_password_prompt: "Podaj hasło SFTP, żeby połączyć się z notatnikiem.",
       gdrive_connected: "Google Drive: połączono",
       gdrive_disconnected: "Google Drive: brak autoryzacji",
       gdrive_reconnect: "Połącz ponownie", gdrive_authorize: "Autoryzuj Drive",
@@ -1218,7 +1218,8 @@ if (shell) {
       label_notes_dir: "Notes directory", browse: "Browse",
       label_port: "Port", label_user: "Username",
       label_password: "Password", label_remote_path: "Remote path",
-      sftp_password_hint: "If you don't tick \"Remember\", the password is asked each session and never stored.", sftp_remember_label: "Remember password (encrypted in DB)",
+      sftp_password_hint: "Password is encrypted at rest with a key derived from your session secret.",
+      sftp_password_prompt: "Enter your SFTP password to connect to your notebook.",
       gdrive_connected: "Google Drive: connected",
       gdrive_disconnected: "Google Drive: not authorized",
       gdrive_reconnect: "Reconnect", gdrive_authorize: "Authorize Drive",
@@ -1354,7 +1355,8 @@ if (shell) {
       label_notes_dir: "Directorio de notas", browse: "Explorar",
       label_port: "Puerto", label_user: "Usuario",
       label_password: "Contraseña", label_remote_path: "Ruta remota",
-      sftp_password_hint: "Sin marcar \"Recordar\" la contraseña no se guarda.", sftp_remember_label: "Recordar contraseña (cifrada en la BD)",
+      sftp_password_hint: "La contraseña se cifra con una clave derivada del secreto de sesión.",
+      sftp_password_prompt: "Introduce tu contraseña SFTP para conectarte al cuaderno.",
       gdrive_connected: "Google Drive: conectado",
       gdrive_disconnected: "Google Drive: no autorizado",
       gdrive_reconnect: "Reconectar", gdrive_authorize: "Autorizar Drive",
@@ -1490,7 +1492,8 @@ if (shell) {
       label_notes_dir: "Notizenverzeichnis", browse: "Durchsuchen",
       label_port: "Port", label_user: "Benutzer",
       label_password: "Passwort", label_remote_path: "Remotepfad",
-      sftp_password_hint: "Ohne \"Merken\" wird das Passwort nicht gespeichert.", sftp_remember_label: "Passwort merken (verschlüsselt in DB)",
+      sftp_password_hint: "Das Passwort wird mit einem aus dem Session-Secret abgeleiteten Schlüssel verschlüsselt.",
+      sftp_password_prompt: "Gib dein SFTP-Passwort ein, um dein Notizbuch zu verbinden.",
       gdrive_connected: "Google Drive: verbunden",
       gdrive_disconnected: "Google Drive: nicht autorisiert",
       gdrive_reconnect: "Erneut verbinden", gdrive_authorize: "Drive autorisieren",
@@ -1626,7 +1629,8 @@ if (shell) {
       label_notes_dir: "Каталог заметок", browse: "Обзор",
       label_port: "Порт", label_user: "Пользователь",
       label_password: "Пароль", label_remote_path: "Удалённый путь",
-      sftp_password_hint: "Без флажка \"Запомнить\" пароль не сохраняется.", sftp_remember_label: "Запомнить пароль (зашифровано в БД)",
+      sftp_password_hint: "Пароль шифруется ключом, выведенным из секрета сессии.",
+      sftp_password_prompt: "Введите пароль SFTP, чтобы подключиться к блокноту.",
       gdrive_connected: "Google Drive: подключён",
       gdrive_disconnected: "Google Drive: нет авторизации",
       gdrive_reconnect: "Переподключить", gdrive_authorize: "Авторизовать Drive",
@@ -2322,7 +2326,6 @@ if (shell) {
       sftp_port: parseInt(sftpPortInput?.value || "22", 10),
       sftp_username: sftpUsernameInput?.value || "",
       sftp_password: sftpPasswordInput?.value || "",
-      sftp_remember_password: Boolean(sftpRememberInput?.checked),
       sftp_path: sftpPathInput?.value || "/",
       gdrive_folder_id: gdriveFolderIdInput?.value || "root",
       sort_mode: sortModeSelect.value,
@@ -2350,7 +2353,6 @@ if (shell) {
         ? "•••••• (saved — leave blank to keep)"
         : "Required";
     }
-    if (sftpRememberInput) sftpRememberInput.checked = Boolean(nextPreferences.sftp_remember_password);
     if (sftpPathInput) sftpPathInput.value = nextPreferences.sftp_path || "/";
     if (gdriveFolderIdInput) gdriveFolderIdInput.value = nextPreferences.gdrive_folder_id || "root";
     sortModeSelect.value = nextPreferences.sort_mode;
@@ -4292,6 +4294,22 @@ if (shell) {
   // ── SFTP connect button ─────────────────────────────────────────
   const sftpConnectBtn = document.getElementById("sftp-connect-button");
   const sftpConnectStatus = document.getElementById("sftp-connect-status");
+
+  // Called on app load when source=sftp but no password is on file
+  // (e.g. fresh hosted-mode session). Opens Settings on the Source tab,
+  // focuses the password field, and surfaces a clear status hint.
+  function promptForSftpPassword() {
+    openSettingsModal();
+    setActiveSettingsTab("source");
+    setTimeout(() => {
+      sftpPasswordInput?.focus();
+      if (sftpConnectStatus) {
+        sftpConnectStatus.textContent = t("sftp_password_prompt");
+        sftpConnectStatus.style.color = "";
+      }
+    }, 50);
+    setStatus(t("sftp_password_prompt"));
+  }
   sftpConnectBtn?.addEventListener("click", async () => {
     if (!config.sftpTestUrl) return;
     sftpConnectBtn.disabled = true;
@@ -4316,14 +4334,10 @@ if (shell) {
         return;
       }
       sftpConnectStatus.textContent = "✓ Connected. Opening folder picker…";
-      // Persist creds so the folder picker page can use them. The
-      // password is also kept in the SERVER session for this hop —
-      // /api/sftp/test stashes it under sftp_session_password so the
-      // picker can browse without re-asking.
+      // /api/sftp/test has already persisted the verified creds
+      // (encrypted at rest) and switched source_type to 'sftp'. Hand
+      // off to the folder picker so the user can pick a remote dir.
       if (sourceTypeSelect) sourceTypeSelect.value = "sftp";
-      await persistPreferences({ source_type: "sftp" });
-      // Hard-redirect into the folder picker; it'll save final sftp_path
-      // and bounce back to "/" when the user chooses a directory.
       window.location.href = "/auth/sftp/folder";
     } catch (err) {
       sftpConnectStatus.textContent = `Error: ${err.message || err}`;
@@ -4351,7 +4365,17 @@ if (shell) {
   } else {
     loadPreferences()
       .then(() => loadPreferenceProfiles())
-      .then(() => loadTree({ autoSelect: true }))
+      .then(() => {
+        // SFTP configured but no password on file → prompt before
+        // attempting loadTree. Avoids a 500 in the status bar on first
+        // entry; gives the user a clear "enter your password" UX.
+        const prefs = preferences;
+        if (prefs?.source_type === "sftp" && !prefs.has_stored_sftp_password) {
+          promptForSftpPassword();
+          return;
+        }
+        return loadTree({ autoSelect: true });
+      })
       .catch((error) => setStatus(error.message, true));
   }
 }

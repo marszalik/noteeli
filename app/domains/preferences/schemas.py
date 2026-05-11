@@ -17,7 +17,6 @@ class AppPreferences(BaseModel):
     sftp_port: int = Field(default=22, ge=1, le=65535)
     sftp_username: str = ""
     sftp_password: str = ""
-    sftp_remember_password: bool = False
     has_stored_sftp_password: bool = False  # read-only, server-set
     sftp_path: str = "/"
     gdrive_folder_id: str = "root"
@@ -38,7 +37,6 @@ class UpdatePreferencesRequest(BaseModel):
     sftp_port: int = Field(default=22, ge=1, le=65535)
     sftp_username: str = ""
     sftp_password: str = ""              # empty = "keep existing"; non-empty = "replace"
-    sftp_remember_password: bool = False
     sftp_path: str = "/"
     gdrive_folder_id: str = "root"
     sort_mode: SortMode

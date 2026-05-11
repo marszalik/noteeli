@@ -71,26 +71,6 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.app_name)
 
-    # Copy the session-scoped SFTP password into a ContextVar so
-    # storage.build_backend() can authenticate even when the user
-    # opted out of persisting the password to DB. Starlette runs
-    # later-added middlewares as OUTER, so we register this one
-    # BEFORE SessionMiddleware — SessionMiddleware then wraps it
-    # and populates request.session before this body runs.
-    from app.domains.workspace.storage import session_sftp_password
-
-    @app.middleware("http")
-    async def _propagate_sftp_session_password(request: Request, call_next):
-        try:
-            pwd = request.session.get("sftp_session_password", "")
-        except (AssertionError, KeyError):
-            pwd = ""
-        token = session_sftp_password.set(pwd)
-        try:
-            return await call_next(request)
-        finally:
-            session_sftp_password.reset(token)
-
     # In hosted mode, the session cookie is set by noteeli.com and shared
     # across .noteeli.com (cookie domain). Both apps MUST use the same
     # session_secret and cookie name.

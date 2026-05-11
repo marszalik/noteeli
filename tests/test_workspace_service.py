@@ -778,3 +778,52 @@ def test_demo_mode_blocks_browsed_directory_creation(tmp_path: Path):
     with pytest.raises(DemoReadOnlyError):
         service.create_browsed_directory(str(notes), "shouldnt-exist")
     assert not (notes / "shouldnt-exist").exists()
+
+
+# ── save_sftp_credentials: end-to-end persistence + readback ────────
+
+
+def test_save_sftp_credentials_persists_encrypted_password(tmp_path: Path):
+    """The /api/sftp/test endpoint calls save_sftp_credentials() after a
+    successful connect. After this call:
+
+      - source_type flips to 'sftp'
+      - host/port/user/path are stored as-is
+      - password is encrypted at rest (Fernet) but read back decrypted
+      - has_stored_sftp_password is True so the UI knows not to prompt
+    """
+    service = build_service(tmp_path / "vault")
+
+    saved = service.save_sftp_credentials(
+        host="sftp.example.com",
+        port=2222,
+        username="alice",
+        password="s3cret",
+        path="/srv/notes",
+    )
+
+    assert saved.source_type == "sftp"
+    assert saved.sftp_host == "sftp.example.com"
+    assert saved.sftp_port == 2222
+    assert saved.sftp_username == "alice"
+    assert saved.sftp_path == "/srv/notes"
+    assert saved.sftp_password == "s3cret"            # decrypted
+    assert saved.has_stored_sftp_password is True
+
+    # Verify it survives a fresh service instance (i.e. it's actually
+    # in the DB, not just in memory).
+    fresh = build_service(tmp_path / "vault")
+    reloaded = fresh.get_preferences()
+    assert reloaded.sftp_password == "s3cret"
+    assert reloaded.has_stored_sftp_password is True
+
+    # And confirm the raw DB column is NOT plaintext.
+    import sqlite3
+    db_path = tmp_path / ".noteeli" / "noteeli.sqlite3"
+    conn = sqlite3.connect(db_path)
+    raw = conn.execute(
+        "SELECT value FROM app_settings WHERE key = 'sftp_password'"
+    ).fetchone()
+    conn.close()
+    assert raw[0] != "s3cret"
+    assert raw[0].startswith("gAAAAA")  # Fernet token prefix

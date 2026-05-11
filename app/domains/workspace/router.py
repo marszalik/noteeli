@@ -366,11 +366,16 @@ async def workspace_sftp_test_api(request: Request):
                 sftp.close()
         finally:
             ssh.close()
-        # Stash the verified password in the server session so the next
-        # step (folder picker) can browse without re-prompting. Lives
-        # only for this session — never written to disk unless the user
-        # ticked "Remember password" before saving prefs.
-        request.session["sftp_session_password"] = body.get("password", "")
+        # Persist the verified credentials so the folder picker and the
+        # workspace can use them. Password is encrypted at rest (Fernet,
+        # key derived from NOTEELI_SESSION_SECRET).
+        workspace_service.save_sftp_credentials(
+            host=body.get("host", ""),
+            port=int(body.get("port", 22)),
+            username=body.get("username", ""),
+            password=body.get("password", ""),
+            path=(body.get("path", "/") or "/").rstrip("/") or "/",
+        )
         return {"ok": True}
     except Exception as exc:
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
@@ -389,7 +394,6 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
         sftp_port=payload.sftp_port,
         sftp_username=payload.sftp_username,
         sftp_password=payload.sftp_password,
-        sftp_remember_password=payload.sftp_remember_password,
         sftp_path=payload.sftp_path,
         gdrive_folder_id=payload.gdrive_folder_id,
         autosave_enabled=payload.autosave_enabled,
