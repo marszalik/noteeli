@@ -348,6 +348,14 @@
               step="1"
               value="${preferences.editor_font_size}"
             />
+
+            <label class="settings-toggle">
+              <input id="compact-chrome-input" type="checkbox" ${'checked' if preferences.compact_chrome else ''} />
+              <span>
+                <strong data-i18n="label_compact_chrome">Kompaktowy układ (bez ramek)</strong>
+                <small class="muted" data-i18n="compact_chrome_hint">Usuwa zaokrąglone obramowania paneli i zewnętrzny margines, żeby zyskać miejsce na treść.</small>
+              </span>
+            </label>
           </section>
 
           <section class="settings-tab-panel hidden" data-panel="editor" role="tabpanel">
@@ -362,14 +370,6 @@
               <span>
                 <strong data-i18n="label_autosave">Automatyczny zapis</strong>
                 <small class="muted" data-i18n="autosave_hint">Zapisuje zmiany po krotkiej pauzie w pisaniu.</small>
-              </span>
-            </label>
-
-            <label class="settings-toggle">
-              <input id="compact-chrome-input" type="checkbox" ${'checked' if preferences.compact_chrome else ''} />
-              <span>
-                <strong data-i18n="label_compact_chrome">Kompaktowy układ (bez ramek)</strong>
-                <small class="muted" data-i18n="compact_chrome_hint">Usuwa zaokrąglone obramowania paneli i zewnętrzny margines, żeby zyskać miejsce na treść.</small>
               </span>
             </label>
 
