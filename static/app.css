@@ -1007,7 +1007,9 @@ body[data-theme="noteeli"] .sidebar-tree-icon.is-active {
 
 .context-menu {
   position: fixed;
-  z-index: 50;
+  /* Must beat the sidebar-overlay (z:200) used in RWD/mobile, where the
+     sidebar floats as a drawer; otherwise the menu hides behind it. */
+  z-index: 300;
   width: min(280px, calc(100vw - 24px));
   padding: 0.5rem;
   border-radius: 18px;
