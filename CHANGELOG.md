@@ -11,6 +11,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **New default look:** fresh installs/users now start with the Webnote.li
+  theme, the compact (frameless) layout enabled, and the Magazine markdown
+  rendering style. Existing instances keep whatever they already had.
+
 ### Added
 
 - **Duplicate (file context menu)** — copies any file into the same folder

@@ -22,13 +22,13 @@ class AppPreferences(BaseModel):
     gdrive_folder_id: str = "root"
     gdrive_credentials: str = ""
     sort_mode: SortMode = "alphabetical"
-    theme_mode: ThemeMode = "noteeli"
+    theme_mode: ThemeMode = "webnote"
     editor_font_size: int = Field(default=16, ge=12, le=28)
     autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
-    compact_chrome: bool = False
+    compact_chrome: bool = True
 
 
 class UpdatePreferencesRequest(BaseModel):
@@ -47,7 +47,7 @@ class UpdatePreferencesRequest(BaseModel):
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
-    compact_chrome: bool = False
+    compact_chrome: bool = True
 
 
 class SavedPreferencesProfile(BaseModel):
@@ -63,13 +63,13 @@ class SavedPreferencesProfile(BaseModel):
     gdrive_folder_id: str = "root"
     gdrive_credentials: str = ""
     sort_mode: SortMode = "alphabetical"
-    theme_mode: ThemeMode = "noteeli"
+    theme_mode: ThemeMode = "webnote"
     editor_font_size: int = Field(default=16, ge=12, le=28)
     autosave_enabled: bool = False
     image_upload_mode: ImageUploadMode = "same_dir"
     image_upload_subdir: str = "assets"
     language: Language = "en"
-    compact_chrome: bool = False
+    compact_chrome: bool = True
 
 
 class SavedPreferencesProfilesResponse(BaseModel):

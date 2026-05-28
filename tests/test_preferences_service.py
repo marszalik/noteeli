@@ -131,19 +131,19 @@ def test_compact_chrome_round_trips(tmp_path):
     repo = PreferencesRepository(settings)
     service = PreferencesService(settings, repo)
 
-    # Default is False
-    assert service.get_preferences().compact_chrome is False
+    # Default is on (frameless layout ships as the default look).
+    assert service.get_preferences().compact_chrome is True
 
-    # Toggle on, persist
+    # Toggle off, persist
     updated = service.update_preferences(
         content_root=str(tmp_path / "notes"),
         sort_mode="alphabetical",
-        theme_mode="noteeli",
+        theme_mode="webnote",
         editor_font_size=14,
-        compact_chrome=True,
+        compact_chrome=False,
     )
-    assert updated.compact_chrome is True
+    assert updated.compact_chrome is False
 
     # Survives a fresh repo (i.e. it's in SQLite, not just memory)
     reloaded = PreferencesService(settings, PreferencesRepository(settings)).get_preferences()
-    assert reloaded.compact_chrome is True
+    assert reloaded.compact_chrome is False

@@ -34,13 +34,13 @@ class PreferencesRepository:
             ("gdrive_folder_id", "root"),
             ("gdrive_credentials", ""),
             ("sort_mode", "alphabetical"),
-            ("theme_mode", "light"),
+            ("theme_mode", "webnote"),
             ("editor_font_size", "16"),
             ("autosave_enabled", "false"),
             ("image_upload_mode", "same_dir"),
             ("image_upload_subdir", "assets"),
             ("language", "pl"),
-            ("compact_chrome", "false"),
+            ("compact_chrome", "true"),
         )
         with self._connect() as connection:
             connection.execute(
@@ -314,13 +314,13 @@ class PreferencesRepository:
             gdrive_folder_id=values.get("gdrive_folder_id", "root"),
             gdrive_credentials=values.get("gdrive_credentials", ""),
             sort_mode=values.get("sort_mode", "alphabetical"),
-            theme_mode=values.get("theme_mode", "light"),
+            theme_mode=values.get("theme_mode", "webnote"),
             editor_font_size=int(values.get("editor_font_size", "16")),
             autosave_enabled=self._coerce_bool(values.get("autosave_enabled", False)),
             image_upload_mode=values.get("image_upload_mode", "same_dir"),
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
             language=values.get("language", "pl"),
-            compact_chrome=self._coerce_bool(values.get("compact_chrome", False)),
+            compact_chrome=self._coerce_bool(values.get("compact_chrome", True)),
         )
 
     def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:

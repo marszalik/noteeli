@@ -2333,18 +2333,23 @@ if (shell) {
     });
   }
 
+  // Default markdown rendering style for fresh sessions (no saved choice).
+  const DEFAULT_MD_STYLE = "magazine";
+
   function applyMarkdownStyle(style) {
-    document.body.dataset.mdStyle = style || "default";
+    document.body.dataset.mdStyle = style || DEFAULT_MD_STYLE;
   }
 
   // Restore previously chosen markdown style on page load.
-  applyMarkdownStyle(localStorage.getItem("markdown-style") || "default");
+  applyMarkdownStyle(localStorage.getItem("markdown-style") || DEFAULT_MD_STYLE);
 
   if (markdownStyleSelect) {
-    markdownStyleSelect.value = localStorage.getItem("markdown-style") || "default";
+    markdownStyleSelect.value = localStorage.getItem("markdown-style") || DEFAULT_MD_STYLE;
     markdownStyleSelect.addEventListener("change", () => {
-      const value = markdownStyleSelect.value || "default";
-      if (value === "default") localStorage.removeItem("markdown-style");
+      const value = markdownStyleSelect.value || DEFAULT_MD_STYLE;
+      // localStorage only stores a non-default override; picking the
+      // default clears it.
+      if (value === DEFAULT_MD_STYLE) localStorage.removeItem("markdown-style");
       else localStorage.setItem("markdown-style", value);
       applyMarkdownStyle(value);
     });
