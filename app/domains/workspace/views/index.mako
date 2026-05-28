@@ -85,6 +85,9 @@
           <button id="refresh-tree" class="icon-button icon-button-small" type="button" aria-label="Refresh tree" title="Refresh tree">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
           </button>
+          <button id="tree-search-toggle" class="icon-button icon-button-small" type="button" aria-label="Search files" aria-pressed="false" title="Search files" data-i18n-title="tree_search_title">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+          </button>
           <span class="sidebar-toolbar-sep"></span>
           <button id="reset-tree-root" class="icon-button icon-button-small sidebar-tree-icon hidden" type="button" aria-label="Back to full tree" title="Back to full tree">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6V3L5 8l5 5V9c3.31 0 6 2.69 6 6 0 .7-.12 1.36-.34 1.98l1.53 1.53A7.92 7.92 0 0 0 18 15c0-4.42-3.58-8-8-8zm-6 9c0 4.42 3.58 8 8 8 1.85 0 3.55-.63 4.9-1.69l-1.46-1.46A5.96 5.96 0 0 1 12 21c-3.31 0-6-2.69-6-6 0-.7.12-1.36.34-1.98L4.81 11.5A7.92 7.92 0 0 0 4 15z"/></svg>
@@ -92,6 +95,18 @@
           <button id="toggle-hidden-files" class="icon-button icon-button-small sidebar-tree-icon" type="button" aria-label="Show hidden files" aria-pressed="false" title="Show hidden files">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l1.4 1.5H17.5A2.5 2.5 0 0 1 20 8v1h-2V8a.5.5 0 0 0-.5-.5h-6.9L9.2 6H6.5A.5.5 0 0 0 6 6.5V8H4zm-.5 3H20l-1.6 8.1A2.5 2.5 0 0 1 15.95 20H7.05a2.5 2.5 0 0 1-2.45-2.4z"/></svg>
           </button>
+        </div>
+        <div id="tree-search-row" class="tree-search-row hidden">
+          <input
+            id="tree-search-input"
+            type="search"
+            class="tree-search-input"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Szukaj plików…"
+            data-i18n-placeholder="tree_search_placeholder"
+            aria-label="Search files by name"
+          />
         </div>
       </div>
 

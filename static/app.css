@@ -988,6 +988,49 @@ body[data-theme="noteeli"] .modal-header h3 {
   color: var(--accent);
 }
 
+/* File search box — revealed by the magnifier toggle in the toolbar. */
+.tree-search-row {
+  margin-top: 0.5rem;
+}
+
+.tree-search-row.hidden {
+  display: none;
+}
+
+.tree-search-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+}
+
+.tree-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.tree-search-input::placeholder {
+  color: var(--muted);
+}
+
+body[data-theme="dark"] .tree-search-input,
+body[data-theme="noteeli"] .tree-search-input {
+  background: rgba(8, 17, 26, 0.6);
+  border-color: var(--line-strong);
+}
+
+.tree-search-empty {
+  padding: 1rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 body[data-theme="dark"] .sidebar-tree-icon,
 body[data-theme="noteeli"] .sidebar-tree-icon {
   background: rgba(17, 24, 39, 0.78);

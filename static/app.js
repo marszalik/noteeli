@@ -124,6 +124,7 @@ if (shell) {
   let directoryBrowserCreateOpen = false;
   let contextMenuState = null;
   let showHiddenFiles = false;
+  let treeSearchQuery = "";
   let scopedRootPath = "";
   let uploadTargetPath = "";
   let pendingUploadFiles = [];
@@ -1204,6 +1205,9 @@ if (shell) {
       st_updating_order: "Aktualizuję kolejność...",
       st_order_saved: "Kolejność zapisana.",
       st_showing_hidden: "Ukryte pliki są widoczne.",
+      tree_search_title: "Szukaj plików",
+      tree_search_placeholder: "Szukaj plików…",
+      tree_search_no_results: "Brak plików pasujących do wyszukiwania.",
       st_hiding_hidden: "Ukryte pliki są ukryte.",
     },
     en: {
@@ -1343,6 +1347,9 @@ if (shell) {
       st_updating_order: "Updating order...",
       st_order_saved: "Order saved.",
       st_showing_hidden: "Hidden files are visible.",
+      tree_search_title: "Search files",
+      tree_search_placeholder: "Search files…",
+      tree_search_no_results: "No files match your search.",
       st_hiding_hidden: "Hidden files are hidden.",
     },
     es: {
@@ -1482,6 +1489,9 @@ if (shell) {
       st_updating_order: "Actualizando orden...",
       st_order_saved: "Orden guardado.",
       st_showing_hidden: "Los archivos ocultos son visibles.",
+      tree_search_title: "Buscar archivos",
+      tree_search_placeholder: "Buscar archivos…",
+      tree_search_no_results: "Ningún archivo coincide con la búsqueda.",
       st_hiding_hidden: "Los archivos ocultos están ocultos.",
     },
     de: {
@@ -1621,6 +1631,9 @@ if (shell) {
       st_updating_order: "Reihenfolge wird aktualisiert...",
       st_order_saved: "Reihenfolge gespeichert.",
       st_showing_hidden: "Versteckte Dateien sind sichtbar.",
+      tree_search_title: "Dateien suchen",
+      tree_search_placeholder: "Dateien suchen…",
+      tree_search_no_results: "Keine Dateien entsprechen der Suche.",
       st_hiding_hidden: "Versteckte Dateien sind ausgeblendet.",
     },
     ru: {
@@ -1760,6 +1773,9 @@ if (shell) {
       st_updating_order: "Обновление порядка...",
       st_order_saved: "Порядок сохранён.",
       st_showing_hidden: "Скрытые файлы видны.",
+      tree_search_title: "Поиск файлов",
+      tree_search_placeholder: "Поиск файлов…",
+      tree_search_no_results: "Нет файлов, соответствующих поиску.",
       st_hiding_hidden: "Скрытые файлы скрыты.",
     },
   };
@@ -1785,6 +1801,12 @@ if (shell) {
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       const key = el.dataset.i18nPlaceholder;
       if (t[key] !== undefined) el.placeholder = t[key];
+    });
+
+    // Translate tooltip titles on elements with [data-i18n-title]
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+      const key = el.dataset.i18nTitle;
+      if (t[key] !== undefined) el.title = t[key];
     });
 
     // Update dynamic text nodes that are set by JS
@@ -3283,6 +3305,28 @@ if (shell) {
     };
   }
 
+  // Recursively keep only nodes whose name contains the query (case-
+  // insensitive), plus any ancestor directories on the path to a match.
+  // A directory whose own name matches keeps all its children. Returns
+  // null when nothing in this subtree matches.
+  function filterTreeBySearch(node, query) {
+    const selfMatch = node.name.toLowerCase().includes(query);
+    if (node.kind !== "directory") {
+      return selfMatch ? node : null;
+    }
+    const matchedChildren = (node.children || [])
+      .map((child) => filterTreeBySearch(child, query))
+      .filter(Boolean);
+    if (selfMatch) {
+      // Folder name itself matches → show it with its full contents.
+      return { ...node, children: node.children || [] };
+    }
+    if (matchedChildren.length) {
+      return { ...node, children: matchedChildren };
+    }
+    return null;
+  }
+
   function enableDragAndDrop(row, node) {
     if (!node.path) {
       return;
@@ -3492,7 +3536,10 @@ if (shell) {
       const toggle = document.createElement("button");
       toggle.type = "button";
       toggle.className = "tree-toggle";
-      const isExpanded = expandedDirectories.has(node.path);
+      // While searching, force every surviving folder open so matches deep
+      // in the tree are visible without manual expansion.
+      const isExpanded =
+        Boolean(treeSearchQuery.trim()) || expandedDirectories.has(node.path);
       toggle.appendChild(makeSvgIcon(isExpanded ? TREE_ICONS.chevronDown : TREE_ICONS.chevronRight));
       toggle.addEventListener("click", () => {
         if (expandedDirectories.has(node.path)) {
@@ -3581,7 +3628,15 @@ if (shell) {
     }
 
     const scopedNode = getScopedRootNode(node);
-    const visibleNode = filterVisibleTree(scopedNode);
+    let visibleNode = filterVisibleTree(scopedNode);
+
+    const searchQuery = treeSearchQuery.trim().toLowerCase();
+    if (searchQuery) {
+      const matchedChildren = (visibleNode.children || [])
+        .map((child) => filterTreeBySearch(child, searchQuery))
+        .filter(Boolean);
+      visibleNode = { ...visibleNode, children: matchedChildren };
+    }
 
     if (scopedRootPath && visibleNode.path) {
       const scopeBar = document.createElement("div");
@@ -3605,6 +3660,14 @@ if (shell) {
       scopeBar.appendChild(label);
 
       treeRoot.appendChild(scopeBar);
+    }
+
+    if (searchQuery && !(visibleNode.children || []).length) {
+      const empty = document.createElement("div");
+      empty.className = "tree-search-empty";
+      empty.textContent = t("tree_search_no_results");
+      treeRoot.appendChild(empty);
+      return;
     }
 
     const list = document.createElement("ul");
@@ -4115,6 +4178,44 @@ if (shell) {
     applyHiddenFilesToggleState();
     renderTree(treeData);
     setStatus(showHiddenFiles ? t("st_showing_hidden") : t("st_hiding_hidden"));
+  });
+
+  // ── File search ─────────────────────────────────────────────────
+  const treeSearchToggle = document.getElementById("tree-search-toggle");
+  const treeSearchRow = document.getElementById("tree-search-row");
+  const treeSearchInput = document.getElementById("tree-search-input");
+
+  function setTreeSearchOpen(open) {
+    treeSearchRow.classList.toggle("hidden", !open);
+    treeSearchToggle.setAttribute("aria-pressed", open ? "true" : "false");
+    treeSearchToggle.classList.toggle("is-active", open);
+    if (open) {
+      treeSearchInput.focus();
+      treeSearchInput.select();
+    } else {
+      // Closing clears the filter and restores the normal tree.
+      if (treeSearchQuery) {
+        treeSearchQuery = "";
+        treeSearchInput.value = "";
+        renderTree(treeData);
+      }
+    }
+  }
+
+  treeSearchToggle?.addEventListener("click", () => {
+    setTreeSearchOpen(treeSearchRow.classList.contains("hidden"));
+  });
+
+  treeSearchInput?.addEventListener("input", () => {
+    treeSearchQuery = treeSearchInput.value;
+    renderTree(treeData);
+  });
+
+  treeSearchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setTreeSearchOpen(false);
+    }
   });
 
   treeRoot.addEventListener("dragover", (event) => {

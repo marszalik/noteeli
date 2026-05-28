@@ -251,6 +251,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Drag-resize sidebar width, persisted | 🌐 | `setSidebarWidth` |
 | Mobile overlay mode with backdrop | 🌐 | `.app-shell.sidebar-overlay::before` |
 | Refresh tree button | 🌐 | `refreshButton` |
+| File search box (magnifier toggle) — filter tree by name fragment, auto-expands matching folders | 🌐 | `filterTreeBySearch`, `treeSearchQuery`, toggle `#tree-search-toggle` |
 | New file / new directory toolbar buttons | 🌐 | `openCreateModal` |
 | Tree-row context menu with icons + i18n labels (open / scope / upload / new file / new folder / download / copy path / rename / refresh / delete) | 🌐 | `renderTreeContextMenu` (recent overhaul) |
 

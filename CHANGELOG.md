@@ -13,6 +13,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **File search in the sidebar** — a magnifier button next to the refresh
+  icon reveals a search box that filters the tree by name fragment
+  (case-insensitive). Matching folders auto-expand so deep matches are
+  visible; Escape or toggling the button clears it. Labels in all 5
+  locales.
+
 - **Settings → Appearance → "Compact layout (no frames)"** — toggle that
   removes the rounded panel borders, drop shadows, and the outer
   padding/gap around the sidebar and workspace. Live preview while the
