@@ -183,7 +183,9 @@ body[data-theme="webnote"] .label {
 body[data-theme="webnote"] .tree-link {
   font-size: 0.86rem;
   border-radius: 10px;
-  padding: 6px 10px;
+  /* Horizontal padding matches the base theme (0.15rem) so the
+     chevron→folder gap stays tight; keep the taller 6px vertical. */
+  padding: 6px 0.15rem;
   color: var(--muted);
   border: 1px solid transparent;
 }
