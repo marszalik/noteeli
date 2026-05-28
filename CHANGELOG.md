@@ -11,11 +11,7 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- **New default look:** fresh installs/users now start with the Webnote.li
-  theme, the compact (frameless) layout enabled, and the Magazine markdown
-  rendering style. Existing instances keep whatever they already had.
+## [1.2.0] - 2026-05-28
 
 ### Added
 
@@ -38,41 +34,44 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **New default look:** fresh installs/users now start with the Webnote.li
+  theme, the compact (frameless) layout enabled, and the Magazine markdown
+  rendering style. Existing instances keep whatever they already had.
+
 - **SFTP password is now always persisted (encrypted at rest).** The
-  "Remember password" checkbox is gone — it created a fragile transient
-  mode (ContextVar + request middleware) that intermittently failed on
-  hosted instances, and it didn't add real security: the database is
-  already encrypted with Fernet using a key derived from
-  `NOTEELI_SESSION_SECRET`, so a stolen `noteeli.sqlite3` file is useless
-  without the env file. Side effects of this cleanup:
-  - `sftp_remember_password` removed from preferences schema, API
-    payload, repository defaults, and the Source tab UI.
-  - `/api/sftp/test` now persists the verified credentials directly
-    (calls `WorkspaceService.save_sftp_credentials` — new method).
-  - The session-stash `sftp_session_password` is gone, along with the
-    request middleware in `app/main.py` and the ContextVar in
-    `app/domains/workspace/storage.py`. Everyone reads `prefs.sftp_password`.
-  - The SFTP folder-picker page (`/auth/sftp/folder`) drops its session
-    lookup and reads the persisted password.
+  "Remember password" checkbox is gone — it added no real security (the
+  password is encrypted with Fernet using a key derived from
+  `NOTEELI_SESSION_SECRET`, so a stolen `noteeli.sqlite3` is useless
+  without the env file) and the transient session-only mode was fragile
+  on hosted instances. `/api/sftp/test` now persists the verified
+  credentials directly (`WorkspaceService.save_sftp_credentials`); the
+  `sftp_remember_password` field and the per-request session-password
+  plumbing were removed.
+
 - **First-load UX when SFTP is configured but no password is on file:**
   the Settings modal opens on the Source tab with the password input
   focused and a clear "Enter your SFTP password to connect" hint, so
   users no longer see a generic error in the status bar.
 
+- **Tree sidebar readability:** tighter chevron→folder spacing and file
+  icons aligned directly under sibling folders at every depth and theme.
+
 ### Fixed
 
+- **SFTP authentication failed after picking a folder.** The workspace
+  could freeze on tree load with an auth error after configuring SFTP;
+  credentials are now persisted on connect, so the tree loads reliably.
+
+- **Context menu hidden under the sidebar in mobile/RWD mode** — bumped
+  its z-index above the floating sidebar drawer.
+
+- **PWA served stale CSS/JS after deploys.** Same-origin static assets
+  are now fetched network-first (cached copy kept only as an offline
+  fallback), so updates appear on the next reload.
+
 - **Onboarding: Settings modal now auto-opens after Google login** when
-  storage isn't configured yet. Previously users only saw a "Welcome"
-  banner with a Settings link and had to click it to start setup.
-- **SFTP authentication failed after picking a folder** when the user
-  opted out of "Remember password". The verified password was kept in
-  the server session for the folder-picker hop, but `build_backend()`
-  read `prefs.sftp_password` (empty) and returned an unauthenticated
-  connection, freezing the workspace on tree load. A request middleware
-  now propagates `request.session["sftp_session_password"]` into a
-  ContextVar that `build_backend()` falls back to when the DB column is
-  empty — so "Remember = no" means "don't persist across sessions",
-  not "fail within this session".
+  storage isn't configured yet, instead of only showing a banner.
+
 - **Misleading "Błąd usuwania pliku" (Delete error) on any API failure.**
   The generic fallback in `requestJson`/`requestMultipart` reused the
   delete-specific i18n key. Replaced with a dedicated `st_request_failed`
