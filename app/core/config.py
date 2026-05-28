@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -61,6 +61,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _demo_is_never_hosted(self) -> "Settings":
+        # Demo and hosted are mutually exclusive: the public demo is a
+        # local, read-only, no-auth instance. It commonly runs from the
+        # same working directory as the hosted app, so it would otherwise
+        # inherit NOTEELI_HOSTED_MODE=1 from a shared .env and then refuse
+        # local storage ("Hosted mode requires SFTP or Google Drive").
+        # Demo always wins.
+        if self.demo_mode and self.hosted_mode:
+            object.__setattr__(self, "hosted_mode", False)
+        return self
 
     @field_validator("content_root", mode="before")
     @classmethod
