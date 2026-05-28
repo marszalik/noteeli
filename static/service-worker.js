@@ -12,7 +12,7 @@
  *    and auth stay correct
  */
 
-const VERSION = "noteeli-pwa-v3";
+const VERSION = "noteeli-pwa-v4";
 const APP_SHELL = [
   "/",
   "/static/app.js",
@@ -82,6 +82,25 @@ async function networkFirstNavigation(request) {
   }
 }
 
+// Same-origin static assets (app.css, app.js, icons): network-first.
+// They're cache-busted with ?v=<mtime> in the HTML, but a stale-cached
+// HTML (e.g. served by an edge CDN) can reference an older ?v= that the
+// SW already has cached — so stale-while-revalidate could pin old CSS/JS
+// indefinitely. Network-first guarantees fresh assets whenever online,
+// and still falls back to cache when offline (PWA shell keeps working).
+async function networkFirstAsset(request) {
+  const cache = await caches.open(VERSION);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw err;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -98,9 +117,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // same-origin static assets: stale-while-revalidate
+  // same-origin static assets: network-first (fresh when online, cached
+  // copy only as an offline fallback)
   if (isStaticAsset(url)) {
-    event.respondWith(staleWhileRevalidate(request));
+    event.respondWith(networkFirstAsset(request));
     return;
   }
 
