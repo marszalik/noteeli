@@ -84,4 +84,8 @@ class RenameItemRequest(BaseModel):
     new_name: str
 
 
+class DuplicateItemRequest(BaseModel):
+    path: str
+
+
 TreeNode.model_rebuild()

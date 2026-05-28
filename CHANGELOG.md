@@ -13,6 +13,11 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Duplicate (file context menu)** — copies any file into the same folder
+  under `<name>_1.<ext>`, incrementing the suffix (`_2`, `_3`, …) when a
+  copy already exists. Binary-safe; the new file is selected/opened.
+  Backend: `WorkspaceService.duplicate_item` + `POST /api/items/duplicate`.
+
 - **File search in the sidebar** — a magnifier button next to the refresh
   icon reveals a search box that filters the tree by name fragment
   (case-insensitive). Matching folders auto-expand so deep matches are

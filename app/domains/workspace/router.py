@@ -23,6 +23,7 @@ from app.domains.workspace.schemas import (
     CreateItemRequest,
     CreatedItem,
     DirectoryBrowserResponse,
+    DuplicateItemRequest,
     FileDocument,
     MoveItemRequest,
     RenameItemRequest,
@@ -95,6 +96,7 @@ async def workspace_page(request: Request):
             "downloadUrl": str(request.url_for("workspace_download_item_api")),
             "deleteUrl": str(request.url_for("workspace_delete_item_api")),
             "renameUrl": str(request.url_for("workspace_rename_item_api")),
+            "duplicateUrl": str(request.url_for("workspace_duplicate_item_api")),
             "directoriesUrl": str(request.url_for("workspace_directories_api")),
             "createDirectoryUrl": str(request.url_for("workspace_create_directory_api")),
             "previewUrl": str(request.url_for("workspace_file_preview_api")),
@@ -289,6 +291,19 @@ async def workspace_rename_item_api(request: Request, payload: RenameItemRequest
     auth_service.require_api_access(request)
     try:
         return workspace_service.rename_item(payload.path, payload.new_name)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ItemAlreadyExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/api/items/duplicate", response_model=CreatedItem, name="workspace_duplicate_item_api")
+async def workspace_duplicate_item_api(request: Request, payload: DuplicateItemRequest):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.duplicate_item(payload.path)
     except InvalidPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DocumentNotFoundError as exc:

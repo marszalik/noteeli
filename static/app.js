@@ -1125,6 +1125,7 @@ if (shell) {
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
       ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
+      ctx_duplicate: "Duplikuj",
       ctx_refresh: "Odśwież drzewo", ctx_delete: "Usuń",
       ctx_confirm_delete: "Kliknij ponownie, aby potwierdzić",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
@@ -1159,6 +1160,8 @@ if (shell) {
       st_delete_error: "Błąd usuwania.",
       st_deleted: "Usunięto",
       st_delete_fail: "Błąd połączenia przy usuwaniu.",
+      st_duplicated: "Zduplikowano",
+      st_duplicate_fail: "Błąd połączenia przy duplikowaniu.",
       st_request_failed: "Błąd żądania.",
       st_showing_only: "Pokazuję tylko",
       st_upload_prepared: "Przygotowano upload do",
@@ -1267,6 +1270,7 @@ if (shell) {
       ctx_new_file: "New file", ctx_new_dir: "New folder",
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
       ctx_copy_path: "Copy path", ctx_rename: "Rename",
+      ctx_duplicate: "Duplicate",
       ctx_refresh: "Refresh tree", ctx_delete: "Delete",
       ctx_confirm_delete: "Click again to confirm",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
@@ -1301,6 +1305,8 @@ if (shell) {
       st_delete_error: "Delete error.",
       st_deleted: "Deleted",
       st_delete_fail: "Connection error while deleting.",
+      st_duplicated: "Duplicated",
+      st_duplicate_fail: "Connection error while duplicating.",
       st_request_failed: "Request failed.",
       st_showing_only: "Showing only",
       st_upload_prepared: "Upload prepared to",
@@ -1409,6 +1415,7 @@ if (shell) {
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
       ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
+      ctx_duplicate: "Duplicar",
       ctx_refresh: "Refrescar árbol", ctx_delete: "Eliminar",
       ctx_confirm_delete: "Haz clic de nuevo para confirmar",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
@@ -1443,6 +1450,8 @@ if (shell) {
       st_delete_error: "Error al eliminar.",
       st_deleted: "Eliminado",
       st_delete_fail: "Error de conexión al eliminar.",
+      st_duplicated: "Duplicado",
+      st_duplicate_fail: "Error de conexión al duplicar.",
       st_request_failed: "Error en la solicitud.",
       st_showing_only: "Mostrando solo",
       st_upload_prepared: "Subida preparada a",
@@ -1551,6 +1560,7 @@ if (shell) {
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
       ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
+      ctx_duplicate: "Duplizieren",
       ctx_refresh: "Baum aktualisieren", ctx_delete: "Löschen",
       ctx_confirm_delete: "Erneut klicken zum Bestätigen",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
@@ -1585,6 +1595,8 @@ if (shell) {
       st_delete_error: "Fehler beim Löschen.",
       st_deleted: "Gelöscht",
       st_delete_fail: "Verbindungsfehler beim Löschen.",
+      st_duplicated: "Dupliziert",
+      st_duplicate_fail: "Verbindungsfehler beim Duplizieren.",
       st_request_failed: "Anfrage fehlgeschlagen.",
       st_showing_only: "Zeige nur",
       st_upload_prepared: "Upload vorbereitet nach",
@@ -1693,6 +1705,7 @@ if (shell) {
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
       ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
+      ctx_duplicate: "Дублировать",
       ctx_refresh: "Обновить дерево", ctx_delete: "Удалить",
       ctx_confirm_delete: "Нажмите ещё раз для подтверждения",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
@@ -1727,6 +1740,8 @@ if (shell) {
       st_delete_error: "Ошибка удаления.",
       st_deleted: "Удалено",
       st_delete_fail: "Ошибка соединения при удалении.",
+      st_duplicated: "Дублировано",
+      st_duplicate_fail: "Ошибка соединения при дублировании.",
       st_request_failed: "Ошибка запроса.",
       st_showing_only: "Показывается только",
       st_upload_prepared: "Загрузка подготовлена в",
@@ -2808,6 +2823,27 @@ if (shell) {
     });
   }
 
+  async function duplicateItem(node) {
+    try {
+      const created = await requestJson(config.duplicateUrl, {
+        method: "POST",
+        body: JSON.stringify({ path: node.path }),
+      });
+      await loadTree();
+      // Select + open the freshly created copy.
+      selectedTreePath = created.path;
+      selectedTreeKind = "file";
+      if (created.editable) {
+        await loadFile(created.path);
+      } else {
+        renderTree(treeData);
+      }
+      setStatus(`${t("st_duplicated")}: ${created.name}.`);
+    } catch (error) {
+      setStatus(error.message || t("st_duplicate_fail"), true);
+    }
+  }
+
   async function deleteItem(node) {
     try {
       const resp = await fetch(`${config.deleteUrl}?path=${encodeURIComponent(node.path)}`, { method: "DELETE" });
@@ -2839,6 +2875,7 @@ if (shell) {
     newFolder: "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3z",
     download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
     copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11z",
+    duplicate: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11zm-7-9h-2v2H8v2h2v2h2v-2h2v-2h-2z",
     rename: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
     refresh: "M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
     delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
@@ -2961,6 +2998,14 @@ if (shell) {
         openRenameModal(node);
       }),
     );
+    // Duplicate — files only. Copies into the same folder as <name>_N.
+    if (node.kind !== "directory") {
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_duplicate"), CONTEXT_ICONS.duplicate, async () => {
+          await duplicateItem(node);
+        }),
+      );
+    }
     // Publish / Unpublish / Copy public link
     const publishedId = publishedPaths[node.path];
     if (publishedId) {

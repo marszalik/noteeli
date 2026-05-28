@@ -827,3 +827,56 @@ def test_save_sftp_credentials_persists_encrypted_password(tmp_path: Path):
     conn.close()
     assert raw[0] != "s3cret"
     assert raw[0].startswith("gAAAAA")  # Fernet token prefix
+
+
+# ── duplicate_item ──────────────────────────────────────────────────
+
+
+def test_duplicate_item_appends_incrementing_suffix(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "report.md").write_text("# Report\n", encoding="utf-8")
+    service = build_service(notes)
+
+    first = service.duplicate_item("report.md")
+    assert first.name == "report_1.md"
+    assert (notes / "report_1.md").read_text(encoding="utf-8") == "# Report\n"
+
+    # A second duplicate of the original skips the taken _1 and uses _2.
+    second = service.duplicate_item("report.md")
+    assert second.name == "report_2.md"
+    assert (notes / "report_2.md").exists()
+
+
+def test_duplicate_item_preserves_extension_and_binary_content(tmp_path: Path):
+    notes = tmp_path / "vault"
+    nested = notes / "img"
+    nested.mkdir(parents=True)
+    blob = bytes(range(256))
+    (nested / "photo.png").write_bytes(blob)
+    service = build_service(notes)
+
+    created = service.duplicate_item("img/photo.png")
+    assert created.name == "photo_1.png"
+    assert created.path == "img/photo_1.png"
+    assert (nested / "photo_1.png").read_bytes() == blob
+
+
+def test_duplicate_item_rejects_directory(tmp_path: Path):
+    notes = tmp_path / "vault"
+    (notes / "folder").mkdir(parents=True)
+    service = build_service(notes)
+
+    with pytest.raises(InvalidPathError):
+        service.duplicate_item("folder")
+
+
+def test_duplicate_item_handles_name_without_extension(tmp_path: Path):
+    notes = tmp_path / "vault"
+    notes.mkdir()
+    (notes / "LICENSE").write_text("MIT\n", encoding="utf-8")
+    service = build_service(notes)
+
+    created = service.duplicate_item("LICENSE")
+    assert created.name == "LICENSE_1"
+    assert (notes / "LICENSE_1").read_text(encoding="utf-8") == "MIT\n"

@@ -398,6 +398,40 @@ class WorkspaceService:
         backend.rename(src_rel, dst_rel)
         return self._build_item_response(dst_rel, backend)
 
+    def duplicate_item(self, path: str) -> CreatedItem:
+        """Copy a file into the same folder under a free `<stem>_N<suffix>`
+        name (N starting at 1). Files only — directories aren't supported.
+        Binary-safe: copies raw bytes."""
+        self._block_if_demo()
+        backend = self._get_backend()
+        src_rel = self._resolve_path(path, backend)
+
+        if backend.is_dir(src_rel):
+            raise InvalidPathError("Only files can be duplicated.")
+
+        src = Path(src_rel)
+        parent_rel = str(src.parent)
+        if parent_rel == ".":
+            parent_rel = ""
+        stem = src.stem
+        suffix = src.suffix  # includes leading dot, or "" if none
+
+        # Find the first free <stem>_N<suffix>.
+        n = 1
+        while True:
+            candidate_name = f"{stem}_{n}{suffix}"
+            dst_rel = f"{parent_rel}/{candidate_name}" if parent_rel else candidate_name
+            if not backend.exists(dst_rel):
+                break
+            n += 1
+
+        backend.write_bytes(dst_rel, backend.read_bytes(src_rel))
+
+        if self.get_preferences().sort_mode == "manual":
+            self._refresh_manual_order(parent_rel, backend)
+
+        return self._build_item_response(dst_rel, backend)
+
     def delete_item(self, path: str) -> None:
         self._block_if_demo()
         # Drop any publish entries that pointed at this path (or any
