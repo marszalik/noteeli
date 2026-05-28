@@ -6,7 +6,7 @@ It is designed for people who want an Obsidian-like workflow in the browser with
 
 Website: [noteeli.com](https://noteeli.com)
 
-![Noteeli](https://noteeli.com/static/screenshots/noteeli-markdown-workspace.png)
+![Noteeli](https://noteeli.com/static/screenshots/noteeli-markdown-workspace.png?v=1.2.0)
 
 ## Quick install
 
