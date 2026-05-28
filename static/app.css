@@ -1360,9 +1360,9 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
 .tree-list {
   list-style: none;
   margin: 0;
-  /* Indent matches toggle width + tree-row gap so a child's icon lands at
-     the same X as its parent's folder icon (rather than to the left of it). */
-  padding-left: 1.25rem;
+  /* Indent matches the toggle width so a child row lines up one level in.
+     Keep in sync with .tree-toggle width and .tree-link-file margin-left. */
+  padding-left: 0.95rem;
 }
 
 .tree-list-root {
@@ -1376,7 +1376,7 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0;
   position: relative;
 }
 
@@ -1429,18 +1429,32 @@ body[data-theme="noteeli"] .tree-scope-up:hover {
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 0.28rem 0.35rem;
+  padding: 0.28rem 0.25rem;
   border-radius: 10px;
 }
 
 .tree-toggle {
-  width: 1.1rem;
+  width: 0.95rem;
   padding: 0.28rem 0;
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Chevron sized explicitly (it lives directly in the button, not in a
+   .tree-icon wrapper) so the toggle box stays snug around it. */
+.tree-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* File leaves have no chevron, so their icon would start ~1 toggle-width
+   to the left of sibling folders. Push them right by the toggle width so
+   file icons line up directly under folder icons at the same level. */
+.tree-link-file {
+  margin-left: 0.95rem;
 }
 
 .tree-link {
