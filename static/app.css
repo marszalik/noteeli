@@ -3316,9 +3316,10 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
     flex-wrap: nowrap; /* single row — enforce by hiding non-essential items */
   }
 
-  /* hide non-essential controls on mobile to keep topbar single-line */
+  /* hide non-essential controls on mobile to keep topbar single-line.
+     The saved-profiles button stays visible — it's the only path to
+     switch between saved workspace configs on mobile. */
   .editor-zoom,
-  .profiles-menu,
   .user-chip,
   .editor-mode-toggle {
     display: none !important;
