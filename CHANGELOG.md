@@ -11,6 +11,34 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-05-28
+
+### Added
+
+- **Active profile indicator** — the workspace tracks which saved
+  preference profile was last applied and highlights its row in the
+  dropdown (subtle accent background + 3px inset border) so it's clear
+  which set is currently in effect. Deleting the active profile clears
+  the marker automatically.
+
+### Fixed
+
+- **Demo (`demo.noteeli.com`) showed an empty tree and a "configure
+  storage" banner.** The demo service runs uvicorn from the hosted app's
+  working directory, so pydantic-settings inherited
+  `NOTEELI_HOSTED_MODE=1` from a shared `.env`. Hosted mode then forbade
+  the demo's local content root. A `Settings` validator now forces
+  `hosted_mode=False` whenever `demo_mode=True` — demo and hosted are
+  mutually exclusive by design.
+- **Saved-profiles button hidden on mobile.** The `@media (max-width: 768px)`
+  rule that strips non-essential topbar items was also hiding the
+  profiles menu, leaving no way to switch sets on a phone. Restored;
+  the dropdown was already viewport-clamped.
+- **Pinned sidebar reverted to collapsed after refresh on mobile.**
+  `initSidebar` force-collapsed any persisted `docked` mode on mobile.
+  Now the user's explicit pin choice is respected across refreshes;
+  only an actual width shortage on desktop falls back to collapsed.
+
 ## [1.2.0] - 2026-05-28
 
 ### Added

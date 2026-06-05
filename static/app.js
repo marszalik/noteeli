@@ -238,9 +238,13 @@ if (shell) {
   }
 
   function initSidebar() {
-    // On mobile, never start docked.
-    // On medium-width viewports, also collapse if sidebar is wider than available space.
-    if (sidebarMode === "docked" && (isMobile() || window.innerWidth - sidebarWidth < 420)) {
+    // If the persisted mode is "docked" but there isn't enough horizontal
+    // room to actually dock (less than 420px left for the workspace
+    // panel), fall back to collapsed. Mobile width by itself is NOT a
+    // reason to override the user — if they explicitly pinned the
+    // sidebar on a phone, respect that choice across refreshes (mobile
+    // "docked" renders as the floating drawer staying open).
+    if (sidebarMode === "docked" && !isMobile() && window.innerWidth - sidebarWidth < 420) {
       sidebarMode = "collapsed";
     }
 
