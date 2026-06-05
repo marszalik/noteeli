@@ -323,12 +323,16 @@ if (shell) {
       });
     }
 
-    // Auto-collapse on resize:
-    //   • always on mobile (≤768 px)
-    //   • on wider viewports when sidebar would leave < 420 px for the workspace
+    // Auto-collapse on resize when a *docked* sidebar would leave less
+    // than 420 px for the workspace. This is a desktop concern only: on
+    // mobile a docked sidebar renders as a full-screen drawer (it doesn't
+    // share the row with the workspace), and mobile browsers fire spurious
+    // resize events on load — URL-bar show/hide, keyboard, orientation —
+    // so reacting to them here would silently un-pin a sidebar the user
+    // deliberately pinned, and persist that collapse. Mobile is excluded.
     window.addEventListener("resize", () => {
       if (sidebarMode !== "docked") return;
-      if (isMobile() || window.innerWidth - sidebarWidth < 420) {
+      if (!isMobile() && window.innerWidth - sidebarWidth < 420) {
         setSidebarMode("collapsed");
       }
     });

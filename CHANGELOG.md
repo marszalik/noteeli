@@ -19,6 +19,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   (the pin button is the only stable touch target inside it).
   The button's `aria-label` / tooltip now also flip between "Pin
   sidebar" and "Unpin sidebar" to match the current state.
+- **Pinned sidebar still collapsed on refresh on mobile** (1.2.1 only
+  fixed the init path). The `resize` handler also force-collapsed a
+  docked sidebar on mobile and persisted the collapse — and mobile
+  browsers fire spurious `resize` events on load (URL-bar show/hide,
+  keyboard, orientation). The width-shortage auto-collapse is now a
+  desktop-only concern; mobile is excluded, so an explicit pin survives.
 
 ## [1.2.1] - 2026-05-28
 
