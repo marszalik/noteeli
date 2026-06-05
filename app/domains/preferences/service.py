@@ -188,6 +188,8 @@ class PreferencesService:
         deleted = self.repository.delete_profile(profile_id)
         if not deleted:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
+        if self.repository.get_active_profile_id() == profile_id:
+            self.repository.set_active_profile_id(None)
 
     def reorder_profiles(self, ordered_ids: list[int]) -> None:
         self.repository.reorder_profiles(ordered_ids)
@@ -196,6 +198,10 @@ class PreferencesService:
         profile_preferences = self.repository.get_profile_preferences(profile_id)
         if profile_preferences is None:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
+
+        # Mark as the active profile BEFORE running update_preferences so
+        # that the returned AppPreferences carries the right active_profile_id.
+        self.repository.set_active_profile_id(profile_id)
 
         return self.update_preferences(
             content_root=profile_preferences.content_root,

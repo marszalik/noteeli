@@ -1076,6 +1076,7 @@ if (shell) {
       profile_hint: "Zapisuje aktualne pola formularza jako profil.",
       editing_profile_prefix: "Edytujesz",
       no_profiles_hint: "Brak zapisanych zestawów. Wpisz nazwę poniżej, żeby zapisać aktualne ustawienia jako profil.",
+      profile_active_title: "Aktywny zestaw — jego ustawienia są teraz używane.",
       save_new_profile_placeholder: "Zapisz aktualne jako nowy profil…", save_action: "Zapisz",
       quick_start: "Szybki start", saved_profiles: "Zapisane profile",
       no_profiles_list: "Brak zapisanych profili.",
@@ -1221,6 +1222,7 @@ if (shell) {
       profile_hint: "Saves the current form fields as a quick-switch profile.",
       editing_profile_prefix: "Editing",
       no_profiles_hint: "No saved profiles yet. Type a name below to save the current settings as a profile.",
+      profile_active_title: "Active profile — its settings are currently applied.",
       save_new_profile_placeholder: "Save current as new profile…", save_action: "Save",
       quick_start: "Quick start", saved_profiles: "Saved profiles",
       no_profiles_list: "No saved profiles.",
@@ -1366,6 +1368,7 @@ if (shell) {
       profile_hint: "Guarda los campos actuales como perfil de cambio rápido.",
       editing_profile_prefix: "Editando",
       no_profiles_hint: "No hay perfiles guardados. Escribe un nombre abajo para guardar la configuración actual.",
+      profile_active_title: "Perfil activo — sus ajustes están aplicados ahora.",
       save_new_profile_placeholder: "Guardar como nuevo perfil…", save_action: "Guardar",
       quick_start: "Inicio rápido", saved_profiles: "Perfiles guardados",
       no_profiles_list: "No hay perfiles guardados.",
@@ -1511,6 +1514,7 @@ if (shell) {
       profile_hint: "Speichert die aktuellen Felder als Schnellwechsel-Profil.",
       editing_profile_prefix: "Bearbeitung von",
       no_profiles_hint: "Noch keine Profile. Gib unten einen Namen ein, um die aktuellen Einstellungen zu speichern.",
+      profile_active_title: "Aktives Profil — seine Einstellungen sind aktuell aktiv.",
       save_new_profile_placeholder: "Aktuelle Einstellungen als neues Profil…", save_action: "Speichern",
       quick_start: "Schnellstart", saved_profiles: "Gespeicherte Profile",
       no_profiles_list: "Keine gespeicherten Profile.",
@@ -1656,6 +1660,7 @@ if (shell) {
       profile_hint: "Сохраняет текущие поля как профиль быстрого переключения.",
       editing_profile_prefix: "Редактирование",
       no_profiles_hint: "Нет сохранённых профилей. Введите имя ниже, чтобы сохранить текущие настройки как профиль.",
+      profile_active_title: "Активный профиль — его настройки сейчас применяются.",
       save_new_profile_placeholder: "Сохранить текущее как новый профиль…", save_action: "Сохранить",
       quick_start: "Быстрый старт", saved_profiles: "Сохранённые профили",
       no_profiles_list: "Нет сохранённых профилей.",
@@ -2537,9 +2542,15 @@ if (shell) {
       return;
     }
 
+    const activeProfileId = preferences?.active_profile_id || null;
+
     preferenceProfiles.forEach((profile) => {
       const row = document.createElement("div");
       row.className = "profiles-dropdown-row";
+      if (activeProfileId === profile.id) {
+        row.classList.add("is-active");
+        row.title = t("profile_active_title");
+      }
       row.draggable = true;
       row.dataset.profileId = String(profile.id);
 

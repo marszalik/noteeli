@@ -29,6 +29,10 @@ class AppPreferences(BaseModel):
     image_upload_subdir: str = "assets"
     language: Language = "en"
     compact_chrome: bool = True
+    # Read-only: which saved profile (if any) was last applied. The
+    # workspace's live prefs already reflect that profile's values; this
+    # field lets the UI highlight the active row in the dropdown.
+    active_profile_id: int | None = None
 
 
 class UpdatePreferencesRequest(BaseModel):

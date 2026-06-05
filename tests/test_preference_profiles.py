@@ -109,3 +109,45 @@ def test_delete_preference_profile_removes_entry(tmp_path: Path):
     service.delete_profile(saved.id)
 
     assert service.list_profiles() == []
+
+
+def test_apply_profile_marks_it_active_and_delete_clears(tmp_path: Path):
+    """The dropdown highlights which profile is currently active; deleting
+    the active profile must clear the marker so the UI doesn't point at
+    a row that no longer exists."""
+    repository, service = build_service(tmp_path)
+
+    # Fresh DB → nothing is active.
+    assert repository.get_active_profile_id() is None
+    assert service.get_preferences().active_profile_id is None
+
+    a = service.create_profile(
+        name="A",
+        content_root=str(tmp_path / "content"),
+        sort_mode="alphabetical",
+        theme_mode="webnote",
+        editor_font_size=14,
+    )
+    b = service.create_profile(
+        name="B",
+        content_root=str(tmp_path / "content"),
+        sort_mode="manual",
+        theme_mode="dark",
+        editor_font_size=18,
+    )
+
+    applied = service.apply_profile(a.id)
+    assert applied.active_profile_id == a.id
+    assert service.get_preferences().active_profile_id == a.id
+
+    # Switching to B updates the marker.
+    service.apply_profile(b.id)
+    assert service.get_preferences().active_profile_id == b.id
+
+    # Deleting the inactive A leaves B as active.
+    service.delete_profile(a.id)
+    assert service.get_preferences().active_profile_id == b.id
+
+    # Deleting the active B clears the marker.
+    service.delete_profile(b.id)
+    assert service.get_preferences().active_profile_id is None

@@ -1695,6 +1695,15 @@ body[data-theme="noteeli"] .modal-actions {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  position: relative;
+  border-radius: 12px;
+}
+
+/* Mark the profile that was last applied — its values are reflected in
+   the workspace's current preferences, so it's the "active" set. */
+.profiles-dropdown-row.is-active {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .profiles-dropdown-row .profiles-dropdown-item {

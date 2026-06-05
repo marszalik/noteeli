@@ -41,6 +41,7 @@ class PreferencesRepository:
             ("image_upload_subdir", "assets"),
             ("language", "pl"),
             ("compact_chrome", "true"),
+            ("active_profile_id", ""),
         )
         with self._connect() as connection:
             connection.execute(
@@ -321,7 +322,34 @@ class PreferencesRepository:
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
             language=values.get("language", "pl"),
             compact_chrome=self._coerce_bool(values.get("compact_chrome", True)),
+            active_profile_id=self._parse_active_profile_id(values.get("active_profile_id", "")),
         )
+
+    @staticmethod
+    def _parse_active_profile_id(raw: object) -> int | None:
+        try:
+            value = int(str(raw))
+            return value if value > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    def get_active_profile_id(self) -> int | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM app_settings WHERE key = 'active_profile_id'"
+            ).fetchone()
+        return self._parse_active_profile_id(row["value"] if row else "")
+
+    def set_active_profile_id(self, profile_id: int | None) -> None:
+        value = str(profile_id) if (isinstance(profile_id, int) and profile_id > 0) else ""
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO app_settings(key, value) VALUES('active_profile_id', ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (value,),
+            )
 
     def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:
         payload = json.loads(row["payload"])
