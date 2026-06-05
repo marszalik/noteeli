@@ -191,6 +191,16 @@ if (shell) {
       sidebarToggleBtn.setAttribute("aria-expanded", String(isOpen));
       sidebarToggleBtn.title = isOpen ? "Collapse sidebar" : "Open sidebar";
     }
+    // The pin button toggles between docked and collapsed — keep its
+    // tooltip / aria honest about the next action so users (especially
+    // on mobile, where the drawer covers the screen) can find the way
+    // out.
+    if (sidebarPinBtn) {
+      const pinned = mode === "docked";
+      sidebarPinBtn.setAttribute("aria-pressed", String(pinned));
+      sidebarPinBtn.setAttribute("aria-label", pinned ? "Unpin sidebar" : "Pin sidebar");
+      sidebarPinBtn.title = pinned ? "Unpin sidebar" : "Pin sidebar";
+    }
   }
 
   function setSidebarWidth(w) {
@@ -228,9 +238,13 @@ if (shell) {
   }
 
   function pinSidebar() {
-    // Dock the sidebar (pin it into the layout) and persist
-    setSidebarMode("docked");
-    localStorage.setItem("sidebar-mode", "docked");
+    // Toggle: if the sidebar is already pinned (docked), the second tap
+    // un-pins and closes it. Otherwise pin it. On mobile this is the
+    // only way out of a docked drawer, since the drawer covers the whole
+    // viewport and the pin button is the only stable touch target.
+    const nextMode = sidebarMode === "docked" ? "collapsed" : "docked";
+    setSidebarMode(nextMode);
+    localStorage.setItem("sidebar-mode", nextMode);
   }
 
   function closeSidebarOverlay() {

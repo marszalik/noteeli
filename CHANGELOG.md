@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pin button now toggles** — a second tap on the pin un-pins and
+  closes the sidebar. Previously pinning was one-way, which on mobile
+  meant the docked drawer covered the whole viewport with no way out
+  (the pin button is the only stable touch target inside it).
+  The button's `aria-label` / tooltip now also flip between "Pin
+  sidebar" and "Unpin sidebar" to match the current state.
+
 ## [1.2.1] - 2026-05-28
 
 ### Added
