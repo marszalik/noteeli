@@ -137,6 +137,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Toast UI Markdown WYSIWYG (default for `.md`) | 🌐 | `showEditorMode`, `editor.changeMode("wysiwyg")` |
 | Toast UI Markdown source view | 🌐 | toggle persisted to `localStorage["markdown-editor-mode"]` |
 | Editor mode toggle button (WYSIWYG ↔ Markdown) hidden for non-md | 🌐 | |
+| Undo / Redo toolbar buttons (injected into Toast UI toolbar) | 🌐 | `attachUndoRedoToolbarButtons`, `editor.exec('undo'\|'redo')` |
 | Cursor reset to start of doc after `setMarkdown` (fixes silent toolbar buttons) | 🌐 | `editor.moveCursorToStart()` after load |
 | JSONEditor — form mode, fully expanded by default | 🌐 | `jsonEditor.setMode("form"); expandAll()` |
 | JSONEditor — fallback to code mode for invalid JSON | 🌐 | catch-on-parse-error path |

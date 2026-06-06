@@ -2650,6 +2650,13 @@ body[data-theme="obsidian"] .toastui-editor-md-preview tbody tr:nth-child(even) 
      position:fixed on the dropdown menu. Size button manually instead. */
 }
 
+.noteeli-undo-redo-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding-right: 0.35rem;
+}
+
 .noteeli-toolbar-button {
   display: inline-flex;
   align-items: center;

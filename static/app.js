@@ -902,6 +902,45 @@ if (shell) {
     diagramToolbarTrigger = trigger;
   }
 
+  // Toast UI ships undo/redo as commands (Ctrl/Cmd+Z) but no toolbar
+  // buttons. Inject an Undo/Redo group at the FRONT of the toolbar — the
+  // conventional position — using editor.exec('undo'|'redo').
+  function attachUndoRedoToolbarButtons() {
+    const toolbar = editorContainer.querySelector(".toastui-editor-defaultUI-toolbar");
+    if (!toolbar || toolbar.querySelector(".noteeli-undo-redo-group")) {
+      return;
+    }
+
+    const group = document.createElement("div");
+    group.className = "toastui-editor-toolbar-group noteeli-undo-redo-group";
+
+    const makeButton = (command, label, iconSvg) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "noteeli-toolbar-button";
+      btn.setAttribute("aria-label", label);
+      btn.title = label;
+      btn.innerHTML = iconSvg;
+      // Don't let the button steal the editor selection/focus.
+      btn.addEventListener("mousedown", (event) => event.preventDefault());
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        editor.exec(command);
+        editor.focus();
+      });
+      return btn;
+    };
+
+    const undoIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+    const redoIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>';
+
+    group.append(
+      makeButton("undo", t("toolbar_undo"), undoIcon),
+      makeButton("redo", t("toolbar_redo"), redoIcon),
+    );
+    toolbar.insertBefore(group, toolbar.firstChild);
+  }
+
   // ── Mermaid setup ─────────────────────────────────────────
   let currentEditorMode = "wysiwyg";
 
@@ -1209,6 +1248,7 @@ if (shell) {
       st_file_ready: "Plik gotowy do edycji.",
       st_file_reloaded: "Plik przeładowany z dysku.",
       refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
+      toolbar_undo: "Cofnij", toolbar_redo: "Ponów",
       refresh_file_confirm: "Masz niezapisane zmiany. Przeładować plik z dysku i je odrzucić?",
       st_pdf_preview: "Podgląd PDF gotowy.",
       st_image_preview: "Podgląd obrazu gotowy.",
@@ -1358,6 +1398,7 @@ if (shell) {
       st_file_ready: "File ready to edit.",
       st_file_reloaded: "File reloaded from disk.",
       refresh_file_title: "Reload file (it may have changed in the background)",
+      toolbar_undo: "Undo", toolbar_redo: "Redo",
       refresh_file_confirm: "You have unsaved changes. Reload the file from disk and discard them?",
       st_pdf_preview: "PDF preview ready.",
       st_image_preview: "Image preview ready.",
@@ -1507,6 +1548,7 @@ if (shell) {
       st_file_ready: "Archivo listo para editar.",
       st_file_reloaded: "Archivo recargado desde el disco.",
       refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
+      toolbar_undo: "Deshacer", toolbar_redo: "Rehacer",
       refresh_file_confirm: "Tienes cambios sin guardar. ¿Recargar el archivo desde el disco y descartarlos?",
       st_pdf_preview: "Vista previa PDF lista.",
       st_image_preview: "Vista previa de imagen lista.",
@@ -1656,6 +1698,7 @@ if (shell) {
       st_file_ready: "Datei bereit zur Bearbeitung.",
       st_file_reloaded: "Datei von der Festplatte neu geladen.",
       refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
+      toolbar_undo: "Rückgängig", toolbar_redo: "Wiederholen",
       refresh_file_confirm: "Du hast ungespeicherte Änderungen. Datei von der Festplatte neu laden und verwerfen?",
       st_pdf_preview: "PDF-Vorschau bereit.",
       st_image_preview: "Bildvorschau bereit.",
@@ -1805,6 +1848,7 @@ if (shell) {
       st_file_ready: "Файл готов к редактированию.",
       st_file_reloaded: "Файл перезагружен с диска.",
       refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
+      toolbar_undo: "Отменить", toolbar_redo: "Повторить",
       refresh_file_confirm: "Есть несохранённые изменения. Перезагрузить файл с диска и отменить их?",
       st_pdf_preview: "Предпросмотр PDF готов.",
       st_image_preview: "Предпросмотр изображения готов.",
@@ -4634,6 +4678,7 @@ if (shell) {
   applyTreeScopeState();
   renderUploadFileList();
   showEditorMode();
+  attachUndoRedoToolbarButtons();
   attachDiagramToolbarButtons();
   toggleOverlay({ empty: true, unsupported: false });
   // Public viewer ships only tree + file URLs. Skip preferences and

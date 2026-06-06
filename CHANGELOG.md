@@ -13,6 +13,9 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Undo / Redo buttons in the WYSIWYG editor toolbar.** Toast UI only
+  shipped the keyboard shortcuts (Ctrl/Cmd+Z); now there's a visible
+  Undo/Redo group at the front of the toolbar. Labels in all 5 locales.
 - **Reload file button** in the topbar — re-fetches the open file from
   disk (it may have changed in the background via SFTP, another device,
   or an external editor). Confirms before discarding unsaved local edits.
