@@ -12,6 +12,9 @@ if (shell) {
   const increaseFontSizeButton = document.getElementById("increase-font-size");
   const fontSizeLabel = document.getElementById("font-size-label");
   const saveButton = document.getElementById("save-button");
+  const refreshFileButton = document.getElementById("refresh-file");
+  const userMenuToggle = document.getElementById("user-menu-toggle");
+  const userMenuDropdown = document.getElementById("user-menu-dropdown");
   const editorModeToggle = document.getElementById("editor-mode-toggle");
   const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
   const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
@@ -1204,6 +1207,9 @@ if (shell) {
       st_tree_ready: "Drzewo plików gotowe.",
       st_loading_file: "Wczytuję plik...",
       st_file_ready: "Plik gotowy do edycji.",
+      st_file_reloaded: "Plik przeładowany z dysku.",
+      refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
+      refresh_file_confirm: "Masz niezapisane zmiany. Przeładować plik z dysku i je odrzucić?",
       st_pdf_preview: "Podgląd PDF gotowy.",
       st_image_preview: "Podgląd obrazu gotowy.",
       st_file_not_editable: "Tego pliku nie można edytować.",
@@ -1350,6 +1356,9 @@ if (shell) {
       st_tree_ready: "File tree ready.",
       st_loading_file: "Loading file...",
       st_file_ready: "File ready to edit.",
+      st_file_reloaded: "File reloaded from disk.",
+      refresh_file_title: "Reload file (it may have changed in the background)",
+      refresh_file_confirm: "You have unsaved changes. Reload the file from disk and discard them?",
       st_pdf_preview: "PDF preview ready.",
       st_image_preview: "Image preview ready.",
       st_file_not_editable: "This file cannot be edited.",
@@ -1496,6 +1505,9 @@ if (shell) {
       st_tree_ready: "Árbol de archivos listo.",
       st_loading_file: "Cargando archivo...",
       st_file_ready: "Archivo listo para editar.",
+      st_file_reloaded: "Archivo recargado desde el disco.",
+      refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
+      refresh_file_confirm: "Tienes cambios sin guardar. ¿Recargar el archivo desde el disco y descartarlos?",
       st_pdf_preview: "Vista previa PDF lista.",
       st_image_preview: "Vista previa de imagen lista.",
       st_file_not_editable: "Este archivo no se puede editar.",
@@ -1642,6 +1654,9 @@ if (shell) {
       st_tree_ready: "Dateibaum bereit.",
       st_loading_file: "Datei wird geladen...",
       st_file_ready: "Datei bereit zur Bearbeitung.",
+      st_file_reloaded: "Datei von der Festplatte neu geladen.",
+      refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
+      refresh_file_confirm: "Du hast ungespeicherte Änderungen. Datei von der Festplatte neu laden und verwerfen?",
       st_pdf_preview: "PDF-Vorschau bereit.",
       st_image_preview: "Bildvorschau bereit.",
       st_file_not_editable: "Diese Datei kann nicht bearbeitet werden.",
@@ -1788,6 +1803,9 @@ if (shell) {
       st_tree_ready: "Дерево файлов готово.",
       st_loading_file: "Загрузка файла...",
       st_file_ready: "Файл готов к редактированию.",
+      st_file_reloaded: "Файл перезагружен с диска.",
+      refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
+      refresh_file_confirm: "Есть несохранённые изменения. Перезагрузить файл с диска и отменить их?",
       st_pdf_preview: "Предпросмотр PDF готов.",
       st_image_preview: "Предпросмотр изображения готов.",
       st_file_not_editable: "Этот файл нельзя редактировать.",
@@ -3882,6 +3900,7 @@ if (shell) {
       openParentDirectories(file.path);
       updateHeader(file.name, file.path);
       saveButton.disabled = !file.editable;
+      if (refreshFileButton) refreshFileButton.disabled = false;
       localStorage.setItem("last-opened-file", file.path);
 
       if (file.editable && selectedFileType === "json") {
@@ -4369,7 +4388,46 @@ if (shell) {
     addPendingUploadFiles(event.dataTransfer.files);
   });
   togglePreferenceProfilesButton?.addEventListener("click", togglePreferenceProfilesDropdown);
-  openSettingsButton.addEventListener("click", openSettingsModal);
+
+  // ── Reload the currently-open file from disk ────────────────────
+  // The file may have changed in the background (SFTP, another device,
+  // an external editor). Re-fetch it. If there are unsaved local edits,
+  // confirm first since the disk copy will replace them.
+  refreshFileButton?.addEventListener("click", async () => {
+    if (!selectedPath) return;
+    if (editorDirty && !window.confirm(t("refresh_file_confirm"))) return;
+    const path = selectedPath;
+    refreshFileButton.disabled = true;
+    try {
+      await loadFile(path);
+      setStatus(t("st_file_reloaded"));
+    } catch (error) {
+      setStatus(error.message || t("st_request_failed"), true);
+    } finally {
+      if (selectedPath) refreshFileButton.disabled = false;
+    }
+  });
+
+  // ── Account menu (settings + logout) ────────────────────────────
+  function closeUserMenu() {
+    userMenuDropdown?.classList.add("hidden");
+    userMenuDropdown?.setAttribute("aria-hidden", "true");
+    userMenuToggle?.setAttribute("aria-expanded", "false");
+  }
+  function openUserMenu() {
+    userMenuDropdown?.classList.remove("hidden");
+    userMenuDropdown?.setAttribute("aria-hidden", "false");
+    userMenuToggle?.setAttribute("aria-expanded", "true");
+  }
+  userMenuToggle?.addEventListener("click", () => {
+    if (userMenuDropdown?.classList.contains("hidden")) openUserMenu();
+    else closeUserMenu();
+  });
+
+  openSettingsButton.addEventListener("click", () => {
+    closeUserMenu();
+    openSettingsModal();
+  });
   closeSettingsButton.addEventListener("click", closeSettingsModal);
   cancelSettingsButton.addEventListener("click", closeSettingsModal);
   // Legacy settings-tab profile UI was removed; quick-save input
@@ -4422,6 +4480,14 @@ if (shell) {
     ) {
       closePreferenceProfilesDropdown();
     }
+    if (
+      userMenuDropdown &&
+      !userMenuDropdown.classList.contains("hidden") &&
+      !userMenuDropdown.contains(event.target) &&
+      !userMenuToggle?.contains(event.target)
+    ) {
+      closeUserMenu();
+    }
   });
   document.addEventListener("contextmenu", (event) => {
     if (!event.target.closest(".tree-row")) {
@@ -4446,6 +4512,10 @@ if (shell) {
     }
     if (event.key === "Escape" && preferenceProfilesDropdown && !preferenceProfilesDropdown.classList.contains("hidden")) {
       closePreferenceProfilesDropdown();
+      return;
+    }
+    if (event.key === "Escape" && userMenuDropdown && !userMenuDropdown.classList.contains("hidden")) {
+      closeUserMenu();
       return;
     }
     if (event.key === "Escape" && !directoryBrowserModal.classList.contains("hidden")) {

@@ -179,6 +179,11 @@
               </svg>
             </button>
           </div>
+          <button id="refresh-file" class="icon-button icon-button-small" type="button" aria-label="Reload file from disk" title="Reload file (it may have changed in the background)" data-i18n-title="refresh_file_title" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+            </svg>
+          </button>
           <button
             id="editor-mode-toggle"
             class="button button-secondary button-sm editor-mode-toggle"
@@ -186,19 +191,40 @@
             aria-label="Toggle edit mode"
             title="Toggle mode: WYSIWYG <-> Markdown"
           >WYSIWYG</button>
-          <button id="open-settings" class="icon-button" type="button" aria-label="Open settings">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10.3 2.4h3.4l.6 2.3c.6.2 1.2.4 1.8.7l2.1-1.2 2.4 2.4-1.2 2.1c.3.6.5 1.2.7 1.8l2.3.6v3.4l-2.3.6c-.2.6-.4 1.2-.7 1.8l1.2 2.1-2.4 2.4-2.1-1.2c-.6.3-1.2.5-1.8.7l-.6 2.3h-3.4l-.6-2.3c-.6-.2-1.2-.4-1.8-.7l-2.1 1.2-2.4-2.4 1.2-2.1c-.3-.6-.5-1.2-.7-1.8l-2.3-.6v-3.4l2.3-.6c.2-.6.4-1.2.7-1.8L3.5 6.6 5.9 4.2 8 5.4c.6-.3 1.2-.5 1.8-.7zm1.7 6.1a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
-            </svg>
-          </button>
-          % if user.get("is_local"):
-            <span class="user-chip" data-i18n="local_mode_chip">Tryb lokalny</span>
-          % else:
-            <span class="user-chip">${user.get("email")}</span>
-            <form method="post" action="${request.url_for('logout_action')}">
-              <button class="button button-secondary button-sm" type="submit" data-i18n="logout_button">Wyloguj</button>
-            </form>
-          % endif
+
+          <div class="user-menu">
+            <button id="user-menu-toggle" class="icon-button" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown" title="Account">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </button>
+            <div id="user-menu-dropdown" class="user-menu-dropdown hidden" role="menu" aria-hidden="true">
+              <div class="user-menu-identity">
+                % if user.get("is_local"):
+                  <span class="user-menu-label" data-i18n="local_mode_chip">Tryb lokalny</span>
+                % else:
+                  <span class="user-menu-email">${user.get("email")}</span>
+                % endif
+              </div>
+              <button id="open-settings" class="user-menu-item" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M10.3 2.4h3.4l.6 2.3c.6.2 1.2.4 1.8.7l2.1-1.2 2.4 2.4-1.2 2.1c.3.6.5 1.2.7 1.8l2.3.6v3.4l-2.3.6c-.2.6-.4 1.2-.7 1.8l1.2 2.1-2.4 2.4-2.1-1.2c-.6.3-1.2.5-1.8.7l-.6 2.3h-3.4l-.6-2.3c-.6-.2-1.2-.4-1.8-.7l-2.1 1.2-2.4-2.4 1.2-2.1c-.3-.6-.5-1.2-.7-1.8l-2.3-.6v-3.4l2.3-.6c.2-.6.4-1.2.7-1.8L3.5 6.6 5.9 4.2 8 5.4c.6-.3 1.2-.5 1.8-.7zm1.7 6.1a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
+                </svg>
+                <span data-i18n="settings_title">Ustawienia</span>
+              </button>
+              % if not user.get("is_local"):
+                <form method="post" action="${request.url_for('logout_action')}" class="user-menu-logout-form">
+                  <button class="user-menu-item user-menu-item-danger" type="submit" role="menuitem">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4z" />
+                    </svg>
+                    <span data-i18n="logout_button">Wyloguj</span>
+                  </button>
+                </form>
+              % endif
+            </div>
+          </div>
+
           <button id="save-button" class="button button-primary button-sm" type="button" data-i18n="save_button" disabled>Zapisz</button>
         </div>
       </header>

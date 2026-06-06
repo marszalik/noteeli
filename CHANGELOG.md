@@ -11,6 +11,19 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Reload file button** in the topbar — re-fetches the open file from
+  disk (it may have changed in the background via SFTP, another device,
+  or an external editor). Confirms before discarding unsaved local edits.
+
+### Changed
+
+- **Topbar tidy-up: Settings and Logout now live under an account menu.**
+  A user icon on the right opens a dropdown with the signed-in email (or
+  "Local mode"), Settings, and Logout — replacing the loose settings cog,
+  email chip, and logout button. Font zoom stays in the topbar.
+
 ### Fixed
 
 - **Pin button now toggles** — a second tap on the pin un-pins and
