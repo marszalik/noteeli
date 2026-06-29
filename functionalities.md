@@ -330,6 +330,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Auto-detect git repo for the workspace dir (local + SFTP) | ✅ `tests/test_git_service.py` | `GitService`; local `subprocess`, SFTP `paramiko` SSH-exec |
 | `git status` parsing (branch, ahead/behind, file states) | ✅ `test_status_lists_*`, `test_branch_parsing_no_upstream` | porcelain v1 `-z`, paths re-relativised to workspace |
 | Commit (all) / commit specific paths | ✅ `test_commit_*` | `git add -A` or `git add -- <paths>` then commit |
+| Commit signed by logged-in user (author + committer) | ✅ `test_commit_signed_with_author_identity`, `test_commit_without_author_uses_ambient_config` | `-c user.name/.email`; only real (non-local) logins override repo config |
 | Commit + push in one call; fetch / pull / push | ✅ `test_git_api_status_commit_flow` (push failure is graceful) | `/api/git/*` endpoints |
 | Tree decorations: file status badges + folder dirty dots | 🌐 | `gitStatusByPath`, `gitDirtyDirs`, `renderNode` |
 | Git menu (branch, change list, commit box, remote ops) | 🌐 | `#git-menu`, `renderGitMenu`, `gitCommit`, `gitRemoteOp` |

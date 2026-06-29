@@ -50,8 +50,14 @@ _ALLOWED_SUBCOMMANDS = {
 
 
 def _check_subcommand(args: list[str]) -> None:
-    if not args or args[0] not in _ALLOWED_SUBCOMMANDS:
-        raise GitError(f"Refusing to run git subcommand: {args[0] if args else '(none)'}")
+    # Skip leading global options so the real subcommand is validated even
+    # when we prepend `-c user.name=… -c user.email=…` for commit identity.
+    i = 0
+    while i < len(args) and args[i] == "-c":
+        i += 2  # `-c` plus its `key=value`
+    sub = args[i] if i < len(args) else None
+    if sub not in _ALLOWED_SUBCOMMANDS:
+        raise GitError(f"Refusing to run git subcommand: {sub if sub else '(none)'}")
 
 
 class _GitRunner(ABC):
@@ -280,7 +286,21 @@ class GitService:
             raise GitError("Path traversal is not allowed.")
         return cleaned
 
-    def commit(self, message: str, paths: list[str] | None = None) -> GitOpResult:
+    @staticmethod
+    def _identity_args(author: dict | None) -> list[str]:
+        """Build `-c user.name=… -c user.email=…` so the commit is signed by
+        the logged-in user (author AND committer) rather than the instance's
+        ambient git config. Shared/collaborative workspaces thus attribute
+        each commit to whoever made it."""
+        if not author:
+            return []
+        email = (author.get("email") or "").strip()
+        if not email:
+            return []
+        name = (author.get("name") or "").strip() or email
+        return ["-c", f"user.name={name}", "-c", f"user.email={email}"]
+
+    def commit(self, message: str, paths: list[str] | None = None, author: dict | None = None) -> GitOpResult:
         runner = self._require_runner()
         if not self.is_repo():
             raise GitNotConfiguredError("The workspace is not a git repository.")
@@ -296,7 +316,7 @@ class GitService:
         if code != 0:
             return GitOpResult(ok=False, message=(err or out or "git add failed").strip())
 
-        code, out, err = runner.run(["commit", "-m", message])
+        code, out, err = runner.run([*self._identity_args(author), "commit", "-m", message])
         if code != 0:
             text = (out + "\n" + err).lower()
             if "nothing to commit" in text or "no changes added" in text:

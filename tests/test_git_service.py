@@ -202,3 +202,40 @@ def test_dot_git_excluded_from_tree(tmp_path: Path):
     top_names = {c.name for c in tree.children}
     assert ".git" not in top_names
     assert "note.md" in top_names
+
+
+def test_commit_signed_with_author_identity(tmp_path: Path):
+    """A commit carries the logged-in user as author + committer, not the
+    repo's ambient git config."""
+    repo = tmp_path / "ws"
+    _init_repo(repo)
+    # Ambient config is "Test <t@example.com>"; the commit should override.
+    (repo / "n.md").write_text("hi\n", encoding="utf-8")
+
+    service = _service(repo)
+    result = service.commit(
+        "collab note",
+        author={"name": "Bob Collaborator", "email": "bob@gmail.com"},
+    )
+    assert result.ok, result.message
+
+    out = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--pretty=%an <%ae>|%cn <%ce>"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    author_part, committer_part = out.split("|")
+    assert author_part == "Bob Collaborator <bob@gmail.com>"
+    assert committer_part == "Bob Collaborator <bob@gmail.com>"
+
+
+def test_commit_without_author_uses_ambient_config(tmp_path: Path):
+    repo = tmp_path / "ws"
+    _init_repo(repo)
+    (repo / "n.md").write_text("hi\n", encoding="utf-8")
+    service = _service(repo)
+    assert service.commit("plain", author=None).ok
+    an = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--pretty=%ae"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert an == "t@example.com"

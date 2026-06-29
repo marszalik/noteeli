@@ -13,6 +13,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Git commits are signed by the logged-in user.** In a shared workspace,
+  a commit is attributed (author + committer) to whoever made it — using
+  their Google name + email — instead of the instance's ambient git
+  config, so the history shows who did what. Localhost/demo synthetic
+  users keep the repo's own git identity (a solo self-hoster isn't stamped
+  `local@noteeli`).
 - **Locked workspace (`NOTEELI_LOCK_WORKSPACE=1`).** Pins the storage
   source and root: users can't change the source / content root / SFTP
   settings, the Settings "Source" tab is hidden, and the directory picker

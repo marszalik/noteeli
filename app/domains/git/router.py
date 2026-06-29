@@ -44,11 +44,18 @@ async def git_status_api(request: Request) -> GitStatus:
 
 @router.post("/api/git/commit", response_model=GitOpResult, name="git_commit_api")
 async def git_commit_api(request: Request, payload: GitCommitRequest) -> GitOpResult:
-    auth_service.require_api_access(request)
+    user = auth_service.require_api_access(request)
     _block_demo()
     service = _service()
+    # Sign the commit as the logged-in user so shared workspaces attribute
+    # each commit to whoever made it. Only real (Google) logins override the
+    # repo's git config — localhost/demo synthetic users keep the repo's own
+    # ambient identity so a solo self-hoster isn't stamped "local@noteeli".
+    author = None
+    if not user.get("is_local"):
+        author = {"name": user.get("name", ""), "email": user.get("email", "")}
     try:
-        result = service.commit(payload.message, payload.paths or None)
+        result = service.commit(payload.message, payload.paths or None, author=author)
         if result.ok and payload.push:
             push = service.push()
             if not push.ok:
