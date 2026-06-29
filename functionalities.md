@@ -323,6 +323,21 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Changelog at `CHANGELOG.md` (Keep a Changelog format) | — | manually maintained |
 | Installer pin to release tag (`NOTEELI_VERSION=v1.0.0`) | — | `install.sh` env override |
 
+## 21. Git integration
+
+| Feature | Status | Notes |
+|---|---|---|
+| Auto-detect git repo for the workspace dir (local + SFTP) | ✅ `tests/test_git_service.py` | `GitService`; local `subprocess`, SFTP `paramiko` SSH-exec |
+| `git status` parsing (branch, ahead/behind, file states) | ✅ `test_status_lists_*`, `test_branch_parsing_no_upstream` | porcelain v1 `-z`, paths re-relativised to workspace |
+| Commit (all) / commit specific paths | ✅ `test_commit_*` | `git add -A` or `git add -- <paths>` then commit |
+| Commit + push in one call; fetch / pull / push | ✅ `test_git_api_status_commit_flow` (push failure is graceful) | `/api/git/*` endpoints |
+| Tree decorations: file status badges + folder dirty dots | 🌐 | `gitStatusByPath`, `gitDirtyDirs`, `renderNode` |
+| Git menu (branch, change list, commit box, remote ops) | 🌐 | `#git-menu`, `renderGitMenu`, `gitCommit`, `gitRemoteOp` |
+| Per-item commit / commit & push from context menu | 🌐 | `gitCommitPath` |
+| `.git` excluded from the notes tree | ✅ `test_dot_git_excluded_from_tree` | `_build_directory_node` skip |
+| Client-path validation + subcommand allow-list (injection guard) | ✅ `test_commit_rejects_path_traversal` | `_safe_rel`, `_ALLOWED_SUBCOMMANDS` |
+| Git disabled in demo mode | ✅ `test_demo_mode_disables_git` | runner is `None` in demo |
+
 ---
 
 ## Test coverage at a glance

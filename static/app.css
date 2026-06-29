@@ -1861,6 +1861,206 @@ body[data-theme="noteeli"] .user-menu-dropdown {
   border-color: var(--line-strong);
 }
 
+/* ── Git menu ───────────────────────────────────────────────── */
+.git-menu {
+  position: relative;
+}
+
+.git-menu.hidden {
+  display: none;
+}
+
+#git-menu-toggle {
+  position: relative;
+}
+
+.git-menu-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.git-menu-badge.hidden {
+  display: none;
+}
+
+.git-dropdown {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 0;
+  width: min(320px, calc(100vw - 2rem));
+  padding: 0.7rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(16px);
+  z-index: 60;
+}
+
+.git-dropdown.hidden {
+  display: none;
+}
+
+.git-branch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.git-branch-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.git-sync-state {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.git-changes-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0.6rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0;
+}
+
+.git-change-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.15rem;
+  font-size: 0.82rem;
+}
+
+.git-change-letter {
+  width: 1.1rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+}
+
+.git-change-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.git-changes-empty {
+  padding: 0.6rem 0.2rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.git-commit-message {
+  width: 100%;
+  resize: vertical;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+}
+
+.git-commit-message:focus {
+  border-color: var(--accent);
+}
+
+.git-commit-actions,
+.git-remote-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.git-commit-actions .button,
+.git-remote-actions .button {
+  flex: 1;
+}
+
+.git-status-msg {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  min-height: 1rem;
+  word-break: break-word;
+}
+
+.git-status-msg.is-error {
+  color: #dc2626;
+}
+
+.git-status-msg.is-ok {
+  color: #16a34a;
+}
+
+body[data-theme="dark"] .git-dropdown,
+body[data-theme="noteeli"] .git-dropdown {
+  background: linear-gradient(180deg, rgba(17, 28, 47, 0.98), rgba(15, 28, 52, 0.96));
+  border-color: var(--line-strong);
+}
+
+/* ── Tree git decorations ───────────────────────────────────── */
+.git-status-badge {
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.15rem;
+}
+
+.git-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-left: 0.2rem;
+}
+
+/* status colours (shared by list letters, tree badges, dots) */
+.git-modified  { color: #d9920a; }
+.git-added     { color: #16a34a; }
+.git-deleted   { color: #dc2626; }
+.git-untracked { color: #6b7280; }
+.git-renamed   { color: #2563eb; }
+.git-conflict  { color: #dc2626; }
+.git-dot.git-modified  { background: #d9920a; }
+.git-dot.git-added     { background: #16a34a; }
+.git-dot.git-deleted   { background: #dc2626; }
+.git-dot.git-untracked { background: #9ca3af; }
+.git-dot.git-renamed   { background: #2563eb; }
+.git-dot.git-conflict  { background: #dc2626; }
+
+/* a changed file's name gets a subtle tint so the row reads as "dirty" */
+.tree-link.is-git-changed {
+  font-weight: 600;
+}
+
 .icon-button {
   width: 2.75rem;
   height: 2.75rem;

@@ -15,6 +15,20 @@ if (shell) {
   const refreshFileButton = document.getElementById("refresh-file");
   const userMenuToggle = document.getElementById("user-menu-toggle");
   const userMenuDropdown = document.getElementById("user-menu-dropdown");
+  const gitMenu = document.getElementById("git-menu");
+  const gitMenuToggle = document.getElementById("git-menu-toggle");
+  const gitMenuDropdown = document.getElementById("git-menu-dropdown");
+  const gitMenuBadge = document.getElementById("git-menu-badge");
+  const gitBranchName = document.getElementById("git-branch-name");
+  const gitSyncState = document.getElementById("git-sync-state");
+  const gitChangesList = document.getElementById("git-changes-list");
+  const gitCommitMessage = document.getElementById("git-commit-message");
+  const gitCommitButton = document.getElementById("git-commit");
+  const gitCommitPushButton = document.getElementById("git-commit-push");
+  const gitFetchButton = document.getElementById("git-fetch");
+  const gitPullButton = document.getElementById("git-pull");
+  const gitPushButton = document.getElementById("git-push");
+  const gitStatusMsg = document.getElementById("git-status-msg");
   const editorModeToggle = document.getElementById("editor-mode-toggle");
   const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
   const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
@@ -110,6 +124,11 @@ if (shell) {
   // and by the context menu to switch between Publish and Unpublish.
   let publishedPaths = {};
   let publishedSlugs = {};
+  // Git state — populated by refreshGitStatus(); empty when the workspace
+  // has no git (gdrive / non-repo dir / demo).
+  let gitInfo = null;                  // { is_repo, branch, ahead, behind, ... } or null
+  let gitStatusByPath = {};            // { "rel/path": "modified"|"added"|... }
+  let gitDirtyDirs = new Set();        // ancestor dirs that contain a change
   let preferenceProfiles = [];
   let editingPreferenceProfileId = null;
   let profileFormGdriveCredentials = "";
@@ -1191,6 +1210,11 @@ if (shell) {
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
       ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
       ctx_duplicate: "Duplikuj",
+      ctx_git_commit: "Commit (ten element)", ctx_git_commit_push: "Commit i push (ten element)",
+      git_commit: "Commit", git_commit_push: "Commit i push", git_fetch: "Fetch", git_pull: "Pull", git_push: "Push",
+      git_commit_placeholder: "Opis zmian…", git_clean: "Brak zmian — czysto.",
+      git_need_message: "Podaj opis commita.", git_working: "Pracuję…", git_done: "Gotowe.", git_failed: "Operacja git nie powiodła się.",
+      git_prompt_commit: "Opis commita dla tego elementu:", git_prompt_commit_push: "Opis commita (zostanie też wypchnięty):",
       ctx_refresh: "Odśwież drzewo", ctx_delete: "Usuń",
       ctx_confirm_delete: "Kliknij ponownie, aby potwierdzić",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
@@ -1341,6 +1365,11 @@ if (shell) {
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
       ctx_copy_path: "Copy path", ctx_rename: "Rename",
       ctx_duplicate: "Duplicate",
+      ctx_git_commit: "Commit (this item)", ctx_git_commit_push: "Commit & push (this item)",
+      git_commit: "Commit", git_commit_push: "Commit & Push", git_fetch: "Fetch", git_pull: "Pull", git_push: "Push",
+      git_commit_placeholder: "Commit message…", git_clean: "No changes — clean.",
+      git_need_message: "Enter a commit message.", git_working: "Working…", git_done: "Done.", git_failed: "Git operation failed.",
+      git_prompt_commit: "Commit message for this item:", git_prompt_commit_push: "Commit message (will also be pushed):",
       ctx_refresh: "Refresh tree", ctx_delete: "Delete",
       ctx_confirm_delete: "Click again to confirm",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
@@ -1491,6 +1520,11 @@ if (shell) {
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
       ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
       ctx_duplicate: "Duplicar",
+      ctx_git_commit: "Confirmar (este elemento)", ctx_git_commit_push: "Confirmar y enviar (este elemento)",
+      git_commit: "Confirmar", git_commit_push: "Confirmar y enviar", git_fetch: "Fetch", git_pull: "Pull", git_push: "Push",
+      git_commit_placeholder: "Mensaje del commit…", git_clean: "Sin cambios — limpio.",
+      git_need_message: "Escribe un mensaje de commit.", git_working: "Trabajando…", git_done: "Listo.", git_failed: "La operación git falló.",
+      git_prompt_commit: "Mensaje del commit para este elemento:", git_prompt_commit_push: "Mensaje del commit (también se enviará):",
       ctx_refresh: "Refrescar árbol", ctx_delete: "Eliminar",
       ctx_confirm_delete: "Haz clic de nuevo para confirmar",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
@@ -1641,6 +1675,11 @@ if (shell) {
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
       ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
       ctx_duplicate: "Duplizieren",
+      ctx_git_commit: "Commit (dieses Element)", ctx_git_commit_push: "Commit & Push (dieses Element)",
+      git_commit: "Commit", git_commit_push: "Commit & Push", git_fetch: "Fetch", git_pull: "Pull", git_push: "Push",
+      git_commit_placeholder: "Commit-Nachricht…", git_clean: "Keine Änderungen — sauber.",
+      git_need_message: "Gib eine Commit-Nachricht ein.", git_working: "Arbeite…", git_done: "Fertig.", git_failed: "Git-Vorgang fehlgeschlagen.",
+      git_prompt_commit: "Commit-Nachricht für dieses Element:", git_prompt_commit_push: "Commit-Nachricht (wird auch gepusht):",
       ctx_refresh: "Baum aktualisieren", ctx_delete: "Löschen",
       ctx_confirm_delete: "Erneut klicken zum Bestätigen",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
@@ -1791,6 +1830,11 @@ if (shell) {
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
       ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
       ctx_duplicate: "Дублировать",
+      ctx_git_commit: "Коммит (этот элемент)", ctx_git_commit_push: "Коммит и push (этот элемент)",
+      git_commit: "Коммит", git_commit_push: "Коммит и push", git_fetch: "Fetch", git_pull: "Pull", git_push: "Push",
+      git_commit_placeholder: "Сообщение коммита…", git_clean: "Изменений нет — чисто.",
+      git_need_message: "Введите сообщение коммита.", git_working: "Выполняю…", git_done: "Готово.", git_failed: "Git-операция не удалась.",
+      git_prompt_commit: "Сообщение коммита для этого элемента:", git_prompt_commit_push: "Сообщение коммита (также будет отправлено):",
       ctx_refresh: "Обновить дерево", ctx_delete: "Удалить",
       ctx_confirm_delete: "Нажмите ещё раз для подтверждения",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
@@ -2983,6 +3027,8 @@ if (shell) {
     publish: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z",
     unpublish: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
     copyLink: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
+    gitCommit: "M12 4a8 8 0 0 0-7.75 6H1l3.5 4 3.5-4H5.27A6.99 6.99 0 0 1 12 6a7 7 0 1 1-6.94 8H3.05A8 8 0 1 0 12 4zm-1 4v5l4 2 .75-1.23-3.25-1.92V8z",
+    gitPush: "M12 3 6 9h4v6h4V9h4l-6-6zM5 19h14v2H5z",
   };
 
   function createContextMenuButton(label, iconD, onClick, tone = "default", skipClose = false) {
@@ -3103,6 +3149,19 @@ if (shell) {
       treeContextMenu.appendChild(
         createContextMenuButton(t("ctx_duplicate"), CONTEXT_ICONS.duplicate, async () => {
           await duplicateItem(node);
+        }),
+      );
+    }
+    // Git — commit / commit & push just this file or folder.
+    if (gitIsActive()) {
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_git_commit"), CONTEXT_ICONS.gitCommit, async () => {
+          await gitCommitPath(node, { push: false });
+        }),
+      );
+      treeContextMenu.appendChild(
+        createContextMenuButton(t("ctx_git_commit_push"), CONTEXT_ICONS.gitPush, async () => {
+          await gitCommitPath(node, { push: true });
         }),
       );
     }
@@ -3717,6 +3776,15 @@ if (shell) {
         }
         renderTree(treeData);
       });
+      // A directory is "dirty" if it contains changed files, or if git
+      // reported the directory itself (a wholly-untracked folder, which
+      // porcelain lists at the directory level).
+      const dirStatus = gitStatusByPath[node.path];
+      if (dirStatus || gitDirtyDirs.has(node.path)) {
+        const dot = document.createElement("span");
+        dot.className = `git-dot git-${dirStatus || "modified"}`;
+        label.appendChild(dot);
+      }
       row.appendChild(label);
       appendPublishBadge(row, node);
       row.addEventListener("contextmenu", (event) => openTreeContextMenu(event, node));
@@ -3749,6 +3817,15 @@ if (shell) {
     }
     if (!node.editable) {
       fileButton.classList.add("is-disabled");
+    }
+    const gitStatus = gitStatusByPath[node.path];
+    if (gitStatus) {
+      fileButton.classList.add("is-git-changed");
+      const badge = document.createElement("span");
+      badge.className = `git-status-badge git-${gitStatus}`;
+      badge.textContent = GIT_STATUS_LETTER[gitStatus] || "•";
+      badge.title = gitStatus;
+      fileButton.appendChild(badge);
     }
     fileButton.addEventListener("click", () => {
       selectedTreePath = node.path;
@@ -3836,6 +3913,211 @@ if (shell) {
     }
   }
 
+  // ── Git integration ─────────────────────────────────────────────
+  const GIT_STATUS_LETTER = {
+    modified: "M",
+    added: "A",
+    deleted: "D",
+    untracked: "?",
+    renamed: "R",
+    conflict: "!",
+  };
+
+  function gitIsActive() {
+    return Boolean(gitInfo && gitInfo.is_repo);
+  }
+
+  function buildGitDirtyDirs(files) {
+    const dirs = new Set();
+    for (const f of files) {
+      const parts = f.path.split("/");
+      parts.pop(); // drop filename
+      let acc = "";
+      for (const part of parts) {
+        acc = acc ? `${acc}/${part}` : part;
+        dirs.add(acc);
+      }
+    }
+    return dirs;
+  }
+
+  async function refreshGitStatus({ rerender = true } = {}) {
+    if (config.isPublic || !config.gitStatusUrl) return;
+    try {
+      const data = await requestJson(config.gitStatusUrl, { method: "GET" });
+      if (!data || !data.available || !data.is_repo) {
+        gitInfo = null;
+        gitStatusByPath = {};
+        gitDirtyDirs = new Set();
+        gitMenu?.classList.add("hidden");
+        if (rerender && treeData) renderTree(treeData);
+        return;
+      }
+      gitInfo = data;
+      gitStatusByPath = {};
+      for (const f of data.files || []) gitStatusByPath[f.path] = f.status;
+      gitDirtyDirs = buildGitDirtyDirs(data.files || []);
+      gitMenu?.classList.remove("hidden");
+      renderGitMenu();
+      if (rerender && treeData) renderTree(treeData);
+    } catch {
+      // Non-fatal — treat as "no git" for this round.
+      gitInfo = null;
+      gitStatusByPath = {};
+      gitDirtyDirs = new Set();
+      gitMenu?.classList.add("hidden");
+    }
+  }
+
+  function renderGitMenu() {
+    if (!gitInfo) return;
+    if (gitBranchName) gitBranchName.textContent = gitInfo.branch || "—";
+    if (gitSyncState) {
+      const bits = [];
+      if (gitInfo.ahead) bits.push(`↑${gitInfo.ahead}`);
+      if (gitInfo.behind) bits.push(`↓${gitInfo.behind}`);
+      gitSyncState.textContent = bits.join(" ");
+    }
+    const files = gitInfo.files || [];
+    if (gitMenuBadge) {
+      if (files.length) {
+        gitMenuBadge.textContent = String(files.length);
+        gitMenuBadge.classList.remove("hidden");
+      } else {
+        gitMenuBadge.classList.add("hidden");
+      }
+    }
+    if (gitChangesList) {
+      gitChangesList.innerHTML = "";
+      if (!files.length) {
+        const empty = document.createElement("div");
+        empty.className = "git-changes-empty";
+        empty.textContent = t("git_clean");
+        gitChangesList.appendChild(empty);
+      } else {
+        files.forEach((f) => {
+          const row = document.createElement("div");
+          row.className = "git-change-row";
+          const letter = document.createElement("span");
+          letter.className = `git-change-letter git-${f.status}`;
+          letter.textContent = GIT_STATUS_LETTER[f.status] || "•";
+          const path = document.createElement("span");
+          path.className = "git-change-path";
+          path.textContent = f.path;
+          path.title = `${f.status}: ${f.path}`;
+          row.append(letter, path);
+          gitChangesList.appendChild(row);
+        });
+      }
+    }
+    // Commit buttons disabled when there's nothing to commit.
+    const nothing = !files.length;
+    if (gitCommitButton) gitCommitButton.disabled = nothing;
+    if (gitCommitPushButton) gitCommitPushButton.disabled = nothing;
+  }
+
+  function setGitStatusMsg(msg, kind = "") {
+    if (!gitStatusMsg) return;
+    gitStatusMsg.textContent = msg || "";
+    gitStatusMsg.classList.remove("is-error", "is-ok");
+    if (kind === "error") gitStatusMsg.classList.add("is-error");
+    else if (kind === "ok") gitStatusMsg.classList.add("is-ok");
+  }
+
+  function setGitButtonsBusy(busy) {
+    [gitCommitButton, gitCommitPushButton, gitFetchButton, gitPullButton, gitPushButton]
+      .forEach((b) => { if (b) b.disabled = busy; });
+  }
+
+  async function gitCommit({ push = false } = {}) {
+    const message = (gitCommitMessage?.value || "").trim();
+    if (!message) {
+      setGitStatusMsg(t("git_need_message"), "error");
+      gitCommitMessage?.focus();
+      return;
+    }
+    setGitButtonsBusy(true);
+    setGitStatusMsg(t("git_working"));
+    try {
+      const result = await requestJson(config.gitCommitUrl, {
+        method: "POST",
+        body: JSON.stringify({ message, push }),
+      });
+      if (result.ok) {
+        setGitStatusMsg(result.message || t("git_done"), "ok");
+        if (gitCommitMessage) gitCommitMessage.value = "";
+        await refreshGitStatus();
+      } else {
+        setGitStatusMsg(result.message || t("git_failed"), "error");
+      }
+    } catch (error) {
+      setGitStatusMsg(error.message || t("git_failed"), "error");
+    } finally {
+      setGitButtonsBusy(false);
+      renderGitMenu();
+    }
+  }
+
+  async function gitRemoteOp(op) {
+    const url = {
+      fetch: config.gitFetchUrl,
+      pull: config.gitPullUrl,
+      push: config.gitPushUrl,
+    }[op];
+    if (!url) return;
+    setGitButtonsBusy(true);
+    setGitStatusMsg(t("git_working"));
+    try {
+      const result = await requestJson(url, { method: "POST" });
+      setGitStatusMsg(result.message || (result.ok ? t("git_done") : t("git_failed")), result.ok ? "ok" : "error");
+      await refreshGitStatus();
+    } catch (error) {
+      setGitStatusMsg(error.message || t("git_failed"), "error");
+    } finally {
+      setGitButtonsBusy(false);
+      renderGitMenu();
+    }
+  }
+
+  // Commit (and optionally push) a single file or directory from the
+  // tree context menu. Prompts for a message inline.
+  async function gitCommitPath(node, { push = false } = {}) {
+    const message = window.prompt(
+      push ? t("git_prompt_commit_push") : t("git_prompt_commit"),
+      `Update ${node.name}`,
+    );
+    if (message === null) return;
+    const trimmed = message.trim();
+    if (!trimmed) {
+      setStatus(t("git_need_message"), true);
+      return;
+    }
+    setStatus(t("git_working"));
+    try {
+      const result = await requestJson(config.gitCommitUrl, {
+        method: "POST",
+        body: JSON.stringify({ message: trimmed, paths: [node.path], push }),
+      });
+      setStatus(result.message || (result.ok ? t("git_done") : t("git_failed")), !result.ok);
+      await refreshGitStatus();
+    } catch (error) {
+      setStatus(error.message || t("git_failed"), true);
+    }
+  }
+
+  function openGitMenu() {
+    gitMenuDropdown?.classList.remove("hidden");
+    gitMenuDropdown?.setAttribute("aria-hidden", "false");
+    gitMenuToggle?.setAttribute("aria-expanded", "true");
+    // Refresh on open so the change list is current.
+    refreshGitStatus({ rerender: false });
+  }
+  function closeGitMenu() {
+    gitMenuDropdown?.classList.add("hidden");
+    gitMenuDropdown?.setAttribute("aria-hidden", "true");
+    gitMenuToggle?.setAttribute("aria-expanded", "false");
+  }
+
   async function loadTree({ autoSelect = false } = {}) {
     closeTreeContextMenu();
     setStatus(t("st_refreshing_tree"));
@@ -3843,6 +4125,9 @@ if (shell) {
     // Pull the latest publish list in parallel — slow-running, OK to
     // happen after the first paint.
     refreshPublishedItems();
+    // Git status is potentially slow (SSH round-trip for SFTP), so don't
+    // block the first paint — fetch it async and re-render when it lands.
+    refreshGitStatus();
     if (scopedRootPath && !findDirectoryNode(treeData, scopedRootPath)) {
       scopedRootPath = "";
       applyTreeScopeState();
@@ -4468,6 +4753,17 @@ if (shell) {
     else closeUserMenu();
   });
 
+  // ── Git menu wiring ─────────────────────────────────────────────
+  gitMenuToggle?.addEventListener("click", () => {
+    if (gitMenuDropdown?.classList.contains("hidden")) openGitMenu();
+    else closeGitMenu();
+  });
+  gitCommitButton?.addEventListener("click", () => gitCommit({ push: false }));
+  gitCommitPushButton?.addEventListener("click", () => gitCommit({ push: true }));
+  gitFetchButton?.addEventListener("click", () => gitRemoteOp("fetch"));
+  gitPullButton?.addEventListener("click", () => gitRemoteOp("pull"));
+  gitPushButton?.addEventListener("click", () => gitRemoteOp("push"));
+
   openSettingsButton.addEventListener("click", () => {
     closeUserMenu();
     openSettingsModal();
@@ -4532,6 +4828,14 @@ if (shell) {
     ) {
       closeUserMenu();
     }
+    if (
+      gitMenuDropdown &&
+      !gitMenuDropdown.classList.contains("hidden") &&
+      !gitMenuDropdown.contains(event.target) &&
+      !gitMenuToggle?.contains(event.target)
+    ) {
+      closeGitMenu();
+    }
   });
   document.addEventListener("contextmenu", (event) => {
     if (!event.target.closest(".tree-row")) {
@@ -4560,6 +4864,10 @@ if (shell) {
     }
     if (event.key === "Escape" && userMenuDropdown && !userMenuDropdown.classList.contains("hidden")) {
       closeUserMenu();
+      return;
+    }
+    if (event.key === "Escape" && gitMenuDropdown && !gitMenuDropdown.classList.contains("hidden")) {
+      closeGitMenu();
       return;
     }
     if (event.key === "Escape" && !directoryBrowserModal.classList.contains("hidden")) {

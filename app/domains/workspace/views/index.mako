@@ -166,6 +166,37 @@
               </div>
             </div>
           </div>
+          <div class="git-menu hidden" id="git-menu">
+            <button id="git-menu-toggle" class="icon-button" type="button" aria-label="Git" aria-haspopup="true" aria-expanded="false" aria-controls="git-menu-dropdown" title="Git">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M21.62 11.1 12.9 2.38a1.3 1.3 0 0 0-1.84 0l-1.81 1.8 2.3 2.3a1.54 1.54 0 0 1 1.95 1.97l2.22 2.21a1.54 1.54 0 1 1-.92.87l-2.07-2.07v5.45a1.54 1.54 0 1 1-1.27-.04V11.3a1.54 1.54 0 0 1-.84-2.02L8.56 7.0l-6.18 6.18a1.3 1.3 0 0 0 0 1.84l8.72 8.72a1.3 1.3 0 0 0 1.84 0l8.68-8.68a1.3 1.3 0 0 0 0-1.84z"/>
+              </svg>
+              <span id="git-menu-badge" class="git-menu-badge hidden">0</span>
+            </button>
+            <div id="git-menu-dropdown" class="git-dropdown hidden" role="menu" aria-hidden="true">
+              <div class="git-dropdown-header">
+                <div class="git-branch-row">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" class="git-branch-icon"><path d="M6 3a3 3 0 0 0-1 5.83v6.34a3 3 0 1 0 2 0V12a4 4 0 0 0 4 4h1.17a3 3 0 1 0 0-2H11a2 2 0 0 1-2-2V8.83A3 3 0 0 0 6 3z"/></svg>
+                  <strong id="git-branch-name">—</strong>
+                  <span id="git-sync-state" class="git-sync-state"></span>
+                </div>
+              </div>
+              <div id="git-changes-list" class="git-changes-list"></div>
+              <div class="git-commit-box">
+                <textarea id="git-commit-message" class="git-commit-message" rows="2" data-i18n-placeholder="git_commit_placeholder" placeholder="Commit message…"></textarea>
+                <div class="git-commit-actions">
+                  <button id="git-commit" class="button button-secondary button-sm" type="button" data-i18n="git_commit">Commit</button>
+                  <button id="git-commit-push" class="button button-primary button-sm" type="button" data-i18n="git_commit_push">Commit &amp; Push</button>
+                </div>
+              </div>
+              <div class="git-remote-actions">
+                <button id="git-fetch" class="button button-secondary button-sm" type="button" data-i18n="git_fetch">Fetch</button>
+                <button id="git-pull" class="button button-secondary button-sm" type="button" data-i18n="git_pull">Pull</button>
+                <button id="git-push" class="button button-secondary button-sm" type="button" data-i18n="git_push">Push</button>
+              </div>
+              <p id="git-status-msg" class="git-status-msg muted"></p>
+            </div>
+          </div>
           <div class="editor-zoom">
             <button id="decrease-font-size" class="icon-button icon-button-small" type="button" aria-label="Decrease editor font size">
               <svg viewBox="0 0 24 24" aria-hidden="true">

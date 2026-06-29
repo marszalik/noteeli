@@ -1003,6 +1003,11 @@ class WorkspaceService:
         sorted_entries = self._sort_entries(entries, relative_path, sort_mode)
 
         for entry in sorted_entries:
+            # Never surface the .git directory in the notes tree — it's
+            # internal VCS plumbing, not content, and auto-open/"show
+            # hidden" would otherwise wander into it.
+            if entry.is_dir and entry.name == ".git":
+                continue
             if entry.is_dir and not entry.is_symlink:
                 children.append(
                     self._build_directory_node(entry.relative_path, entry.name, sort_mode, backend)

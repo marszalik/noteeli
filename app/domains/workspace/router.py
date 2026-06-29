@@ -104,6 +104,11 @@ async def workspace_page(request: Request):
             "publishUrl": str(request.url_for("publish_create_api")),
             "publishListUrl": str(request.url_for("publish_list_api")),
             "sftpTestUrl": str(request.url_for("workspace_sftp_test_api")),
+            "gitStatusUrl": str(request.url_for("git_status_api")),
+            "gitCommitUrl": str(request.url_for("git_commit_api")),
+            "gitPushUrl": str(request.url_for("git_push_api")),
+            "gitPullUrl": str(request.url_for("git_pull_api")),
+            "gitFetchUrl": str(request.url_for("git_fetch_api")),
         }
     )
     # When storage isn't configured yet (hosted onboarding), don't even

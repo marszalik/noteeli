@@ -13,6 +13,24 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Git integration for the workspace.** When the directory a workspace
+  points at is a git repository, git features light up automatically
+  (no config). Works for both **local** filesystem and **SFTP** sources
+  — SFTP runs git over SSH on the remote server using the SFTP
+  credentials. Google Drive has no git.
+  - **Tree decorations:** changed files get a status badge (M/A/D/?/R)
+    and folders containing changes get a coloured dot.
+  - **Git menu** (icon in the topbar, next to zoom/profiles) with a
+    change count badge: branch + ahead/behind, the list of changes, a
+    commit message box with **Commit** / **Commit & Push**, and
+    **Fetch / Pull / Push** buttons (remote + upstream assumed set).
+  - **Per-item commit:** the tree context menu gains "Commit (this item)"
+    and "Commit & push (this item)" to stage and commit just one file or
+    folder.
+  - Read-only demo has git disabled. The `.git` directory is excluded
+    from the notes tree. Backend: new `app/domains/git/` domain with a
+    runner abstraction (`subprocess` locally, paramiko SSH-exec for SFTP),
+    a fixed subcommand allow-list, and client-path validation.
 - **Undo / Redo buttons in the WYSIWYG editor toolbar.** Toast UI only
   shipped the keyboard shortcuts (Ctrl/Cmd+Z); now there's a visible
   Undo/Redo group at the front of the toolbar. Labels in all 5 locales.
