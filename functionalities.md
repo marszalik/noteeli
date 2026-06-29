@@ -336,6 +336,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Git menu (branch, change list, commit box, remote ops) | 🌐 | `#git-menu`, `renderGitMenu`, `gitCommit`, `gitRemoteOp` |
 | Per-item commit / commit & push from context menu | 🌐 | `gitCommitPath` |
 | `.git` excluded from the notes tree | ✅ `test_dot_git_excluded_from_tree` | `_build_directory_node` skip |
+| Noteeli's own DB (+ wal/shm, data_dir) hidden from tree & git status | ✅ `tests/test_runtime_data_hidden.py` | `runtime_skip_relpaths`; only when data_dir is inside content_root |
 | Client-path validation + subcommand allow-list (injection guard) | ✅ `test_commit_rejects_path_traversal` | `_safe_rel`, `_ALLOWED_SUBCOMMANDS` |
 | Git disabled in demo mode | ✅ `test_demo_mode_disables_git` | runner is `None` in demo |
 

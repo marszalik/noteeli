@@ -188,7 +188,41 @@ class GitService:
             # than 500ing the page.
             return GitStatus(available=True, is_repo=False)
 
-        return self._parse_status(out)
+        status = self._parse_status(out)
+        skip = self._runtime_skip_relpaths()
+        if skip and status.files:
+            status.files = [f for f in status.files if not self._is_runtime_path(f.path, skip)]
+            status.clean = not status.files
+        return status
+
+    @staticmethod
+    def _is_runtime_path(path: str, skip: set[str]) -> bool:
+        return any(path == s or path.startswith(s + "/") for s in skip)
+
+    def _runtime_skip_relpaths(self) -> set[str]:
+        """DB + sidecars + data_dir expressed relative to the workspace
+        dir, so Noteeli's own runtime files never show up in git status
+        when the operator put NOTEELI_DATA_DIR inside the notes folder.
+        Only meaningful for the local source (the DB is always local)."""
+        from pathlib import Path
+        if getattr(self.preferences, "source_type", "local") != "local":
+            return set()
+        skip: set[str] = set()
+        try:
+            root = Path(self.preferences.content_root).resolve()
+        except OSError:
+            return skip
+        db = self.settings.database_path
+        candidates = [self.settings.data_dir, db]
+        candidates += [db.parent / f"{db.name}{s}" for s in ("-wal", "-shm", "-journal")]
+        for p in candidates:
+            try:
+                rel = Path(p).resolve().relative_to(root).as_posix()
+            except (ValueError, OSError):
+                continue
+            if rel and rel != ".":
+                skip.add(rel)
+        return skip
 
     @staticmethod
     def _parse_status(raw: str) -> GitStatus:

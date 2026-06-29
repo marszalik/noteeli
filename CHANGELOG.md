@@ -11,6 +11,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Noteeli's SQLite DB no longer clutters the notes tree.** When the
+  data dir sits inside the notes folder (e.g. `NOTEELI_DATA_DIR` pointed
+  at the notes root), the database and its `-wal`/`-shm`/`-journal`
+  sidecars — and a `.noteeli` data subdirectory — are now excluded from
+  the file tree and from git status, so they don't mix with real notes or
+  show up as uncommitted changes. (Fresh installs already keep the DB in a
+  separate dir; this protects setups where it ended up alongside notes.)
+
 ### Added
 
 - **Per-user preferences and saved profiles.** Each logged-in user now

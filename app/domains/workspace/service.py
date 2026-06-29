@@ -301,7 +301,32 @@ class WorkspaceService:
         backend = self._get_backend()  # routes through hosted-mode security check
         display = backend.root_display
         root_name = display.rstrip("/").rsplit("/", 1)[-1] or display
-        return self._build_directory_node("", root_name, prefs.sort_mode, backend)
+        return self._build_directory_node(
+            "", root_name, prefs.sort_mode, backend, self.runtime_skip_relpaths()
+        )
+
+    def runtime_skip_relpaths(self) -> set[str]:
+        """POSIX paths (relative to the content root) that hold Noteeli's
+        own runtime data — the SQLite DB and its WAL/SHM/journal sidecars,
+        and the data_dir itself when it lives inside the notes directory.
+        These must never appear in the notes tree or in git status, even
+        if the operator pointed NOTEELI_DATA_DIR at the notes folder."""
+        skip: set[str] = set()
+        try:
+            root = Path(self.settings.content_root).resolve()
+        except OSError:
+            return skip
+        db = self.settings.database_path
+        candidates = [self.settings.data_dir, db]
+        candidates += [db.parent / f"{db.name}{suffix}" for suffix in ("-wal", "-shm", "-journal")]
+        for path in candidates:
+            try:
+                rel = Path(path).resolve().relative_to(root).as_posix()
+            except (ValueError, OSError):
+                continue
+            if rel and rel != ".":
+                skip.add(rel)
+        return skip
 
     def read_document(self, relative_path: str) -> FileDocument:
         backend = self._get_backend()
@@ -1020,7 +1045,9 @@ class WorkspaceService:
         name: str,
         sort_mode: SortMode,
         backend: StorageBackend,
+        skip: set[str] | None = None,
     ) -> TreeNode:
+        skip = skip or set()
         children: list[TreeNode] = []
         entries = backend.list_children(relative_path)
         sorted_entries = self._sort_entries(entries, relative_path, sort_mode)
@@ -1031,9 +1058,13 @@ class WorkspaceService:
             # hidden" would otherwise wander into it.
             if entry.is_dir and entry.name == ".git":
                 continue
+            # Hide Noteeli's own runtime data (SQLite DB + sidecars, the
+            # data_dir) when it happens to live inside the notes folder.
+            if entry.relative_path in skip:
+                continue
             if entry.is_dir and not entry.is_symlink:
                 children.append(
-                    self._build_directory_node(entry.relative_path, entry.name, sort_mode, backend)
+                    self._build_directory_node(entry.relative_path, entry.name, sort_mode, backend, skip)
                 )
             else:
                 children.append(TreeNode(
