@@ -94,8 +94,8 @@ class WorkspaceService:
     def root_display(self) -> str:
         return self._get_backend().root_display
 
-    def get_preferences(self) -> AppPreferences:
-        return self.preferences_service.get_preferences()
+    def get_preferences(self, user_key: str | None = None) -> AppPreferences:
+        return self.preferences_service.get_preferences(user_key)
 
     def save_sftp_credentials(
         self,
@@ -139,6 +139,7 @@ class WorkspaceService:
         image_upload_subdir: str = "assets",
         language: str = "pl",
         compact_chrome: bool = False,
+        user_key: str | None = None,
     ) -> AppPreferences:
         self._block_if_demo()
         # SECURITY: hosted mode never accepts source_type=local — would
@@ -165,6 +166,7 @@ class WorkspaceService:
             gdrive_credentials = None  # keep existing
         invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
+            user_key=user_key,
             content_root=content_root,
             sort_mode=sort_mode,
             theme_mode=theme_mode,
@@ -184,13 +186,14 @@ class WorkspaceService:
             compact_chrome=compact_chrome,
         )
 
-    def list_preference_profiles(self) -> list[SavedPreferencesProfile]:
-        return self.preferences_service.list_profiles()
+    def list_preference_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:
+        return self.preferences_service.list_profiles(user_key)
 
     def save_preference_profile(
         self,
         *,
         name: str,
+        user_key: str | None = None,
         content_root: str,
         sort_mode: SortMode,
         theme_mode: str,
@@ -212,6 +215,7 @@ class WorkspaceService:
         self._block_if_demo()
         return self.preferences_service.create_profile(
             name=name,
+            user_key=user_key,
             content_root=content_root,
             sort_mode=sort_mode,
             theme_mode=theme_mode,
@@ -236,6 +240,7 @@ class WorkspaceService:
         profile_id: int,
         *,
         name: str,
+        user_key: str | None = None,
         content_root: str,
         sort_mode: SortMode,
         theme_mode: str,
@@ -258,6 +263,7 @@ class WorkspaceService:
         return self.preferences_service.update_profile(
             profile_id,
             name=name,
+            user_key=user_key,
             content_root=content_root,
             sort_mode=sort_mode,
             theme_mode=theme_mode,
@@ -277,21 +283,21 @@ class WorkspaceService:
             compact_chrome=compact_chrome,
         )
 
-    def delete_preference_profile(self, profile_id: int) -> None:
+    def delete_preference_profile(self, profile_id: int, user_key: str | None = None) -> None:
         self._block_if_demo()
-        self.preferences_service.delete_profile(profile_id)
+        self.preferences_service.delete_profile(profile_id, user_key)
 
-    def reorder_preference_profiles(self, ordered_ids: list[int]) -> None:
+    def reorder_preference_profiles(self, ordered_ids: list[int], user_key: str | None = None) -> None:
         self._block_if_demo()
-        self.preferences_service.reorder_profiles(ordered_ids)
+        self.preferences_service.reorder_profiles(ordered_ids, user_key)
 
-    def apply_preference_profile(self, profile_id: int) -> AppPreferences:
+    def apply_preference_profile(self, profile_id: int, user_key: str | None = None) -> AppPreferences:
         self._block_if_demo()
         invalidate_sftp_cache()
-        return self.preferences_service.apply_profile(profile_id)
+        return self.preferences_service.apply_profile(profile_id, user_key)
 
-    def build_tree(self) -> TreeNode:
-        prefs = self.get_preferences()
+    def build_tree(self, user_key: str | None = None) -> TreeNode:
+        prefs = self.get_preferences(user_key)
         backend = self._get_backend()  # routes through hosted-mode security check
         display = backend.root_display
         root_name = display.rstrip("/").rsplit("/", 1)[-1] or display

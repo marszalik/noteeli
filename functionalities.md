@@ -339,6 +339,16 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Client-path validation + subcommand allow-list (injection guard) | ✅ `test_commit_rejects_path_traversal` | `_safe_rel`, `_ALLOWED_SUBCOMMANDS` |
 | Git disabled in demo mode | ✅ `test_demo_mode_disables_git` | runner is `None` in demo |
 
+## 21b. Per-user preferences & profiles
+
+| Feature | Status | Notes |
+|---|---|---|
+| Personal settings per logged-in user (theme/font/sort/autosave/language/compact/active profile) | ✅ `test_personal_prefs_are_per_user_but_storage_is_shared` | `user_settings` overlay keyed by email; `_PERSONAL_KEYS` |
+| Storage (source/content root/SFTP/Drive) stays shared instance-wide | ✅ same test | only personal keys overlay per user |
+| Saved profiles per user; names unique per user | ✅ `test_saved_profiles_are_per_user` | `preference_profiles.user_key`, `UNIQUE(user_key,name)` |
+| Migration from old global schema (legacy profiles preserved) | ✅ `test_migration_from_old_global_schema` | rebuild table, existing rows → `user_key=''` |
+| `user_key` threaded through service/router (default None = global) | ✅ | back-compat: existing tests unaffected |
+
 ## 22. Locked workspace (`NOTEELI_LOCK_WORKSPACE`)
 
 | Feature | Status | Notes |

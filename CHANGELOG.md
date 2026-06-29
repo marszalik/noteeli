@@ -13,6 +13,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Per-user preferences and saved profiles.** Each logged-in user now
+  has their own theme, font size, sort mode, autosave, language, compact
+  layout, active profile, and saved profile sets — keyed by their email.
+  The **storage stays shared** (source / content root / SFTP / Drive),
+  which is exactly what a collaborative workspace wants: everyone works
+  on the same directory + git, but each person keeps their own look.
+  Backend: new `user_settings` table overlays the per-user personal keys
+  on top of the instance defaults; `preference_profiles` gains a
+  `user_key` column (names are now unique per user). Existing single-user
+  DBs migrate cleanly — old profiles become a shared/legacy bucket.
 - **Git commits are signed by the logged-in user.** In a shared workspace,
   a commit is attributed (author + committer) to whoever made it — using
   their Google name + email — instead of the instance's ambient git

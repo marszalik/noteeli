@@ -23,21 +23,20 @@ class PreferencesService:
         self.settings = settings or get_settings()
         self.repository = repository or PreferencesRepository(self.settings)
 
-    def get_preferences(self) -> AppPreferences:
-        preferences = self.repository.get_app_preferences()
+    def get_preferences(self, user_key: str | None = None) -> AppPreferences:
+        preferences = self.repository.get_app_preferences(user_key)
         if preferences.source_type == "local":
             try:
                 content_root = self._ensure_local_content_root(preferences.content_root)
             except OSError:
                 fallback_root = self._ensure_local_content_root(self.settings.content_root)
-                preferences = self.repository.update_app_preferences(
-                    content_root=str(fallback_root),
-                )
-                return preferences
+                # content_root is global storage, so this fixup is not
+                # user-scoped.
+                self.repository.update_app_preferences(content_root=str(fallback_root))
+                return self.repository.get_app_preferences(user_key)
             if str(content_root) != preferences.content_root:
-                preferences = self.repository.update_app_preferences(
-                    content_root=str(content_root),
-                )
+                self.repository.update_app_preferences(content_root=str(content_root))
+                preferences = self.repository.get_app_preferences(user_key)
         return preferences
 
     def update_preferences(
@@ -59,12 +58,14 @@ class PreferencesService:
         image_upload_subdir: str = "assets",
         language: Language = "pl",
         compact_chrome: bool = False,
+        user_key: str | None = None,
     ) -> AppPreferences:
         if source_type == "local":
             resolved_root = self._ensure_local_content_root(content_root)
             content_root = str(resolved_root)
 
         return self.repository.update_app_preferences(
+            user_key=user_key,
             source_type=source_type,
             content_root=content_root,
             sftp_host=sftp_host,
@@ -84,13 +85,14 @@ class PreferencesService:
             compact_chrome=compact_chrome,
         )
 
-    def list_profiles(self) -> list[SavedPreferencesProfile]:
-        return self.repository.list_profiles()
+    def list_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:
+        return self.repository.list_profiles(user_key)
 
     def create_profile(
         self,
         *,
         name: str,
+        user_key: str | None = None,
         content_root: str,
         sort_mode: SortMode,
         theme_mode: ThemeMode,
@@ -129,7 +131,7 @@ class PreferencesService:
             compact_chrome=compact_chrome,
         )
         try:
-            return self.repository.create_profile(name.strip(), profile_preferences)
+            return self.repository.create_profile(name.strip(), profile_preferences, user_key)
         except sqlite3.IntegrityError as exc:
             raise PreferenceProfileConflictError("Saved settings profile name already exists.") from exc
 
@@ -138,6 +140,7 @@ class PreferencesService:
         profile_id: int,
         *,
         name: str,
+        user_key: str | None = None,
         content_root: str,
         sort_mode: SortMode,
         theme_mode: ThemeMode,
@@ -176,7 +179,7 @@ class PreferencesService:
             compact_chrome=compact_chrome,
         )
         try:
-            profile = self.repository.update_profile(profile_id, name.strip(), profile_preferences)
+            profile = self.repository.update_profile(profile_id, name.strip(), profile_preferences, user_key)
         except sqlite3.IntegrityError as exc:
             raise PreferenceProfileConflictError("Saved settings profile name already exists.") from exc
 
@@ -184,26 +187,27 @@ class PreferencesService:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
         return profile
 
-    def delete_profile(self, profile_id: int) -> None:
-        deleted = self.repository.delete_profile(profile_id)
+    def delete_profile(self, profile_id: int, user_key: str | None = None) -> None:
+        deleted = self.repository.delete_profile(profile_id, user_key)
         if not deleted:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
-        if self.repository.get_active_profile_id() == profile_id:
-            self.repository.set_active_profile_id(None)
+        if self.repository.get_active_profile_id(user_key) == profile_id:
+            self.repository.set_active_profile_id(None, user_key)
 
-    def reorder_profiles(self, ordered_ids: list[int]) -> None:
-        self.repository.reorder_profiles(ordered_ids)
+    def reorder_profiles(self, ordered_ids: list[int], user_key: str | None = None) -> None:
+        self.repository.reorder_profiles(ordered_ids, user_key)
 
-    def apply_profile(self, profile_id: int) -> AppPreferences:
-        profile_preferences = self.repository.get_profile_preferences(profile_id)
+    def apply_profile(self, profile_id: int, user_key: str | None = None) -> AppPreferences:
+        profile_preferences = self.repository.get_profile_preferences(profile_id, user_key)
         if profile_preferences is None:
             raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
 
         # Mark as the active profile BEFORE running update_preferences so
         # that the returned AppPreferences carries the right active_profile_id.
-        self.repository.set_active_profile_id(profile_id)
+        self.repository.set_active_profile_id(profile_id, user_key)
 
         return self.update_preferences(
+            user_key=user_key,
             content_root=profile_preferences.content_root,
             sort_mode=profile_preferences.sort_mode,
             theme_mode=profile_preferences.theme_mode,

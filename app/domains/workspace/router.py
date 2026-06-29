@@ -48,6 +48,14 @@ auth_service = AuthService(settings)
 workspace_service = WorkspaceService(settings)
 
 
+def _user_key(request: Request) -> str:
+    """Stable per-user key (lowercased email) used to scope personal
+    preferences + saved profiles. Empty string when there's no identity
+    (treated as the global/default bucket)."""
+    user = auth_service.get_current_user(request) or {}
+    return (user.get("email") or "").strip().lower()
+
+
 @router.get("/", name="workspace_page")
 async def workspace_page(request: Request):
     user = auth_service.get_current_user(request)
@@ -63,7 +71,7 @@ async def workspace_page(request: Request):
                 status_code=303,
             )
 
-    preferences = workspace_service.get_preferences()
+    preferences = workspace_service.get_preferences(_user_key(request))
 
     # In hosted mode, force SFTP/GDrive: source_type=local is forbidden.
     # If the user lands here without storage configured, flip to a sane
@@ -141,7 +149,7 @@ async def workspace_page(request: Request):
 @router.get("/api/tree", response_model=TreeNode, name="workspace_tree_api")
 async def workspace_tree_api(request: Request):
     auth_service.require_api_access(request)
-    return workspace_service.build_tree()
+    return workspace_service.build_tree(_user_key(request))
 
 
 @router.get("/api/file", response_model=FileDocument, name="workspace_file_api")
@@ -355,7 +363,7 @@ async def workspace_create_directory_api(request: Request, payload: CreateDirect
 @router.get("/api/preferences", response_model=AppPreferences, name="workspace_preferences_api")
 async def workspace_preferences_api(request: Request):
     auth_service.require_api_access(request)
-    return workspace_service.get_preferences()
+    return workspace_service.get_preferences(_user_key(request))
 
 
 @router.post("/api/sftp/test", name="workspace_sftp_test_api")
@@ -406,6 +414,7 @@ async def workspace_sftp_test_api(request: Request):
 async def workspace_update_preferences_api(request: Request, payload: UpdatePreferencesRequest):
     auth_service.require_api_access(request)
     return workspace_service.update_preferences(
+        user_key=_user_key(request),
         content_root=payload.content_root,
         sort_mode=payload.sort_mode,
         theme_mode=payload.theme_mode,
@@ -432,7 +441,7 @@ async def workspace_update_preferences_api(request: Request, payload: UpdatePref
 )
 async def workspace_preference_profiles_api(request: Request):
     auth_service.require_api_access(request)
-    return SavedPreferencesProfilesResponse(profiles=workspace_service.list_preference_profiles())
+    return SavedPreferencesProfilesResponse(profiles=workspace_service.list_preference_profiles(_user_key(request)))
 
 
 @router.post(
@@ -445,6 +454,7 @@ async def workspace_save_preference_profile_api(request: Request, payload: SaveP
     try:
         return workspace_service.save_preference_profile(
             name=payload.name,
+            user_key=_user_key(request),
             content_root=payload.content_root,
             sort_mode=payload.sort_mode,
             theme_mode=payload.theme_mode,
@@ -482,6 +492,7 @@ async def workspace_update_preference_profile_api(
         return workspace_service.update_preference_profile(
             profile_id,
             name=payload.name,
+            user_key=_user_key(request),
             content_root=payload.content_root,
             sort_mode=payload.sort_mode,
             theme_mode=payload.theme_mode,
@@ -513,7 +524,7 @@ async def workspace_update_preference_profile_api(
 async def workspace_delete_preference_profile_api(request: Request, profile_id: int):
     auth_service.require_api_access(request)
     try:
-        workspace_service.delete_preference_profile(profile_id)
+        workspace_service.delete_preference_profile(profile_id, _user_key(request))
     except PreferenceProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "deleted"}
@@ -529,7 +540,7 @@ async def workspace_reorder_preference_profiles_api(request: Request):
     ordered_ids = body.get("ordered_ids") or []
     if not isinstance(ordered_ids, list) or not all(isinstance(i, int) for i in ordered_ids):
         raise HTTPException(status_code=400, detail="ordered_ids must be a list of integers.")
-    workspace_service.reorder_preference_profiles(ordered_ids)
+    workspace_service.reorder_preference_profiles(ordered_ids, _user_key(request))
     return {"status": "ok"}
 
 
@@ -541,7 +552,7 @@ async def workspace_reorder_preference_profiles_api(request: Request):
 async def workspace_apply_preference_profile_api(request: Request, profile_id: int):
     auth_service.require_api_access(request)
     try:
-        return workspace_service.apply_preference_profile(profile_id)
+        return workspace_service.apply_preference_profile(profile_id, _user_key(request))
     except PreferenceProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

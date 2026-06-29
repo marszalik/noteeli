@@ -6,6 +6,23 @@ from app.core.config import Settings, get_settings
 from app.domains.preferences.schemas import AppPreferences, SavedPreferencesProfile, SortMode, ThemeMode, SourceType, ImageUploadMode, Language  # noqa: F401
 
 
+# Settings that are personal to each logged-in user. Everything else
+# (source_type, content_root, sftp_*, gdrive_*) is the instance-wide
+# storage config and stays shared — that's what makes a collaborative
+# workspace point at one directory while each person keeps their own look.
+_PERSONAL_KEYS = frozenset({
+    "sort_mode",
+    "theme_mode",
+    "editor_font_size",
+    "autosave_enabled",
+    "image_upload_mode",
+    "image_upload_subdir",
+    "language",
+    "compact_chrome",
+    "active_profile_id",
+})
+
+
 class PreferencesRepository:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
@@ -67,13 +84,28 @@ class PreferencesRepository:
                 ON item_preferences (parent_path, manual_order)
                 """
             )
+            # Per-user overrides for the personal settings above. The
+            # global app_settings row holds the instance defaults; a row
+            # here shadows it for one user_key (the lowercased email).
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_settings (
+                    user_key TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    PRIMARY KEY (user_key, key)
+                )
+                """
+            )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS preference_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL UNIQUE,
+                    user_key TEXT NOT NULL DEFAULT '',
+                    name TEXT NOT NULL,
                     payload TEXT NOT NULL,
-                    sort_index INTEGER NOT NULL DEFAULT 0
+                    sort_index INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(user_key, name)
                 )
                 """
             )
@@ -84,21 +116,54 @@ class PreferencesRepository:
                 connection.execute(
                     "ALTER TABLE preference_profiles ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0"
                 )
+            # Migration: older DBs have a global UNIQUE(name) and no
+            # user_key. Rebuild so names are unique per user, existing
+            # profiles land in the shared/legacy bucket (user_key='').
+            cols = [r[1] for r in connection.execute("PRAGMA table_info(preference_profiles)")]
+            if cols and "user_key" not in cols:
+                connection.execute("ALTER TABLE preference_profiles RENAME TO preference_profiles_old")
+                connection.execute(
+                    """
+                    CREATE TABLE preference_profiles (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_key TEXT NOT NULL DEFAULT '',
+                        name TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        sort_index INTEGER NOT NULL DEFAULT 0,
+                        UNIQUE(user_key, name)
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO preference_profiles(id, user_key, name, payload, sort_index)
+                    SELECT id, '', name, payload, sort_index FROM preference_profiles_old
+                    """
+                )
+                connection.execute("DROP TABLE preference_profiles_old")
             connection.executemany(
                 "INSERT OR IGNORE INTO app_settings(key, value) VALUES(?, ?)",
                 defaults,
             )
 
-    def get_app_preferences(self) -> AppPreferences:
+    def get_app_preferences(self, user_key: str | None = None) -> AppPreferences:
         with self._connect() as connection:
             rows = connection.execute("SELECT key, value FROM app_settings").fetchall()
-
-        values = {row["key"]: row["value"] for row in rows}
+            values = {row["key"]: row["value"] for row in rows}
+            if user_key:
+                urows = connection.execute(
+                    "SELECT key, value FROM user_settings WHERE user_key = ?",
+                    (user_key,),
+                ).fetchall()
+                for row in urows:
+                    if row["key"] in _PERSONAL_KEYS:
+                        values[row["key"]] = row["value"]
         return self._preferences_from_values(values)
 
     def update_app_preferences(
         self,
         *,
+        user_key: str | None = None,
         source_type: SourceType | None = None,
         content_root: str | None = None,
         sftp_host: str | None = None,
@@ -157,54 +222,83 @@ class PreferencesRepository:
         if compact_chrome is not None:
             updates.append(("compact_chrome", "true" if compact_chrome else "false"))
 
-        if updates:
+        # Split: when acting for a specific user, personal settings go to
+        # that user's overlay; storage settings stay global. With no
+        # user_key (startup seed, demo, save_sftp_credentials, tests),
+        # everything writes globally as before.
+        global_updates: list[tuple[str, str]] = []
+        user_updates: list[tuple[str, str]] = []
+        for key, val in updates:
+            if user_key and key in _PERSONAL_KEYS:
+                user_updates.append((key, val))
+            else:
+                global_updates.append((key, val))
+
+        if global_updates or user_updates:
             with self._connect() as connection:
-                connection.executemany(
-                    "INSERT OR REPLACE INTO app_settings(key, value) VALUES(?, ?)",
-                    updates,
-                )
+                if global_updates:
+                    connection.executemany(
+                        "INSERT OR REPLACE INTO app_settings(key, value) VALUES(?, ?)",
+                        global_updates,
+                    )
+                if user_updates:
+                    connection.executemany(
+                        "INSERT OR REPLACE INTO user_settings(user_key, key, value) VALUES(?, ?, ?)",
+                        [(user_key, k, v) for k, v in user_updates],
+                    )
 
-        return self.get_app_preferences()
+        return self.get_app_preferences(user_key)
 
-    def list_profiles(self) -> list[SavedPreferencesProfile]:
+    @staticmethod
+    def _profile_scope(user_key: str | None) -> tuple[str, tuple]:
+        """SQL fragment + params restricting profile rows to a user.
+
+        A user sees their own profiles plus any legacy/shared rows
+        (user_key=''). With no user_key (tests / back-compat) all rows
+        are in scope."""
+        if user_key:
+            return "user_key IN (?, '')", (user_key,)
+        return "1=1", ()
+
+    def list_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:
+        scope, params = self._profile_scope(user_key)
         with self._connect() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT id, name, payload
                 FROM preference_profiles
+                WHERE {scope}
                 ORDER BY sort_index ASC, name COLLATE NOCASE ASC
-                """
+                """,
+                params,
             ).fetchall()
 
         return [self._profile_from_row(row) for row in rows]
 
-    def reorder_profiles(self, ordered_ids: list[int]) -> None:
-        """Apply a new sort_index to each id in the order given."""
+    def reorder_profiles(self, ordered_ids: list[int], user_key: str | None = None) -> None:
+        """Apply a new sort_index to each id in the order given (scoped)."""
         if not ordered_ids:
             return
+        scope, params = self._profile_scope(user_key)
         with self._connect() as connection:
             for index, profile_id in enumerate(ordered_ids):
                 connection.execute(
-                    "UPDATE preference_profiles SET sort_index = ? WHERE id = ?",
-                    (index, profile_id),
+                    f"UPDATE preference_profiles SET sort_index = ? WHERE id = ? AND {scope}",
+                    (index, profile_id, *params),
                 )
 
-    def create_profile(self, name: str, preferences: AppPreferences) -> SavedPreferencesProfile:
+    def create_profile(self, name: str, preferences: AppPreferences, user_key: str | None = None) -> SavedPreferencesProfile:
         payload = json.dumps(self._encrypted_profile_payload(preferences), ensure_ascii=False)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                INSERT INTO preference_profiles(name, payload)
-                VALUES(?, ?)
+                INSERT INTO preference_profiles(user_key, name, payload)
+                VALUES(?, ?, ?)
                 """,
-                (name, payload),
+                (user_key or "", name, payload),
             )
             row = connection.execute(
-                """
-                SELECT id, name, payload
-                FROM preference_profiles
-                WHERE id = ?
-                """,
+                "SELECT id, name, payload FROM preference_profiles WHERE id = ?",
                 (cursor.lastrowid,),
             ).fetchone()
 
@@ -217,25 +311,23 @@ class PreferencesRepository:
         profile_id: int,
         name: str,
         preferences: AppPreferences,
+        user_key: str | None = None,
     ) -> SavedPreferencesProfile | None:
         payload = json.dumps(self._encrypted_profile_payload(preferences), ensure_ascii=False)
+        scope, params = self._profile_scope(user_key)
         with self._connect() as connection:
             cursor = connection.execute(
-                """
+                f"""
                 UPDATE preference_profiles
                 SET name = ?, payload = ?
-                WHERE id = ?
+                WHERE id = ? AND {scope}
                 """,
-                (name, payload, profile_id),
+                (name, payload, profile_id, *params),
             )
             if cursor.rowcount == 0:
                 return None
             row = connection.execute(
-                """
-                SELECT id, name, payload
-                FROM preference_profiles
-                WHERE id = ?
-                """,
+                "SELECT id, name, payload FROM preference_profiles WHERE id = ?",
                 (profile_id,),
             ).fetchone()
 
@@ -243,23 +335,21 @@ class PreferencesRepository:
             return None
         return self._profile_from_row(row)
 
-    def delete_profile(self, profile_id: int) -> bool:
+    def delete_profile(self, profile_id: int, user_key: str | None = None) -> bool:
+        scope, params = self._profile_scope(user_key)
         with self._connect() as connection:
             cursor = connection.execute(
-                "DELETE FROM preference_profiles WHERE id = ?",
-                (profile_id,),
+                f"DELETE FROM preference_profiles WHERE id = ? AND {scope}",
+                (profile_id, *params),
             )
         return cursor.rowcount > 0
 
-    def get_profile_preferences(self, profile_id: int) -> AppPreferences | None:
+    def get_profile_preferences(self, profile_id: int, user_key: str | None = None) -> AppPreferences | None:
+        scope, params = self._profile_scope(user_key)
         with self._connect() as connection:
             row = connection.execute(
-                """
-                SELECT payload
-                FROM preference_profiles
-                WHERE id = ?
-                """,
-                (profile_id,),
+                f"SELECT payload FROM preference_profiles WHERE id = ? AND {scope}",
+                (profile_id, *params),
             ).fetchone()
 
         if row is None:
@@ -333,23 +423,39 @@ class PreferencesRepository:
         except (TypeError, ValueError):
             return None
 
-    def get_active_profile_id(self) -> int | None:
+    def get_active_profile_id(self, user_key: str | None = None) -> int | None:
         with self._connect() as connection:
-            row = connection.execute(
-                "SELECT value FROM app_settings WHERE key = 'active_profile_id'"
-            ).fetchone()
+            if user_key:
+                row = connection.execute(
+                    "SELECT value FROM user_settings WHERE user_key = ? AND key = 'active_profile_id'",
+                    (user_key,),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT value FROM app_settings WHERE key = 'active_profile_id'"
+                ).fetchone()
         return self._parse_active_profile_id(row["value"] if row else "")
 
-    def set_active_profile_id(self, profile_id: int | None) -> None:
+    def set_active_profile_id(self, profile_id: int | None, user_key: str | None = None) -> None:
         value = str(profile_id) if (isinstance(profile_id, int) and profile_id > 0) else ""
         with self._connect() as connection:
-            connection.execute(
-                """
-                INSERT INTO app_settings(key, value) VALUES('active_profile_id', ?)
-                ON CONFLICT(key) DO UPDATE SET value = excluded.value
-                """,
-                (value,),
-            )
+            if user_key:
+                connection.execute(
+                    """
+                    INSERT INTO user_settings(user_key, key, value)
+                    VALUES(?, 'active_profile_id', ?)
+                    ON CONFLICT(user_key, key) DO UPDATE SET value = excluded.value
+                    """,
+                    (user_key, value),
+                )
+            else:
+                connection.execute(
+                    """
+                    INSERT INTO app_settings(key, value) VALUES('active_profile_id', ?)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                    """,
+                    (value,),
+                )
 
     def _profile_from_row(self, row: sqlite3.Row) -> SavedPreferencesProfile:
         payload = json.loads(row["payload"])
