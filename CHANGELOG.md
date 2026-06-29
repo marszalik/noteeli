@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-29
+
 ### Added
 
 - **Git integration for the workspace.** When the directory a workspace
