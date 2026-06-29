@@ -130,7 +130,7 @@ NOTEELI_SESSION_SECRET=$SECRET
 # Google OAuth — leave blank to use built-in password login below.
 NOTEELI_GOOGLE_CLIENT_ID=
 NOTEELI_GOOGLE_CLIENT_SECRET=
-# Comma-separated list of Google emails allowed to log in (self-hosted).
+# Comma-separated list of Google emails allowed to log in.
 # Example: NOTEELI_ALLOWED_GOOGLE_EMAILS=alice@gmail.com,bob@gmail.com
 NOTEELI_ALLOWED_GOOGLE_EMAILS=
 
