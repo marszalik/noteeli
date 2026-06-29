@@ -2493,6 +2493,13 @@ if (shell) {
   const settingsTabPanels = document.querySelectorAll(".settings-tab-panel");
 
   function setActiveSettingsTab(name) {
+    // The requested tab may not exist (e.g. "source" is removed when the
+    // workspace is locked) — fall back to the first available tab.
+    const hasTab = Array.from(settingsTabButtons).some((b) => b.dataset.tab === name);
+    if (!hasTab) {
+      const first = settingsTabButtons[0];
+      name = first ? first.dataset.tab : name;
+    }
     settingsTabButtons.forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === name));
     settingsTabPanels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.panel !== name));
     try {

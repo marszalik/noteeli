@@ -323,14 +323,18 @@
       </header>
 
       <div class="settings-body">
+<% _locked = bool(context.get('lock_workspace')) %>
         <nav class="settings-tabs" role="tablist">
+          % if not _locked:
           <button class="settings-tab is-active" type="button" data-tab="source" role="tab" data-i18n="group_source">Zrodlo</button>
-          <button class="settings-tab" type="button" data-tab="appearance" role="tab" data-i18n="group_appearance">Wyglad</button>
+          % endif
+          <button class="settings-tab ${'is-active' if _locked else ''}" type="button" data-tab="appearance" role="tab" data-i18n="group_appearance">Wyglad</button>
           <button class="settings-tab" type="button" data-tab="editor" role="tab" data-i18n="group_editor">Edytor</button>
           <button class="settings-tab" type="button" data-tab="images" role="tab" data-i18n="group_images">Obrazki</button>
         </nav>
 
         <div class="settings-tab-content">
+          % if not _locked:
           <section class="settings-tab-panel" data-panel="source" role="tabpanel">
             <label class="settings-label" data-i18n="label_source" for="source-type-select">Zrodlo notatek</label>
             <select id="source-type-select" class="settings-input">
@@ -390,8 +394,9 @@
               <p class="muted small-note" data-i18n="gdrive_folder_hint">Skopiuj ID folderu z URL w Google Drive lub zostaw 'root'.</p>
             </div>
           </section>
+          % endif
 
-          <section class="settings-tab-panel hidden" data-panel="appearance" role="tabpanel">
+          <section class="settings-tab-panel ${'' if _locked else 'hidden'}" data-panel="appearance" role="tabpanel">
             <label class="settings-label" data-i18n="label_language" for="language-select">Jezyk interfejsu</label>
             <select id="language-select" class="settings-input">
               <option value="pl" ${'selected' if preferences.language == 'pl' else ''}>Polski</option>

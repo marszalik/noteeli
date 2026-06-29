@@ -75,8 +75,13 @@ class StorageBackend(ABC):
         """Return (local_path, is_temporary). Caller must unlink if is_temporary=True."""
 
     @abstractmethod
-    def browse_dirs(self, path: str | None) -> DirBrowseResult:
-        """Browse directories for the directory picker in settings."""
+    def browse_dirs(self, path: str | None, confine: bool = False) -> DirBrowseResult:
+        """Browse directories for the directory picker in settings.
+
+        When ``confine`` is True, navigation is clamped to the backend's
+        configured root — no path outside it is listed and ``parent_path``
+        never points above it. Used for locked-workspace instances.
+        """
 
 
 # ---------------------------------------------------------------------------
@@ -154,12 +159,18 @@ class LocalStorageBackend(StorageBackend):
     def get_as_local_path(self, relative_path: str) -> tuple[Path, bool]:
         return self._abs(relative_path), False
 
-    def browse_dirs(self, path: str | None) -> DirBrowseResult:
+    def browse_dirs(self, path: str | None, confine: bool = False) -> DirBrowseResult:
         if path:
             current = Path(path).expanduser().resolve()
             if not current.exists() or not current.is_dir():
                 current = self._root
         else:
+            current = self._root
+
+        # Locked workspace: never let the picker leave the root. Any path
+        # at/above the root resolves to the root, and we don't expose a
+        # parent above it.
+        if confine and not self._is_within_root(current):
             current = self._root
 
         dirs: list[tuple[str, str]] = []
@@ -173,8 +184,21 @@ class LocalStorageBackend(StorageBackend):
         except PermissionError:
             pass
 
-        parent = str(current.parent.resolve()) if current.parent != current else None
+        if current.parent == current:
+            parent = None
+        elif confine and (current == self._root or not self._is_within_root(current.parent)):
+            # Locked: never expose a parent at/above the workspace root.
+            parent = None
+        else:
+            parent = str(current.parent.resolve())
         return DirBrowseResult(current_path=str(current), parent_path=parent, directories=dirs)
+
+    def _is_within_root(self, candidate: Path) -> bool:
+        try:
+            candidate.resolve().relative_to(self._root)
+            return True
+        except ValueError:
+            return False
 
 
 # ---------------------------------------------------------------------------
@@ -341,7 +365,7 @@ class SFTPStorageBackend(StorageBackend):
         tmp.close()
         return Path(tmp.name), True
 
-    def browse_dirs(self, path: str | None) -> DirBrowseResult:
+    def browse_dirs(self, path: str | None, confine: bool = False) -> DirBrowseResult:
         sftp = self._connect()
         current = path or self._remote_root
 
@@ -350,6 +374,14 @@ class SFTPStorageBackend(StorageBackend):
             if not _stat.S_ISDIR(attr.st_mode or 0):
                 current = self._remote_root
         except Exception:
+            current = self._remote_root
+
+        # Locked workspace: clamp to the configured remote root.
+        root = self._remote_root.rstrip("/") or "/"
+        def _within(p: str) -> bool:
+            p = p.rstrip("/") or "/"
+            return p == root or p.startswith(root + "/")
+        if confine and not _within(current):
             current = self._remote_root
 
         dirs: list[tuple[str, str]] = []
@@ -368,6 +400,9 @@ class SFTPStorageBackend(StorageBackend):
             parent = stripped.rsplit("/", 1)[0] or "/"
         elif current != "/":
             parent = "/"
+        # Don't expose a parent at/above the locked root.
+        if confine and parent is not None and not _within(parent):
+            parent = None
 
         return DirBrowseResult(current_path=current, parent_path=parent, directories=dirs)
 
@@ -614,7 +649,7 @@ class GoogleDriveStorageBackend(StorageBackend):
         tmp.close()
         return Path(tmp.name), True
 
-    def browse_dirs(self, path: str | None) -> DirBrowseResult:
+    def browse_dirs(self, path: str | None, confine: bool = False) -> DirBrowseResult:
         service = self._get_service()
         folder_id = path or self._root_folder_id
 
@@ -843,7 +878,7 @@ class MegaStorageBackend(StorageBackend):
         tmp.close()
         return Path(tmp.name), True
 
-    def browse_dirs(self, path: str | None) -> DirBrowseResult:
+    def browse_dirs(self, path: str | None, confine: bool = False) -> DirBrowseResult:
         # path is "HANDLE:relative_path" to allow navigation
         if path and ":" in path:
             _, rel = path.split(":", 1)

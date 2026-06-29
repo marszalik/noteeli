@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
     demo_mode: bool = False
 
+    # ── Locked workspace ────────────────────────────────────────────────
+    # When True, the storage source and root are pinned: users can't change
+    # source_type / content_root / SFTP settings from Settings, the source
+    # tab is hidden, and the directory picker is confined to the workspace
+    # root (no walking up the disk). Use this to safely share a single
+    # directory with a group — combine with an email allowlist (self-hosted)
+    # or the Free-access panel (hosted). Toggle via NOTEELI_LOCK_WORKSPACE=1.
+    lock_workspace: bool = False
+
     # ── Hosted / SaaS mode ──────────────────────────────────────────────
     # When True:
     #   - any Google account may log in (no allowed_google_emails check)

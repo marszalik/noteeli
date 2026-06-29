@@ -11,6 +11,18 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Locked workspace (`NOTEELI_LOCK_WORKSPACE=1`).** Pins the storage
+  source and root: users can't change the source / content root / SFTP
+  settings, the Settings "Source" tab is hidden, and the directory picker
+  is confined to the workspace root (no walking up the disk, no repointing
+  the workspace). Lets you safely share a single directory with a group —
+  combine with an email allowlist (self-hosted) or the Free-access panel
+  (hosted). Works in any mode. Closes a gap where any logged-in user could
+  browse the whole filesystem from the directory picker and repoint the
+  workspace anywhere.
+
 ## [1.3.0] - 2026-06-29
 
 ### Added

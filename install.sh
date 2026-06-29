@@ -130,7 +130,15 @@ NOTEELI_SESSION_SECRET=$SECRET
 # Google OAuth — leave blank to use built-in password login below.
 NOTEELI_GOOGLE_CLIENT_ID=
 NOTEELI_GOOGLE_CLIENT_SECRET=
+# Comma-separated list of Google emails allowed to log in (self-hosted).
+# Example: NOTEELI_ALLOWED_GOOGLE_EMAILS=alice@gmail.com,bob@gmail.com
 NOTEELI_ALLOWED_GOOGLE_EMAILS=
+
+# Lock the workspace: pin the storage source + root above, hide the
+# Settings "Source" tab, and confine the directory picker to the root.
+# Use this to share ONE directory with a group safely — they can't
+# repoint the workspace or browse the rest of the disk. Set to 1 to enable.
+NOTEELI_LOCK_WORKSPACE=
 
 # Built-in password login — change before exposing to the network.
 NOTEELI_LOCAL_USERNAME=admin

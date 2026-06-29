@@ -132,6 +132,7 @@ async def workspace_page(request: Request):
         app_version=app_version,
         demo_mode=settings.demo_mode,
         hosted_mode=settings.hosted_mode,
+        lock_workspace=settings.lock_workspace,
         needs_storage_setup=needs_storage_setup,
         frontend_config=frontend_config,
     )

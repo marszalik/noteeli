@@ -148,6 +148,21 @@ class WorkspaceService:
                 "Local filesystem is not available in hosted mode. "
                 "Please choose SFTP or Google Drive."
             )
+        # SECURITY: a locked workspace pins the storage source + root. Ignore
+        # any client-supplied storage fields and keep the persisted ones, so
+        # a group member can change theme/editor prefs but can never repoint
+        # the workspace or reach the rest of the disk.
+        if self.settings.lock_workspace:
+            current = self.preferences_service.get_preferences()
+            source_type = current.source_type
+            content_root = current.content_root
+            sftp_host = current.sftp_host
+            sftp_port = current.sftp_port
+            sftp_username = current.sftp_username
+            sftp_password = ""  # empty = keep existing encrypted value
+            sftp_path = current.sftp_path
+            gdrive_folder_id = current.gdrive_folder_id
+            gdrive_credentials = None  # keep existing
         invalidate_sftp_cache()
         return self.preferences_service.update_preferences(
             content_root=content_root,
@@ -537,7 +552,7 @@ class WorkspaceService:
         return self.get_preferences()
 
     def browse_directories(self, directory_path: str | None = None) -> DirectoryBrowserResponse:
-        result = self._get_backend().browse_dirs(directory_path)
+        result = self._get_backend().browse_dirs(directory_path, confine=self.settings.lock_workspace)
         return DirectoryBrowserResponse(
             current_path=result.current_path,
             parent_path=result.parent_path,
@@ -546,6 +561,8 @@ class WorkspaceService:
 
     def create_browsed_directory(self, parent_path: str, name: str) -> DirectoryBrowserResponse:
         self._block_if_demo()
+        if self.settings.lock_workspace:
+            raise InvalidPathError("The workspace is locked; the storage root cannot be changed.")
         normalized_name = name.strip()
         if not normalized_name:
             raise InvalidPathError("Directory name cannot be empty.")

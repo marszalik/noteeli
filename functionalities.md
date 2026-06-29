@@ -338,6 +338,16 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Client-path validation + subcommand allow-list (injection guard) | ✅ `test_commit_rejects_path_traversal` | `_safe_rel`, `_ALLOWED_SUBCOMMANDS` |
 | Git disabled in demo mode | ✅ `test_demo_mode_disables_git` | runner is `None` in demo |
 
+## 22. Locked workspace (`NOTEELI_LOCK_WORKSPACE`)
+
+| Feature | Status | Notes |
+|---|---|---|
+| Pin storage source + root; ignore client changes | ✅ `test_locked_update_preferences_pins_storage` | `update_preferences` overrides storage fields when locked |
+| Directory picker confined to root (no escaping up the disk) | ✅ `test_browse_confined_cannot_escape_root` | `browse_dirs(confine=True)`, Local + SFTP |
+| Unconfined picker still walks up (default) | ✅ `test_browse_unconfined_can_walk_up` | regression guard |
+| Block creating dirs outside the root when locked | ✅ `test_locked_blocks_creating_dirs_outside` | `create_browsed_directory` |
+| Hide Settings "Source" tab + default to Appearance when locked | 🌐 | mako `_locked` gate, `setActiveSettingsTab` fallback |
+
 ---
 
 ## Test coverage at a glance
