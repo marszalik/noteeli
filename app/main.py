@@ -110,34 +110,19 @@ def create_app() -> FastAPI:
             content={"detail": str(exc), "needs_storage_setup": True},
         )
 
-    # PWA: service worker must be served from the root scope so it can
-    # intercept all same-origin requests (scope = /).
+    # The PWA is gone, but we keep serving service-worker.js as a
+    # kill-switch (see static/service-worker.js): browsers still running
+    # the old Noteeli SW re-fetch this script, which unregisters itself and
+    # purges caches. no-store so the kill-switch is never itself cached.
     @app.get("/service-worker.js", include_in_schema=False)
     async def service_worker():
         return FileResponse(
             settings.static_dir / "service-worker.js",
             media_type="application/javascript",
-            headers={"Service-Worker-Allowed": "/"},
-        )
-
-    # PWA: web app manifest — served dynamically so icon URLs carry a
-    # ?v= cache-buster. Without this Cloudflare (or any CDN) serves
-    # stale icons indefinitely even after the PNGs are updated.
-    @app.get("/manifest.webmanifest", include_in_schema=False)
-    async def web_manifest():
-        import json as _json
-        from app.core.templates import _static_version
-        raw = (settings.static_dir / "manifest.webmanifest").read_text()
-        data = _json.loads(raw)
-        v = _static_version()
-        for icon in data.get("icons", []):
-            src = icon.get("src", "")
-            if "?" not in src:
-                icon["src"] = f"{src}?v={v}"
-        return JSONResponse(
-            content=data,
-            media_type="application/manifest+json",
-            headers={"Cache-Control": "no-store"},
+            headers={
+                "Service-Worker-Allowed": "/",
+                "Cache-Control": "no-store, max-age=0",
+            },
         )
 
     return app

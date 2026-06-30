@@ -11,6 +11,17 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Dropped the PWA / service worker.** It only cached static assets and
+  the main effect was stale versions lingering in browsers (deploys not
+  showing up). `static/service-worker.js` is now a **kill-switch**:
+  browsers still running the old SW re-fetch it, wipe all caches,
+  unregister, and reload — no manual DevTools dance. The manifest link,
+  `apple-touch-icon`, theme-color and apple-mobile metas were removed from
+  the page head (the favicon stays); the `/manifest.webmanifest` route is
+  gone. New visitors register nothing.
+
 ### Fixed
 
 - **Noteeli's SQLite DB no longer clutters the notes tree.** When the

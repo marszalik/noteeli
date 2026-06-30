@@ -1,135 +1,38 @@
 /*
- * Noteeli service worker.
+ * Noteeli kill-switch service worker.
  *
- * Goals:
- *  - make the app installable as a PWA
- *  - cache static assets + CDN libs so the UI shell keeps loading if the
- *    network is flaky or uvicorn is briefly down
+ * Noteeli no longer ships a PWA / service worker — it only ever cached
+ * static assets and that caused stale versions to linger in browsers.
  *
- * Explicit non-goals:
- *  - caching file content, API responses, OAuth, or anything non-GET —
- *    those must always go to the network so that saves, renames, uploads,
- *    and auth stay correct
+ * This file is intentionally a self-destruct: browsers re-check the SW
+ * script byte-for-byte on navigation (independent of any cached app.js),
+ * so a browser still running an old Noteeli SW will fetch THIS script,
+ * install it, wipe every cache, unregister itself, and reload open tabs.
+ * After that the page is served straight from the network. Keep serving
+ * this file indefinitely so every lingering client eventually clears.
  */
-
-const VERSION = "noteeli-pwa-v4";
-const APP_SHELL = [
-  "/",
-  "/static/app.js",
-  "/static/app.css",
-  "/static/favicon.svg",
-  "/static/icon.svg",
-  "/static/icon-192.png",
-  "/static/icon-512.png",
-  "/static/manifest.webmanifest",
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(VERSION).then((cache) =>
-      // addAll is atomic — if any asset 404s the install fails, which is what we want
-      cache.addAll(APP_SHELL),
-    ),
-  );
-  // new SW takes over as soon as install completes
-  self.skipWaiting();
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)),
-      );
-      await self.clients.claim();
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (_e) {}
+      try {
+        await self.registration.unregister();
+      } catch (_e) {}
+      // Reload any open tabs once so they re-fetch fresh assets without
+      // the (now-removed) cache in the way.
+      try {
+        const clients = await self.clients.matchAll({ type: "window" });
+        for (const client of clients) {
+          client.navigate(client.url);
+        }
+      } catch (_e) {}
     })(),
   );
 });
 
-self.addEventListener("message", (event) => {
-  if (event.data === "skipWaiting") self.skipWaiting();
-});
-
-// --- fetch strategies ---
-
-const isSameOrigin = (url) => url.origin === self.location.origin;
-const isStaticAsset = (url) =>
-  isSameOrigin(url) && url.pathname.startsWith("/static/");
-
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(VERSION);
-  const cached = await cache.match(request);
-  const networkFetch = fetch(request)
-    .then((response) => {
-      if (response && response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => cached);
-  return cached || networkFetch;
-}
-
-async function networkFirstNavigation(request) {
-  const cache = await caches.open(VERSION);
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) cache.put("/", response.clone());
-    return response;
-  } catch (err) {
-    const cached = await cache.match("/");
-    if (cached) return cached;
-    throw err;
-  }
-}
-
-// Same-origin static assets (app.css, app.js, icons): network-first.
-// They're cache-busted with ?v=<mtime> in the HTML, but a stale-cached
-// HTML (e.g. served by an edge CDN) can reference an older ?v= that the
-// SW already has cached — so stale-while-revalidate could pin old CSS/JS
-// indefinitely. Network-first guarantees fresh assets whenever online,
-// and still falls back to cache when offline (PWA shell keeps working).
-async function networkFirstAsset(request) {
-  const cache = await caches.open(VERSION);
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) cache.put(request, response.clone());
-    return response;
-  } catch (err) {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    throw err;
-  }
-}
-
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // only intercept GET — anything else (POST/PUT/DELETE) goes straight to net
-  if (request.method !== "GET") return;
-
-  // ignore OAuth + auth flows — must always hit server
-  if (isSameOrigin(url) && url.pathname.startsWith("/auth/")) return;
-
-  // navigations: network-first, fall back to cached shell if offline
-  if (request.mode === "navigate") {
-    event.respondWith(networkFirstNavigation(request));
-    return;
-  }
-
-  // same-origin static assets: network-first (fresh when online, cached
-  // copy only as an offline fallback)
-  if (isStaticAsset(url)) {
-    event.respondWith(networkFirstAsset(request));
-    return;
-  }
-
-  // cross-origin GET (CDN libs, fonts): stale-while-revalidate
-  if (!isSameOrigin(url)) {
-    event.respondWith(staleWhileRevalidate(request));
-    return;
-  }
-
-  // everything else same-origin (API, file content, tree, previews) — let it
-  // go to the network untouched. Don't cache it.
-});
+// No fetch handler: every request goes straight to the network.

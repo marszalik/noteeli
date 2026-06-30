@@ -5021,13 +5021,15 @@ if (shell) {
 }
 
 // ---------------------------------------------------------------------------
-// PWA — service worker registration
+// Service worker removal
 // ---------------------------------------------------------------------------
 
-// PWA temporarily DISABLED for debugging layout issues.
-// Actively unregister any previously-installed SW and purge its caches so that
-// the browser stops serving stale assets. Once unregistered, the next reload
-// goes straight to the network — no manual DevTools dance needed.
+// Noteeli no longer uses a service worker / PWA — it only caused stale
+// assets to linger. This actively unregisters any previously-installed SW
+// and purges its caches whenever this (fresh) app.js runs. The real
+// deadlock-breaker is the kill-switch in static/service-worker.js (a stale
+// SW serves a stale app.js, so this block alone can't run); the two work
+// together. Once unregistered, the next reload goes straight to the network.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {

@@ -268,13 +268,15 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | `t(key)` for dynamic strings | 🌐 | |
 | Browser title not yet translated | — | `<title>Noteeli</title>` is fixed |
 
-## 17. PWA support
+## 17. PWA support — REMOVED
+
+The PWA (manifest + service worker) was removed: it only cached static
+assets and caused stale versions to linger in browsers.
 
 | Feature | Status | Notes |
 |---|---|---|
-| `manifest.webmanifest` served from root | ❌ | `app/main.py` |
-| `service-worker.js` served at root scope | ❌ | offline shell, asset caching |
-| Installable as a desktop/mobile app | 🌐 | tested manually only |
+| `service-worker.js` kill-switch (unregisters old SW, purges caches) | 🌐 | `static/service-worker.js`, served `no-store` |
+| Manifest / installability / apple-touch / theme-color | — | removed from `base.mako` + `app/main.py` |
 
 ## 18. Demo mode (public showcase)
 
