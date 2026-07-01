@@ -276,6 +276,9 @@ assets and caused stale versions to linger in browsers.
 | Feature | Status | Notes |
 |---|---|---|
 | `service-worker.js` kill-switch (unregisters old SW, purges caches) | 🌐 | `static/service-worker.js`, served `no-store` |
+| App-shell HTML served `Cache-Control: no-store` | ✅ | `render_template` in `app/core/templates.py`, `tests/test_shell_freshness.py` |
+| Inline SW self-heal in HTML `<head>` (unregister + purge + reload once) | ✅ | `app/views/base.mako`, `tests/test_shell_freshness.py` |
+| Cache-busted asset URLs (`app.js?v=`, `app.css?v=`) | ✅ | `static_version` in `app/core/templates.py`, `tests/test_shell_freshness.py` |
 | Manifest / installability / apple-touch / theme-color | — | removed from `base.mako` + `app/main.py` |
 
 ## 18. Demo mode (public showcase)

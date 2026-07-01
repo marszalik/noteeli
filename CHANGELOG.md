@@ -24,6 +24,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Stale deploys now self-heal — no manual cache wipe.** After a deploy,
+  clients stuck on an old service worker (from the previous PWA) or a
+  cached HTML could keep running outdated JS and silently break saves —
+  worst on iOS/Safari, where the kill-switch service worker updates
+  lazily. Two changes fix this without asking users to touch DevTools:
+  the app-shell HTML is now served `Cache-Control: no-store` (so every
+  navigation re-fetches a fresh document with the cache-busted asset
+  URLs), and a small **service-worker self-heal script runs inline from
+  that HTML `<head>`** — before `app.js` — unregistering any leftover
+  service worker, purging Cache Storage, and reloading once. Because it
+  lives in the always-fresh HTML rather than in `app.js` (which may itself
+  be served stale), it reaches clients the old `app.js` cleanup never
+  could. Returning users, including iPad, recover on their next load.
+
 - **Noteeli's SQLite DB no longer clutters the notes tree.** When the
   data dir sits inside the notes folder (e.g. `NOTEELI_DATA_DIR` pointed
   at the notes root), the database and its `-wal`/`-shm`/`-journal`

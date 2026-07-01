@@ -40,4 +40,11 @@ def render_template(template_name: str, request, **context) -> HTMLResponse:
         static_version=_static_version(),
         **context,
     )
-    return HTMLResponse(body)
+    # Never let the app-shell HTML go stale. The document carries the
+    # cache-busting ?v=<mtime> asset URLs *and* the inline service-worker
+    # self-heal script (see base.mako). If a browser or proxy served a
+    # cached copy of this HTML, it would pin outdated JS/CSS and the
+    # self-heal would never get a chance to run. no-store guarantees every
+    # navigation re-fetches a fresh shell — the linchpin for recovering
+    # clients (esp. iOS/Safari) stuck on an old service worker.
+    return HTMLResponse(body, headers={"Cache-Control": "no-store"})
