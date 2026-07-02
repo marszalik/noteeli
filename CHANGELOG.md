@@ -22,6 +22,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   the page head (the favicon stays); the `/manifest.webmanifest` route is
   gone. New visitors register nothing.
 
+### Added
+
+- **Rotating file logs.** Each instance now writes
+  `<data_dir>/logs/noteeli.log`, rotated daily, keeping
+  `NOTEELI_LOG_RETENTION_DAYS` days (default 14). Covers application
+  logs (auth denials, git failures, unexpected errors) **and** uvicorn
+  access/error logs, so incidents stay diagnosable after the systemd
+  journal rotates away. Console/journal output is unchanged.
+
 ### Fixed
 
 - **Locked workspaces (`NOTEELI_LOCK_WORKSPACE=1`) were completely broken

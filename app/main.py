@@ -67,6 +67,9 @@ def _seed_demo_preferences_if_needed(settings) -> None:
 def create_app() -> FastAPI:
     settings = get_settings()
     settings.ensure_runtime_dirs()
+    # File logs first, so everything from startup onward is captured.
+    from app.core.logging import setup_file_logging
+    setup_file_logging(settings)
     _seed_demo_content_if_needed(settings)
     _seed_demo_preferences_if_needed(settings)
 

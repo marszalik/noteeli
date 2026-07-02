@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
     demo_mode: bool = False
 
+    # Rotating file logs: <data_dir>/logs/noteeli.log, rotated daily,
+    # keeping this many days. Covers app + uvicorn access/error logs so
+    # incidents are diagnosable after the journal rotates away.
+    log_retention_days: int = 14
+
     # ── Locked workspace ────────────────────────────────────────────────
     # When True, the storage source and root are pinned: users can't change
     # source_type / content_root / SFTP settings from Settings, the source
