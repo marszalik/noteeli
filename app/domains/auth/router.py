@@ -68,6 +68,7 @@ async def auth_google_callback(request: Request):
         if not userinfo:
             userinfo = await client.parse_id_token(request, token)
     except OAuthError as exc:
+        _log.warning("Google OAuth callback failed: %s (%s)", exc.error, exc.description)
         return _login_template(request, error_message=f"Login failed: {exc.error}")
     except Exception as exc:
         _log.exception("Unexpected error during Google OAuth token exchange")
@@ -75,6 +76,10 @@ async def auth_google_callback(request: Request):
 
     email = userinfo.get("email", "")
     if not auth_service.google_email_is_allowed(email):
+        # Log the exact identity Google sent — without this, "user can't
+        # log in" reports are undiagnosable (wrong account picked? typo in
+        # the allowlist? stale env?). Warning level: it's an access event.
+        _log.warning("Google login DENIED for %r (not on the allowlist)", email)
         return _login_template(request, error_message=f"Access denied for {email}.")
 
     session_user: dict = {
