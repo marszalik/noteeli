@@ -33,6 +33,13 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Gmail dots no longer lock users out of the allowlist.** Google OAuth
+  returns the canonical (dotless) gmail address, while operators naturally
+  type the dotted variant into `NOTEELI_ALLOWED_GOOGLE_EMAILS` — the
+  verbatim comparison then denied a legitimate user. Allowlist and admin
+  checks now canonicalise gmail/googlemail addresses (dots stripped,
+  domains unified); dots remain significant for all other domains.
+
 - **Locked workspaces (`NOTEELI_LOCK_WORKSPACE=1`) were completely broken
   in the UI** — nothing saved (settings, files), the tree stayed empty.
   The lock removes the Settings "Source" panel from the HTML, but

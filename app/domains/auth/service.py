@@ -59,11 +59,29 @@ class AuthService:
             }
         return request.session.get("user")
 
+    @staticmethod
+    def _canonical_email(email: str) -> str:
+        """Normalise an email for allowlist comparison.
+
+        Gmail ignores dots in the local part and treats googlemail.com as
+        an alias of gmail.com — so 'marek.spyrzewski@gmail.com' and
+        'marekspyrzewski@gmail.com' are the SAME account. Google's OAuth
+        returns the canonical (dotless) form, while humans type the dotted
+        one into .env; comparing verbatim locked real users out. Dots stay
+        significant for every other domain (per RFC they may matter)."""
+        e = (email or "").strip().lower()
+        local, _, domain = e.partition("@")
+        if domain in ("gmail.com", "googlemail.com"):
+            local = local.replace(".", "")
+            domain = "gmail.com"
+        return f"{local}@{domain}" if domain else local
+
     def is_admin(self, email: str) -> bool:
         raw = self.settings.admin_emails.strip()
         if not raw:
             return False
-        return email.strip().lower() in {e.strip().lower() for e in raw.split(",") if e.strip()}
+        allowed = {self._canonical_email(e) for e in raw.split(",") if e.strip()}
+        return self._canonical_email(email) in allowed
 
     def require_api_access(self, request: Request) -> dict:
         user = self.get_current_user(request)
@@ -94,8 +112,8 @@ class AuthService:
         raw = self.settings.allowed_google_emails.strip()
         if not raw:
             return False
-        allowed = {e.strip().lower() for e in raw.split(",") if e.strip()}
-        return email.strip().lower() in allowed
+        allowed = {self._canonical_email(e) for e in raw.split(",") if e.strip()}
+        return self._canonical_email(email) in allowed
 
     def password_login_configured(self) -> bool:
         return bool(self.settings.local_username and self.settings.local_password)

@@ -116,3 +116,35 @@ def test_local_host_bypass_allows_unauthenticated_access(tmp_path: Path, monkeyp
     assert body["kind"] == "directory"
 
     get_settings.cache_clear()
+
+
+def test_gmail_dots_are_ignored_in_allowlist(tmp_path):
+    """Google OAuth returns the canonical (dotless) gmail address while the
+    operator typed the dotted variant into .env — both must match. Regression
+    for a real lockout: allowlist had 'marek.spyrzewski@', Google sent
+    'marekspyrzewski@'."""
+    from app.core.config import Settings
+    from app.domains.auth.service import AuthService
+
+    settings = Settings(
+        content_root=tmp_path / "n",
+        data_dir=tmp_path / ".noteeli",
+        session_secret="x",
+        google_client_id="",
+        google_client_secret="",
+        allowed_google_emails="marek.spyrzewski@gmail.com, Alice@Example.com",
+        admin_emails="ad.min@googlemail.com",
+    )
+    auth = AuthService(settings)
+
+    # gmail: dots ignored, googlemail == gmail, case-insensitive
+    assert auth.google_email_is_allowed("marekspyrzewski@gmail.com")
+    assert auth.google_email_is_allowed("marek.spyrzewski@gmail.com")
+    assert auth.google_email_is_allowed("Marek.Spyrzewski@GoogleMail.com")
+    assert auth.is_admin("admin@gmail.com")
+
+    # non-gmail domains: dots stay significant
+    assert auth.google_email_is_allowed("alice@example.com")
+    assert not auth.google_email_is_allowed("a.lice@example.com")
+    # and unknown addresses are still rejected
+    assert not auth.google_email_is_allowed("intruder@gmail.com")
