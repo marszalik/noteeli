@@ -24,6 +24,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Locked workspaces (`NOTEELI_LOCK_WORKSPACE=1`) were completely broken
+  in the UI** — nothing saved (settings, files), the tree stayed empty.
+  The lock removes the Settings "Source" panel from the HTML, but
+  `app.js` still bound a click handler to the panel's Browse button
+  without a null guard; the resulting TypeError aborted the entire init,
+  so no later handler (saves, tree load, settings) was ever wired.
+  The binding is now optional-chained (plus the directory-browser flow
+  guards `content-root-input`).
+
 - **Stale deploys now self-heal — no manual cache wipe.** After a deploy,
   clients stuck on an old service worker (from the previous PWA) or a
   cached HTML could keep running outdated JS and silently break saves —

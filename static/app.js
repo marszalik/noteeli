@@ -3415,7 +3415,7 @@ if (shell) {
     try {
       setStatus(t("st_loading_dirs"));
       openDirectoryBrowserModal();
-      const startPath = contentRootInput.value.trim();
+      const startPath = (contentRootInput?.value || "").trim();
       await loadDirectoryBrowser(startPath);
       toggleDirectoryCreate(false);
       setStatus(t("st_choose_dir"));
@@ -3457,11 +3457,13 @@ if (shell) {
     if (!directoryBrowserState) {
       return;
     }
-    contentRootInput.value = directoryBrowserState.current_path;
+    if (contentRootInput) {
+      contentRootInput.value = directoryBrowserState.current_path;
+    }
     closeDirectoryBrowserModal();
     setStatus(t("st_dir_selected"));
-    contentRootInput.focus();
-    contentRootInput.setSelectionRange(contentRootInput.value.length, contentRootInput.value.length);
+    contentRootInput?.focus();
+    contentRootInput?.setSelectionRange(contentRootInput.value.length, contentRootInput.value.length);
   }
 
   function findDirectoryNode(node, targetPath) {
@@ -4786,7 +4788,11 @@ if (shell) {
       saveCurrentPreferenceProfile();
     }
   });
-  browseContentRootButton.addEventListener("click", openDirectoryBrowser);
+  // Optional-chained: the whole Source panel (including this button) is
+  // removed from the HTML when NOTEELI_LOCK_WORKSPACE=1. A bare
+  // addEventListener on null here crashed the entire init on locked
+  // instances — killing every later binding (saves, tree, settings).
+  browseContentRootButton?.addEventListener("click", openDirectoryBrowser);
   closeDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);
   cancelDirectoryBrowserButton.addEventListener("click", closeDirectoryBrowserModal);
   directoryBrowserNewButton?.addEventListener("click", () => toggleDirectoryCreate());
