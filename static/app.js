@@ -1975,9 +1975,21 @@ if (shell) {
     return (TRANSLATIONS[lang] || TRANSLATIONS.pl)[key] || key;
   }
 
+  // Keep <meta name="theme-color"> (browser chrome / mobile status bar
+  // tint) in step with the active theme. The static #08111a in base.mako
+  // only matches the dark themes; without this, the light theme gets a
+  // dark status bar.
+  function syncThemeColorMeta() {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    const bg = getComputedStyle(document.body).getPropertyValue("--bg").trim();
+    if (bg) meta.setAttribute("content", bg);
+  }
+
   function applyTheme(themeMode) {
     document.body.dataset.theme = themeMode;
     shell.dataset.themeMode = themeMode;
+    syncThemeColorMeta();
     mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), securityLevel: "loose" });
     applyCodeEditorTheme();
     if (currentEditorMode === "wysiwyg") {

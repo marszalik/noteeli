@@ -269,10 +269,12 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | `t(key)` for dynamic strings | 🌐 | |
 | Browser title not yet translated | — | `<title>Noteeli</title>` is fixed |
 
-## 17. PWA support — REMOVED
+## 17. Web-app affordances (service worker REMOVED, manifest kept)
 
-The PWA (manifest + service worker) was removed: it only cached static
-assets and caused stale versions to linger in browsers.
+The service worker was removed: it only cached static assets and caused
+stale versions to linger in browsers. The manifest / theme-color /
+apple-touch-icon head tags DO remain — they need no service worker and
+give add-to-home-screen an icon and the browser a status-bar tint.
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -280,7 +282,9 @@ assets and caused stale versions to linger in browsers.
 | App-shell HTML served `Cache-Control: no-store` | ✅ | `render_template` in `app/core/templates.py`, `tests/test_shell_freshness.py` |
 | Inline SW self-heal in HTML `<head>` (unregister + purge + reload once) | ✅ | `app/views/base.mako`, `tests/test_shell_freshness.py` |
 | Cache-busted asset URLs (`app.js?v=`, `app.css?v=`) | ✅ | `static_version` in `app/core/templates.py`, `tests/test_shell_freshness.py` |
-| Manifest / installability / apple-touch / theme-color | — | removed from `base.mako` + `app/main.py` |
+| Manifest link + apple-touch-icon + theme-color metas in head (no SW registration) | ✅ `test_shell_links_manifest_and_icons` | `app/views/base.mako` |
+| `/manifest.webmanifest` route with `?v=` cache-busted icons, `no-store` | ✅ `test_manifest_route_serves_versioned_icons` | `app/main.py` |
+| `theme-color` meta follows the active theme (status-bar tint per theme) | 🌐 | `syncThemeColorMeta()` in `app.js`, called from `applyTheme` |
 
 ## 18. Demo mode (public showcase)
 

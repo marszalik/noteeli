@@ -11,6 +11,21 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-09
+
+### Fixed
+
+- **Restored the manifest, theme-color and apple-touch-icon head tags**
+  that were dropped together with the service worker in 1.4.0. None of
+  them needs a service worker, and without them a fresh local install got
+  no mobile status-bar tint and no add-to-home-screen icon. The
+  `/manifest.webmanifest` route is back (icons carry `?v=` cache-busters,
+  served `no-store`); the service worker itself stays gone — the shell
+  still registers nothing and the kill-switch keeps cleaning up old
+  installs. Bonus: the `theme-color` meta now follows the active theme,
+  so the light theme gets a light status bar instead of the old
+  hardcoded dark one.
+
 ## [1.4.0] - 2026-07-09
 
 ### Removed

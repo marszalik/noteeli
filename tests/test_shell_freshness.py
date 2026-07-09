@@ -74,3 +74,26 @@ def test_assets_are_cache_busted(client: TestClient):
     body = client.get("/").text
     assert "app.js?v=" in body
     assert "app.css?v=" in body
+
+
+def test_shell_links_manifest_and_icons(client: TestClient):
+    # The service worker is gone, but the manifest / theme-color /
+    # apple-touch-icon must stay: without them a local install gets no
+    # status-bar tint and no home-screen icon.
+    body = client.get("/login").text
+    assert 'rel="manifest"' in body
+    assert "/manifest.webmanifest?v=" in body
+    assert 'name="theme-color"' in body
+    assert 'rel="apple-touch-icon"' in body
+    # But the shell must NOT register a service worker (self-heal only).
+    assert "serviceWorker.register" not in body
+
+
+def test_manifest_route_serves_versioned_icons(client: TestClient):
+    response = client.get("/manifest.webmanifest")
+    assert response.status_code == 200
+    assert response.headers.get("cache-control") == "no-store"
+    data = response.json()
+    assert data["name"] == "Noteeli"
+    assert data["icons"], "manifest must list icons"
+    assert all("?v=" in icon["src"] for icon in data["icons"])
