@@ -2878,6 +2878,25 @@ body[data-theme="obsidian"] .toastui-editor-md-preview tbody tr:nth-child(even) 
   border-color: var(--accent);
 }
 
+/* Toast UI's stylesheet ships `.toastui-editor-defaultUI-toolbar button`
+   with a hardcoded near-white border and dark text. That rule is more
+   specific than `.noteeli-toolbar-button` above, so our theme variables
+   lost: invisible on the light theme, but on every dark theme the custom
+   undo/redo buttons rendered as a glaring white box with a dark glyph.
+   Re-assert the theme variables with higher specificity + !important
+   (the !important also outranks per-theme `.toastui-editor-toolbar
+   button { color: … !important }` overrides, e.g. Obsidian's #808080). */
+.toastui-editor-defaultUI-toolbar button.noteeli-toolbar-button {
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+.toastui-editor-defaultUI-toolbar button.noteeli-toolbar-button:hover {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+}
+
 .noteeli-toolbar-menu {
   position: fixed;
   /* top/left are set dynamically by JS via inline style */
@@ -4100,9 +4119,16 @@ body[data-theme="obsidian"] .toastui-editor-toolbar-icons {
   filter: invert(0.82) hue-rotate(180deg) saturate(0.7);
 }
 
+/* :not(.noteeli-toolbar-button) — the custom undo/redo buttons draw their
+   glyph with currentColor and must keep var(--text); #808080 on the dark
+   surface was near-invisible. */
 body[data-theme="obsidian"] .toastui-editor-toolbar button,
 body[data-theme="obsidian"] .toastui-editor-defaultUI-toolbar button {
   border-radius: 3px !important;
+}
+
+body[data-theme="obsidian"] .toastui-editor-toolbar button:not(.noteeli-toolbar-button),
+body[data-theme="obsidian"] .toastui-editor-defaultUI-toolbar button:not(.noteeli-toolbar-button) {
   color: #808080 !important;
 }
 

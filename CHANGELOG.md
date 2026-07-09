@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-09
+
 ### Removed
 
 - **Dropped the PWA / service worker.** It only cached static assets and
@@ -33,6 +35,26 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Custom toolbar buttons (undo / redo, diagram menu) no longer render as
+  white boxes with dark glyphs on dark themes.** Toast UI's own stylesheet
+  styles `.toastui-editor-defaultUI-toolbar button` with a hardcoded
+  near-white border (and the Obsidian theme forced a #808080 glyph); both
+  rules out-ranked `.noteeli-toolbar-button`'s theme variables. Invisible on
+  the light theme, glaring on every dark one. The theme variables are now
+  re-asserted with higher specificity, verified across all five themes.
+- **`pdm run test` now runs the whole suite.** It silently ran only
+  `test_workspace_service.py` (54 of 153 tests), hiding failures in other
+  files. The suite is also hermetic now: a new `tests/conftest.py` scrubs
+  `NOTEELI_*` env vars, ignores the repo-root `.env`, and sandboxes the
+  content/data dirs — so tests pass on a production box with a real `.env`
+  (previously hosted-mode settings leaked in and dozens of tests failed,
+  one even tried to open a live SFTP connection from the production
+  preferences DB).
+- **Blank boolean env vars no longer crash startup.** A bare
+  `NOTEELI_LOCK_WORKSPACE=` (or `NOTEELI_HOSTED_MODE=` / `NOTEELI_DEMO_MODE=`)
+  line in `.env` arrives as an empty string, which pydantic couldn't parse as
+  a bool and refused to start. Blank now means "not set" and resolves to the
+  disabled default, so you no longer have to write `=0`.
 - **Admin allowlist accepts space-separated emails again (fixes a hosted
   redirect loop).** `NOTEELI_ADMIN_EMAILS` / `NOTEELI_ALLOWED_GOOGLE_EMAILS`
   were split on commas only, but the production `.env` listed admins

@@ -138,6 +138,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Toast UI Markdown source view | 🌐 | toggle persisted to `localStorage["markdown-editor-mode"]` |
 | Editor mode toggle button (WYSIWYG ↔ Markdown) hidden for non-md | 🌐 | |
 | Undo / Redo toolbar buttons (injected into Toast UI toolbar) | 🌐 | `attachUndoRedoToolbarButtons`, `editor.exec('undo'\|'redo')` |
+| Custom toolbar buttons keep theme colors on dark themes (Toast UI's hardcoded white border / Obsidian's grey glyph out-specificity our vars) | 🌐 | `.toastui-editor-defaultUI-toolbar button.noteeli-toolbar-button` re-assertion in `app.css`; verified via Playwright across all 5 themes |
 | Cursor reset to start of doc after `setMarkdown` (fixes silent toolbar buttons) | 🌐 | `editor.moveCursorToStart()` after load |
 | JSONEditor — form mode, fully expanded by default | 🌐 | `jsonEditor.setMode("form"); expandAll()` |
 | JSONEditor — fallback to code mode for invalid JSON | 🌐 | catch-on-parse-error path |
@@ -365,6 +366,7 @@ assets and caused stale versions to linger in browsers.
 | Unconfined picker still walks up (default) | ✅ `test_browse_unconfined_can_walk_up` | regression guard |
 | Block creating dirs outside the root when locked | ✅ `test_locked_blocks_creating_dirs_outside` | `create_browsed_directory` |
 | Hide Settings "Source" tab + default to Appearance when locked | 🌐 | mako `_locked` gate, `setActiveSettingsTab` fallback |
+| Blank boolean env vars (`NOTEELI_LOCK_WORKSPACE=` etc.) tolerated at startup | ✅ `test_blank_bool_env_values_are_disabled` | blank = unset → `False`; used to crash pydantic |
 
 ---
 
@@ -372,21 +374,36 @@ assets and caused stale versions to linger in browsers.
 
 ```
 tests/
-├── test_workspace_service.py        — 47 tests (file CRUD, tree, preview, embed,
+├── conftest.py                       — global isolation: scrubs NOTEELI_* env vars,
+│                                       ignores the repo-root .env, sandboxes
+│                                       content/data dirs (the suite must pass on a
+│                                       production box with a real .env in place)
+├── test_workspace_service.py        — 54 tests (file CRUD, tree, preview, embed,
 │                                       upload/download, rename, delete, path safety,
 │                                       editor file-type routing, JSON round-trip,
 │                                       office previews docx/xlsx/pptx, demo mode)
-├── test_directory_browser_service.py —  3 tests (browser modal backend)
-├── test_preferences_service.py      —  4 tests (fallback to default root,
-│                                       update fields, source-type switching, content-root norm.)
-├── test_preference_profiles.py      —  3 tests (save/list/apply, update, delete)
-├── test_auth_guard.py               — 11 tests (every workspace API endpoint
+├── test_publish_service.py          — 24 tests (publish/unpublish, public routes,
+│                                       path traversal, demo guard)
+├── test_sftp_backend.py             — 17 tests (exists/is_file/is_dir, read &
+│                                       write round-trips, listing, browse_dirs,
+│                                       create/rename/delete, rglob, root_display)
+├── test_auth_guard.py               — 13 tests (every workspace API endpoint
 │                                       gets 401 from non-local hosts; HTML root
 │                                       redirects to /login; local-host bypass)
-└── test_sftp_backend.py             — 15 tests (exists/is_file/is_dir, read &
-                                        write round-trips, listing, browse_dirs,
-                                        create/rename/delete, rglob, root_display)
-                                       — 85 tests total
+├── test_git_service.py              — 12 tests (status/commit flow, signatures,
+│                                       ignore rules)
+├── test_preferences_service.py     —  5 tests (fallback to default root,
+│                                       update fields, source-type switching, content-root norm.)
+├── test_config.py                   —  4 tests (demo/hosted exclusivity, defaults,
+│                                       blank boolean env values tolerated)
+├── test_lock_workspace.py           —  4 tests (pinned storage, confined browser)
+├── test_preference_profiles.py     —  4 tests (save/list/apply, update, delete)
+├── test_shell_freshness.py          —  4 tests (no-store shell, SW kill-switch)
+├── test_directory_browser_service.py — 3 tests (browser modal backend)
+├── test_file_logging.py             —  3 tests (rotating file logs)
+├── test_per_user_preferences.py     —  3 tests (per-user scoping)
+└── test_runtime_data_hidden.py      —  3 tests (runtime dirs hidden from tree)
+                                       — 153 tests total
 ```
 
 ## Coverage gaps (priority order)

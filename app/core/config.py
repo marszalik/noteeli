@@ -88,6 +88,19 @@ class Settings(BaseSettings):
             object.__setattr__(self, "hosted_mode", False)
         return self
 
+    @field_validator(
+        "demo_mode", "hosted_mode", "lock_workspace", mode="before"
+    )
+    @classmethod
+    def _blank_bool_is_false(cls, value: object) -> object:
+        # An empty (or whitespace-only) value in .env — e.g. a bare
+        # `NOTEELI_LOCK_WORKSPACE=` line — means "not set", but pydantic
+        # can't parse "" as a bool and would refuse to start. Treat it as
+        # the disabled default instead of forcing the user to write `0`.
+        if isinstance(value, str) and not value.strip():
+            return False
+        return value
+
     @field_validator("content_root", mode="before")
     @classmethod
     def _normalize_content_root(cls, value: str | Path) -> Path:
