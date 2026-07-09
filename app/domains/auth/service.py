@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 
 from authlib.integrations.starlette_client import OAuth
@@ -80,7 +81,7 @@ class AuthService:
         raw = self.settings.admin_emails.strip()
         if not raw:
             return False
-        allowed = {self._canonical_email(e) for e in raw.split(",") if e.strip()}
+        allowed = {self._canonical_email(e) for e in re.split(r"[\s,]+", raw) if e.strip()}
         return self._canonical_email(email) in allowed
 
     def require_api_access(self, request: Request) -> dict:
@@ -112,7 +113,7 @@ class AuthService:
         raw = self.settings.allowed_google_emails.strip()
         if not raw:
             return False
-        allowed = {self._canonical_email(e) for e in raw.split(",") if e.strip()}
+        allowed = {self._canonical_email(e) for e in re.split(r"[\s,]+", raw) if e.strip()}
         return self._canonical_email(email) in allowed
 
     def password_login_configured(self) -> bool:

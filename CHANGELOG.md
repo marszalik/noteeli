@@ -33,6 +33,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Admin allowlist accepts space-separated emails again (fixes a hosted
+  redirect loop).** `NOTEELI_ADMIN_EMAILS` / `NOTEELI_ALLOWED_GOOGLE_EMAILS`
+  were split on commas only, but the production `.env` listed admins
+  separated by spaces. The whole string collapsed into one bogus entry, so
+  `is_admin()` returned False for a real admin — who, in hosted mode without
+  an active subscription, was bounced to `/subscribe` and back to `/`
+  forever (the browser showed nothing but redirects). Both settings are now
+  split on any run of commas and/or whitespace.
+
 - **Gmail dots no longer lock users out of the allowlist.** Google OAuth
   returns the canonical (dotless) gmail address, while operators naturally
   type the dotted variant into `NOTEELI_ALLOWED_GOOGLE_EMAILS` — the

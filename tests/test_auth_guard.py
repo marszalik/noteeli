@@ -148,3 +148,36 @@ def test_gmail_dots_are_ignored_in_allowlist(tmp_path):
     assert not auth.google_email_is_allowed("a.lice@example.com")
     # and unknown addresses are still rejected
     assert not auth.google_email_is_allowed("intruder@gmail.com")
+
+
+def test_admin_emails_accept_space_separation(tmp_path):
+    """Operators write NOTEELI_ADMIN_EMAILS both comma- and space-separated.
+    Regression for a production redirect loop: prod .env used
+    'a@gmail.com b@gmail.com' (spaces), the parser split on ',' only, so the
+    whole string became one bogus entry — is_admin() returned False for a real
+    admin, who (in hosted mode, no subscription) was then bounced to /subscribe
+    and back to / forever."""
+    from app.core.config import Settings
+    from app.domains.auth.service import AuthService
+
+    for raw in (
+        "elizadie@gmail.com marszalik@gmail.com",       # spaces
+        "elizadie@gmail.com,marszalik@gmail.com",       # commas
+        "elizadie@gmail.com, marszalik@gmail.com",      # comma + space
+        "  elizadie@gmail.com   marszalik@gmail.com  ",  # ragged whitespace
+    ):
+        settings = Settings(
+            content_root=tmp_path / "n",
+            data_dir=tmp_path / ".noteeli",
+            session_secret="x",
+            google_client_id="",
+            google_client_secret="",
+            admin_emails=raw,
+        )
+        auth = AuthService(settings)
+        assert auth.is_admin("elizadie@gmail.com"), raw
+        assert auth.is_admin("marszalik@gmail.com"), raw
+        # dotted variant still canonicalises to the same gmail account
+        assert auth.is_admin("eli.zadie@gmail.com"), raw
+        # non-admins stay out
+        assert not auth.is_admin("intruder@gmail.com"), raw
