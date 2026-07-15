@@ -96,6 +96,16 @@ class CheckpointTracker:
                     logger.info("checkpoint committed: %s", ", ".join(paths))
                 elif "nothing to commit" not in result.message.lower():
                     logger.warning("checkpoint commit failed: %s", result.message)
+            if getattr(settings, "git_autocommit_push", False) and any(
+                r.ok for r in results
+            ):
+                sync = service.sync_push()
+                if sync.ok:
+                    logger.info("checkpoint push: %s", sync.message)
+                elif sync.output == "no_remote":
+                    logger.debug("checkpoint push skipped: no remote")
+                else:
+                    logger.warning("checkpoint push %s: %s", sync.output, sync.message)
         except GitError as exc:
             logger.warning("checkpoint flush failed: %s", exc)
         except Exception:

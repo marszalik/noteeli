@@ -54,7 +54,7 @@ class GitNotConfiguredError(GitError):
 # bug constructing an unexpected argv.
 _ALLOWED_SUBCOMMANDS = {
     "rev-parse", "status", "add", "commit", "push", "pull", "fetch",
-    "log", "blame", "show",
+    "log", "blame", "show", "rebase",
 }
 
 
@@ -515,6 +515,49 @@ class GitService:
 
     def push(self) -> GitOpResult:
         return self._network_op(["push"], "Pushed.")
+
+    def sync_push(self) -> GitOpResult:
+        """Best-effort push for automated checkpoints. Never destructive:
+        plain push → if the remote moved ahead, replay local commits with
+        `pull --rebase` and push again → if the rebase hits a CONTENT
+        conflict, abort it and park (local commits stay intact; the git
+        menu's ahead/behind counters show the stalled state for a human
+        to resolve). `output` carries a machine-readable outcome."""
+        runner = self._require_runner()
+        if not self.is_repo():
+            raise GitNotConfiguredError("The workspace is not a git repository.")
+
+        code, out, err = runner.run(["push"], timeout=90)
+        if code == 0:
+            return GitOpResult(ok=True, message="Pushed.", output="pushed")
+        text = (out + "\n" + err).lower()
+        if (
+            "no configured push destination" in text
+            or "no upstream" in text
+            or "read only" in text
+        ):
+            return GitOpResult(ok=False, message=(err or out).strip(), output="no_remote")
+
+        code, out, err = runner.run(["pull", "--rebase"], timeout=90)
+        if code == 0:
+            code2, out2, err2 = runner.run(["push"], timeout=90)
+            if code2 == 0:
+                return GitOpResult(
+                    ok=True, message="Rebased onto remote and pushed.", output="pushed"
+                )
+            return GitOpResult(ok=False, message=(err2 or out2).strip(), output="push_failed")
+
+        # Conflict (or other rebase failure) — make sure no half-done
+        # rebase is left behind, then park.
+        try:
+            runner.run(["rebase", "--abort"])
+        except GitError:
+            pass
+        return GitOpResult(
+            ok=False,
+            message="Remote has conflicting changes — sync parked for manual resolution.",
+            output="parked",
+        )
 
     def pull(self) -> GitOpResult:
         return self._network_op(["pull", "--ff-only"], "Pulled.")

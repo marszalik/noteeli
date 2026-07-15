@@ -231,8 +231,14 @@ configurable) it is committed automatically — signed by whoever saved it
 last, one commit per author. You'll see it as `Checkpoint: filename.md` in
 the history. Nobody has to remember to commit, and `git log`/`git blame`
 still tell the truth about who wrote what. Pending checkpoints are committed
-immediately when the server shuts down, so restarts lose nothing. Note that
-checkpoints commit — they don't push; pull/push cadence stays in your hands.
+immediately when the server shuts down, so restarts lose nothing. By
+default checkpoints commit but don't push. Add
+`NOTEELI_GIT_AUTOCOMMIT_PUSH=1` and each checkpoint is also pushed to the
+repo's remote — handy when a private GitHub/GitLab repo is your source of
+truth. If someone pushed to the remote in the meantime, clean changes are
+replayed automatically; a genuine content conflict is *parked* (nothing
+lost, the ↑/↓ counters in the git menu show it) for you to resolve once
+with Pull.
 
 ## 11. Personalisation
 

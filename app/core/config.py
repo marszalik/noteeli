@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # by hand. Toggle via NOTEELI_GIT_AUTOCOMMIT=1.
     git_autocommit: bool = False
     git_autocommit_idle_seconds: int = 300
+    # After a successful checkpoint, push to the configured remote. If the
+    # remote moved ahead, clean divergence is replayed via pull --rebase;
+    # a content conflict parks the sync (nothing lost, ahead/behind shows
+    # in the git menu) for a human to resolve. Needs git_autocommit.
+    git_autocommit_push: bool = False
 
     # Rotating file logs: <data_dir>/logs/noteeli.log, rotated daily,
     # keeping this many days. Covers app + uvicorn access/error logs so
@@ -99,7 +104,8 @@ class Settings(BaseSettings):
         return self
 
     @field_validator(
-        "demo_mode", "hosted_mode", "lock_workspace", "git_autocommit", mode="before"
+        "demo_mode", "hosted_mode", "lock_workspace", "git_autocommit",
+        "git_autocommit_push", mode="before"
     )
     @classmethod
     def _blank_bool_is_false(cls, value: object) -> object:

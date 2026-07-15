@@ -11,6 +11,21 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-07-15
+
+### Added
+
+- **Auto-push after checkpoints** (`NOTEELI_GIT_AUTOCOMMIT_PUSH=1`, needs
+  `NOTEELI_GIT_AUTOCOMMIT`). Each successful silent checkpoint is pushed
+  to the repo's remote, making an external git remote (e.g. a private
+  GitHub repo) the durable source of truth for a workspace. Never
+  destructive: if the remote moved ahead, clean divergence is replayed
+  with `pull --rebase` (checkpoint authorship preserved); a content
+  conflict aborts the rebase and *parks* the sync — local commits stay
+  intact, nothing is overwritten, and the git menu's ↑/↓ counters show
+  the stalled state for a human to resolve once. No remote configured →
+  silent no-op.
+
 ## [1.5.6] - 2026-07-15
 
 ### Added
@@ -509,7 +524,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.6...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.7...HEAD
+[1.5.7]: https://github.com/marszalik/noteeli/compare/v1.5.6...v1.5.7
 [1.5.6]: https://github.com/marszalik/noteeli/compare/v1.5.5...v1.5.6
 [1.5.5]: https://github.com/marszalik/noteeli/compare/v1.5.4...v1.5.5
 [1.5.4]: https://github.com/marszalik/noteeli/compare/v1.5.3...v1.5.4
