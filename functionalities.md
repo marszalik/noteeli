@@ -382,6 +382,7 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Block creating dirs outside the root when locked | ✅ `test_locked_blocks_creating_dirs_outside` | `create_browsed_directory` |
 | Hide Settings "Source" tab + default to Appearance when locked | 🌐 | mako `_locked` gate, `setActiveSettingsTab` fallback |
 | Blank boolean env vars (`NOTEELI_LOCK_WORKSPACE=` etc.) tolerated at startup | ✅ `test_blank_bool_env_values_are_disabled` | blank = unset → `False`; used to crash pydantic |
+| Instance retirement redirect (`NOTEELI_REDIRECT_ALL_TO=<url>` → app is a pure 301) | ✅ `test_redirect_all_to_turns_the_app_into_a_301` | `create_app()` early-returns a catch-all redirect app |
 
 ---
 

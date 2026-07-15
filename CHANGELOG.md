@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-07-15
+
+### Added
+
+- **Instance retirement redirect** (`NOTEELI_REDIRECT_ALL_TO=<url>`).
+  When set, the app serves nothing but a permanent 301 to the given URL
+  — for decommissioned instances whose domain should keep forwarding
+  visitors somewhere alive, without touching the reverse proxy.
+
 ## [1.5.8] - 2026-07-15
 
 ### Changed
@@ -537,7 +546,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.8...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.9...HEAD
+[1.5.9]: https://github.com/marszalik/noteeli/compare/v1.5.8...v1.5.9
 [1.5.8]: https://github.com/marszalik/noteeli/compare/v1.5.7...v1.5.8
 [1.5.7]: https://github.com/marszalik/noteeli/compare/v1.5.6...v1.5.7
 [1.5.6]: https://github.com/marszalik/noteeli/compare/v1.5.5...v1.5.6

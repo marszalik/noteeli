@@ -66,6 +66,23 @@ def _seed_demo_preferences_if_needed(settings) -> None:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # Retired instance: the whole app is a permanent redirect. No routers,
+    # no storage, no auth — the domain just forwards somewhere alive.
+    if settings.redirect_all_to:
+        from fastapi.responses import RedirectResponse
+
+        redirect_app = FastAPI(title=f"{settings.app_name} (retired)")
+
+        @redirect_app.api_route(
+            "/{path:path}",
+            methods=["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            include_in_schema=False,
+        )
+        async def _retired(path: str):
+            return RedirectResponse(url=settings.redirect_all_to, status_code=301)
+
+        return redirect_app
+
     settings.ensure_runtime_dirs()
     # File logs first, so everything from startup onward is captured.
     from app.core.logging import setup_file_logging

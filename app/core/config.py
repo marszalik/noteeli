@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
     demo_mode: bool = False
 
+    # ── Instance retirement ─────────────────────────────────────────────
+    # When set to a URL, the app serves nothing but a 301 to it — for
+    # decommissioned instances whose domain should live on (e.g. a retired
+    # hosted app pointing visitors at the project site) without touching
+    # the reverse proxy.
+    redirect_all_to: str = ""
+
     # ── Silent checkpoint commits ───────────────────────────────────────
     # When on, every saved file is queued and — once it has been idle for
     # git_autocommit_idle_seconds — committed automatically, signed by

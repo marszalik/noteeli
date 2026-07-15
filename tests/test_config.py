@@ -34,3 +34,22 @@ def test_blank_bool_env_values_are_disabled():
     assert s.lock_workspace is False
     assert s.hosted_mode is False
     assert s.demo_mode is False
+
+
+def test_redirect_all_to_turns_the_app_into_a_301(tmp_path, monkeypatch):
+    """A retired instance serves nothing but permanent redirects."""
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("NOTEELI_CONTENT_ROOT", str(tmp_path / "content"))
+    monkeypatch.setenv("NOTEELI_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("NOTEELI_REDIRECT_ALL_TO", "https://noteeli.com")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    from app.main import create_app
+
+    client = TestClient(create_app(), base_url="http://app.example.com")
+    for path in ("/", "/login", "/api/tree", "/42/anything"):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 301, path
+        assert response.headers["location"] == "https://noteeli.com"
+    get_settings.cache_clear()
