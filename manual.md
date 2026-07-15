@@ -111,6 +111,9 @@ active theme.
 **Links between notes.** A relative Markdown link to another note
 (`[plan](harmonogram/zjazdy.md)`) opens that note in Noteeli when
 clicked — also on published pages. External links open in a new tab.
+Obsidian users: switch off *Use [[Wikilinks]]* in Settings → Files &
+Links so Obsidian writes standard Markdown links — they then work
+everywhere (Noteeli, GitHub, Azure DevOps) instead of only in Obsidian.
 
 **Reload from disk.** If a file changed outside your editor (another person,
 a script, a git pull), the reload button in the topbar re-reads it — and
