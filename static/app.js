@@ -4433,6 +4433,69 @@ if (shell) {
     }
   }
 
+  // ── Internal note links ─────────────────────────────────────────────
+  // Markdown links between notes ([harmonogram](harmonogram/zjazdy.md))
+  // are dead by default: in the WYSIWYG they do nothing, in the public
+  // view they'd navigate the browser off the app. Intercept clicks and
+  // open the target through the same path the tree uses.
+
+  function resolveRelativeNotePath(href) {
+    if (
+      !href
+      || /^[a-z][a-z0-9+.-]*:/i.test(href)   // http:, mailto:, etc.
+      || href.startsWith("//")
+      || href.startsWith("#")
+      || href.startsWith("/")
+    ) {
+      return null;
+    }
+    let clean = href.split("#")[0].split("?")[0];
+    if (!clean) return null;
+    try {
+      clean = decodeURIComponent(clean);
+    } catch {
+      /* keep raw */
+    }
+    const baseDir = selectedPath && selectedPath.includes("/")
+      ? selectedPath.slice(0, selectedPath.lastIndexOf("/") + 1)
+      : "";
+    const segments = (baseDir + clean).split("/");
+    const out = [];
+    for (const segment of segments) {
+      if (!segment || segment === ".") continue;
+      if (segment === "..") {
+        if (!out.length) return null;   // escapes the workspace root
+        out.pop();
+        continue;
+      }
+      out.push(segment);
+    }
+    return out.length ? out.join("/") : null;
+  }
+
+  function handleContentLinkClick(event) {
+    const anchor = event.target.closest?.("a[href]");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href") || "";
+    if (/^https?:/i.test(href) || href.startsWith("//")) {
+      // External links: open in a new tab instead of tearing down the app.
+      event.preventDefault();
+      event.stopPropagation();
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+    const target = resolveRelativeNotePath(href);
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    loadFile(target);
+  }
+
+  // Capture phase so ProseMirror's own mousedown/click plumbing can't
+  // swallow the event first.
+  document.getElementById("editor")?.addEventListener("click", handleContentLinkClick, true);
+  publicContentContainer?.addEventListener("click", handleContentLinkClick, true);
+
   function openGitMenu() {
     gitMenuDropdown?.classList.remove("hidden");
     gitMenuDropdown?.setAttribute("aria-hidden", "false");

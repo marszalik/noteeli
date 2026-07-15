@@ -132,6 +132,13 @@ def _rewrite_relative_assets(html: str, source_path: str, asset_url: str) -> str
 
     def _replace(match: re.Match) -> str:
         attr_prefix, quote_ch, target = match.group(1), match.group(2), match.group(3)
+        # Links to other NOTES stay relative — the public viewer's click
+        # handler resolves them and swaps the rendered note in place.
+        # Only binary/asset targets go through the preview endpoint.
+        if attr_prefix.lstrip("<").startswith("a") and re.search(
+            r"\.(md|markdown)(?:[#?]|$)", target, re.IGNORECASE
+        ):
+            return match.group(0)
         # The publish preview endpoint understands ?source_path=…&target=…
         # — exactly the shape used by the regular embedded-asset route,
         # so the same backend code path resolves it.

@@ -283,6 +283,65 @@ def test_public_view_hides_editor_chrome(tmp_path):
                 browser.close()
 
 
+def test_internal_note_links_open_in_app(tmp_path):
+    """A markdown link to another note opens that note inside Noteeli —
+    both in the WYSIWYG editor and in the public read-only view — instead
+    of being dead or navigating the browser away."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+
+    with _running_server(tmp_path) as (base_url, content):
+        (content / "note.md").write_text(
+            "# Start\n\nZobacz [harmonogram](harmonogram/zjazdy.md).\n",
+            encoding="utf-8",
+        )
+        sub = content / "harmonogram"
+        sub.mkdir()
+        (sub / "zjazdy.md").write_text(
+            "# Zjazdy\n\nterminy zjazdów\n\nWróć do [startu](../note.md).\n",
+            encoding="utf-8",
+        )
+        kurs = content / "kurs"
+        kurs.mkdir()
+        (kurs / "start.md").write_text(
+            "# Kurs\n\nPlan w [zjazdach](zjazdy.md).\n", encoding="utf-8"
+        )
+        (kurs / "zjazdy.md").write_text(
+            "# Zjazdy kursu\n\npubliczne terminy\n", encoding="utf-8"
+        )
+        folder_url = _publish(base_url, "kurs")
+
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch(headless=True)
+            except Exception as exc:
+                pytest.skip(f"Playwright Chromium unavailable: {exc}")
+            try:
+                page = browser.new_page()
+
+                # Authed editor: click the link inside the WYSIWYG.
+                page.goto(base_url, wait_until="networkidle")
+                page.locator(".tree-link-file", has_text="note.md").click()
+                editor = page.locator("#editor .ProseMirror >> visible=true")
+                editor.wait_for(state="visible", timeout=15_000)
+                editor.locator("a", has_text="harmonogram").click()
+                expect(editor).to_contain_text("terminy zjazdów", timeout=15_000)
+                # ...and back via a ../ link.
+                editor.locator("a", has_text="startu").click()
+                expect(editor).to_contain_text("Zobacz", timeout=15_000)
+
+                # Public folder view: a relative link swaps the rendered
+                # note instead of navigating the browser away.
+                page.goto(folder_url, wait_until="networkidle")
+                public = page.locator("#public-content")
+                expect(public).to_contain_text("Plan w")
+                public.locator("a", has_text="zjazdach").click()
+                expect(public).to_contain_text("publiczne terminy", timeout=15_000)
+                assert page.url.startswith(folder_url)  # no browser navigation
+            finally:
+                browser.close()
+
+
 def _mint_session_cookie(secret: str, user: dict) -> str:
     """Forge a valid starlette session cookie. Works because the test
     controls NOTEELI_SESSION_SECRET — same signing scheme as

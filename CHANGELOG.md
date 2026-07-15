@@ -11,6 +11,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.10] - 2026-07-15
+
+### Added
+
+- **Internal note links now work.** Clicking a relative Markdown link
+  ([harmonogram](harmonogram/zjazdy.md)) opens the target note inside
+  Noteeli — in the WYSIWYG editor (unsaved edits are autosave-flushed
+  first) and in the public read-only view, where the rendered note
+  swaps in place instead of the browser navigating away. `../` paths
+  resolve, escapes above the workspace root are ignored, and external
+  links open in a new tab. The public renderer no longer rewrites
+  note-to-note links through the asset-preview endpoint (images and
+  other assets still are).
+
 ## [1.5.9] - 2026-07-15
 
 ### Added
@@ -546,7 +560,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.9...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.10...HEAD
+[1.5.10]: https://github.com/marszalik/noteeli/compare/v1.5.9...v1.5.10
 [1.5.9]: https://github.com/marszalik/noteeli/compare/v1.5.8...v1.5.9
 [1.5.8]: https://github.com/marszalik/noteeli/compare/v1.5.7...v1.5.8
 [1.5.7]: https://github.com/marszalik/noteeli/compare/v1.5.6...v1.5.7
