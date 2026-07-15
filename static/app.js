@@ -4399,6 +4399,11 @@ if (shell) {
       setStatus(automatic ? t("st_autosaved") : t("st_saved"));
       if (!automatic) {
         await loadTree();
+      } else {
+        // Autosave skips the full tree reload, but the git badge / change
+        // list still needs to reflect the new dirty state. Fire-and-forget
+        // so a slow status call (SFTP) never delays the autosave loop.
+        refreshGitStatus();
       }
     } catch (error) {
       setStatus(error.message, true);

@@ -73,7 +73,31 @@ def create_app() -> FastAPI:
     _seed_demo_content_if_needed(settings)
     _seed_demo_preferences_if_needed(settings)
 
-    app = FastAPI(title=settings.app_name)
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI):
+        # Silent checkpoint commits: a background loop flushes files that
+        # have been idle past the configured window. On shutdown, whatever
+        # is still pending is committed immediately so a service restart
+        # never loses a checkpoint.
+        import asyncio
+
+        from app.domains.git.checkpoint import checkpoint_tracker, run_checkpoint_loop
+
+        task = None
+        if settings.git_autocommit and not settings.demo_mode:
+            task = asyncio.create_task(run_checkpoint_loop())
+        yield
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            await asyncio.to_thread(checkpoint_tracker.flush_due, settings, force=True)
+
+    app = FastAPI(title=settings.app_name, lifespan=_lifespan)
 
     # In hosted mode, the session cookie is set by noteeli.com and shared
     # across .noteeli.com (cookie domain). Both apps MUST use the same

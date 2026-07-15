@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     # `--demo` CLI flag. Used for the public demo at demo.noteeli.com.
     demo_mode: bool = False
 
+    # ── Silent checkpoint commits ───────────────────────────────────────
+    # When on, every saved file is queued and — once it has been idle for
+    # git_autocommit_idle_seconds — committed automatically, signed by
+    # whoever saved it last. "End of an editing session" is not an
+    # observable event, so this idle debounce approximates it. Gives
+    # shared workspaces a truthful `git blame` even when nobody commits
+    # by hand. Toggle via NOTEELI_GIT_AUTOCOMMIT=1.
+    git_autocommit: bool = False
+    git_autocommit_idle_seconds: int = 300
+
     # Rotating file logs: <data_dir>/logs/noteeli.log, rotated daily,
     # keeping this many days. Covers app + uvicorn access/error logs so
     # incidents are diagnosable after the journal rotates away.
@@ -89,7 +99,7 @@ class Settings(BaseSettings):
         return self
 
     @field_validator(
-        "demo_mode", "hosted_mode", "lock_workspace", mode="before"
+        "demo_mode", "hosted_mode", "lock_workspace", "git_autocommit", mode="before"
     )
     @classmethod
     def _blank_bool_is_false(cls, value: object) -> object:

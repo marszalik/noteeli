@@ -11,6 +11,31 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Silent checkpoint commits** (`NOTEELI_GIT_AUTOCOMMIT=1`). "End of an
+  editing session" isn't an observable event, so it's approximated with
+  an idle debounce: every save queues the file, and once it has been
+  quiet for `NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS` (default 300) a
+  background loop commits it — signed by whoever saved it last, same
+  attribution rule as manual commits from the git menu. One commit per
+  author per flush, so `git blame`/history in a shared workspace stays
+  truthful even when nobody commits by hand. Pending checkpoints are
+  force-flushed on shutdown, so a service restart loses nothing.
+  Groundwork for the upcoming blame/diff view.
+
+### Fixed
+
+- **Git badge now updates after autosave.** Autosaving a document left the
+  sidebar git counter (and the tree's modified markers) stale until a full
+  page reload — only a manual save refreshed them, because it reloads the
+  whole tree. Autosave now triggers a lightweight git-status refresh after
+  each successful save (fire-and-forget, so a slow SFTP status call never
+  delays the autosave loop). Covered by a new headless-Chromium e2e test
+  (`tests/test_e2e_git_badge.py`) that boots a real server over a throwaway
+  git repo, types into the editor and asserts the badge appears without a
+  reload; it skips itself when Chromium or the editor CDN is unavailable.
+
 ## [1.4.1] - 2026-07-09
 
 ### Fixed

@@ -218,11 +218,28 @@ async def workspace_embedded_asset_preview_api(
     return FileResponse(path=local_path, media_type=media_type or "application/octet-stream")
 
 
+def _record_checkpoint_save(path: str, user: dict) -> None:
+    """Queue a saved file for a silent checkpoint commit (if enabled).
+    Same attribution rule as manual commits: only real (non-local) logins
+    sign the commit; localhost keeps the repo's ambient identity."""
+    current = get_settings()
+    if not current.git_autocommit or current.demo_mode:
+        return
+    from app.domains.git.checkpoint import checkpoint_tracker
+
+    author = None
+    if not user.get("is_local"):
+        author = {"name": user.get("name", ""), "email": user.get("email", "")}
+    checkpoint_tracker.record_save(path, author)
+
+
 @router.put("/api/file", response_model=FileDocument, name="workspace_save_api")
 async def workspace_save_api(request: Request, payload: SaveFileRequest):
-    auth_service.require_api_access(request)
+    user = auth_service.require_api_access(request)
     try:
-        return workspace_service.save_document(payload.path, payload.content)
+        document = workspace_service.save_document(payload.path, payload.content)
+        _record_checkpoint_save(payload.path, user)
+        return document
     except InvalidPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DocumentNotFoundError as exc:

@@ -350,6 +350,9 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Rotating file logs (`<data_dir>/logs/noteeli.log`, daily, N-day retention) | ✅ `tests/test_file_logging.py` | `app/core/logging.py`, covers app + uvicorn access/error |
 | Client-path validation + subcommand allow-list (injection guard) | ✅ `test_commit_rejects_path_traversal` | `_safe_rel`, `_ALLOWED_SUBCOMMANDS` |
 | Git disabled in demo mode | ✅ `test_demo_mode_disables_git` | runner is `None` in demo |
+| Git badge/change list refreshes after autosave (no reload needed) | ✅ `tests/test_e2e_git_badge.py` (headless Chromium, needs network for CDN — skips offline) | autosave path calls `refreshGitStatus()`; manual save already refreshed via `loadTree()` |
+| Silent checkpoint commits (idle-debounced auto-commit, signed per saver) | ✅ `tests/test_git_checkpoint.py` (12 tests) + e2e `test_autocommit_checkpoints_after_idle` | `NOTEELI_GIT_AUTOCOMMIT=1`, `NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS` (default 300); `CheckpointTracker`, loop in app lifespan, force-flush on shutdown; one commit per author |
+| Concurrent multi-user checkpoints attributed per author (through the real UI) | ✅ e2e `test_two_users_editing_simultaneously_get_own_signed_checkpoints` | two browser contexts with forged session cookies + `X-Forwarded-Host` (bypasses the localhost synthetic identity), interleaved typing → one signed commit each |
 
 ## 21b. Per-user preferences & profiles
 
