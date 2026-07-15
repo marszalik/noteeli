@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-15
+
 ### Added
 
 - **User manual** (`manual.md`) — a complete user-facing guide to every
@@ -431,6 +433,7 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/marszalik/noteeli/compare/v1.4.1...v1.5.0
 [1.1.0]: https://github.com/marszalik/noteeli/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/marszalik/noteeli/releases/tag/v1.0.0
