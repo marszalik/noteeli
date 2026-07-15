@@ -206,6 +206,20 @@ made through Noteeli are signed with your name and email — history and blame
 in a shared workspace attribute work to the right person. Local/anonymous
 access uses the repository's own git identity.
 
+**File history and line authors (blame).** With a file open, the clock
+icon in the topbar opens the history panel:
+
+- The **History** tab lists every commit that touched the file — who,
+  when, and the commit message (renames are followed). Click a commit to
+  unfold exactly what it changed, highlighted **word by word**: added
+  words green, removed words struck through. Word-level matters for
+  notes — rewording a sentence shows just the changed words, not two
+  walls of "line removed / line added".
+- The **Line authors** tab shows the file with a gutter telling you who
+  wrote each line and how long ago, color-coded per person, with fresher
+  lines tinted stronger — a quick "what happened here recently" heatmap.
+  Lines you've saved but that aren't committed yet are marked as such.
+
 **Silent checkpoints (optional, for teams).** With
 `NOTEELI_GIT_AUTOCOMMIT=1` the server commits your work for you: every saved
 file is queued, and once it has been quiet for a few minutes (default 5,

@@ -353,6 +353,10 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Git badge/change list refreshes after autosave (no reload needed) | ✅ `tests/test_e2e_git_badge.py` (headless Chromium, needs network for CDN — skips offline) | autosave path calls `refreshGitStatus()`; manual save already refreshed via `loadTree()` |
 | Silent checkpoint commits (idle-debounced auto-commit, signed per saver) | ✅ `tests/test_git_checkpoint.py` (12 tests) + e2e `test_autocommit_checkpoints_after_idle` | `NOTEELI_GIT_AUTOCOMMIT=1`, `NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS` (default 300); `CheckpointTracker`, loop in app lifespan, force-flush on shutdown; one commit per author |
 | Concurrent multi-user checkpoints attributed per author (through the real UI) | ✅ e2e `test_two_users_editing_simultaneously_get_own_signed_checkpoints` | two browser contexts with forged session cookies + `X-Forwarded-Host` (bypasses the localhost synthetic identity), interleaved typing → one signed commit each |
+| File history API (`/api/git/log` — commits touching a file, follows renames) | ✅ `tests/test_git_history.py` | `GitService.file_log`, `%x1f`-separated format, limit clamped to [1,200] |
+| Blame API (`/api/git/blame` — per-line authorship incl. uncommitted lines) | ✅ `tests/test_git_history.py` | `blame --porcelain` parser; null-sha lines flagged `committed=false` |
+| Word-diff API (`/api/git/diff?sha=` — word-level changes of one commit to one file) | ✅ `tests/test_git_history.py` (incl. root commit, short sha, revision-injection rejects) | `show --word-diff=porcelain`; `_safe_rev` allows bare hex only |
+| History & blame modal (commit list → inline word-diff; Line-authors tab with author gutter + age tint) | ✅ e2e `test_history_modal_shows_commits_diff_and_blame` | `#file-history-button` in topbar (visible when git active + file open), `openHistoryModal`, `loadBlameView`; author colors hashed from email |
 
 ## 21b. Per-user preferences & profiles
 

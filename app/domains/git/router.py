@@ -10,7 +10,14 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.core.config import get_settings
 from app.domains.auth.service import AuthService
-from app.domains.git.schemas import GitCommitRequest, GitOpResult, GitStatus
+from app.domains.git.schemas import (
+    GitBlameResponse,
+    GitCommitRequest,
+    GitFileDiff,
+    GitFileLog,
+    GitOpResult,
+    GitStatus,
+)
 from app.domains.git.service import (
     GitError,
     GitNotConfiguredError,
@@ -40,6 +47,45 @@ async def git_status_api(request: Request) -> GitStatus:
         # Never let a git hiccup break the workspace page — degrade to
         # "no git here".
         return GitStatus(available=False, is_repo=False)
+
+
+def _read_op(request: Request, fn):
+    """Shared wrapper for the read-only history endpoints: same auth gate,
+    same error mapping as the mutating ones (but no demo block — reading
+    history is harmless; demo has no git runner anyway)."""
+    auth_service.require_api_access(request)
+    try:
+        return fn(_service())
+    except GitUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except GitNotConfiguredError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except GitError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/git/log", response_model=GitFileLog, name="git_log_api")
+async def git_log_api(request: Request, path: str, limit: int = 30) -> GitFileLog:
+    return _read_op(
+        request,
+        lambda s: GitFileLog(path=path, entries=s.file_log(path, limit)),
+    )
+
+
+@router.get("/api/git/blame", response_model=GitBlameResponse, name="git_blame_api")
+async def git_blame_api(request: Request, path: str) -> GitBlameResponse:
+    return _read_op(
+        request,
+        lambda s: GitBlameResponse(path=path, lines=s.blame(path)),
+    )
+
+
+@router.get("/api/git/diff", response_model=GitFileDiff, name="git_diff_api")
+async def git_diff_api(request: Request, path: str, sha: str) -> GitFileDiff:
+    return _read_op(
+        request,
+        lambda s: GitFileDiff(path=path, sha=sha, lines=s.commit_word_diff(path, sha)),
+    )
 
 
 @router.post("/api/git/commit", response_model=GitOpResult, name="git_commit_api")

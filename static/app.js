@@ -29,6 +29,14 @@ if (shell) {
   const gitPullButton = document.getElementById("git-pull");
   const gitPushButton = document.getElementById("git-push");
   const gitStatusMsg = document.getElementById("git-status-msg");
+  const fileHistoryButton = document.getElementById("file-history-button");
+  const historyModal = document.getElementById("history-modal");
+  const historyTitle = document.getElementById("history-title");
+  const historyTabLog = document.getElementById("history-tab-log");
+  const historyTabBlame = document.getElementById("history-tab-blame");
+  const historyLogView = document.getElementById("history-log-view");
+  const historyBlameView = document.getElementById("history-blame-view");
+  const closeHistoryButton = document.getElementById("close-history");
   const editorModeToggle = document.getElementById("editor-mode-toggle");
   const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
   const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
@@ -1215,6 +1223,12 @@ if (shell) {
       git_commit_placeholder: "Opis zmian…", git_clean: "Brak zmian — czysto.",
       git_need_message: "Podaj opis commita.", git_working: "Pracuję…", git_done: "Gotowe.", git_failed: "Operacja git nie powiodła się.",
       git_prompt_commit: "Opis commita dla tego elementu:", git_prompt_commit_push: "Opis commita (zostanie też wypchnięty):",
+      history_button_title: "Historia i autorzy zmian",
+      history_tab_log: "Historia", history_tab_blame: "Autorzy linii",
+      history_loading: "Wczytuję…", history_empty: "Ten plik nie ma jeszcze historii w git.",
+      history_failed: "Nie udało się wczytać historii.", history_diff_empty: "Ten commit nie zmienił tekstu tego pliku.",
+      blame_uncommitted: "jeszcze nie w historii",
+      time_just_now: "przed chwilą",
       ctx_refresh: "Odśwież drzewo", ctx_delete: "Usuń",
       ctx_confirm_delete: "Kliknij ponownie, aby potwierdzić",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
@@ -1370,6 +1384,12 @@ if (shell) {
       git_commit_placeholder: "Commit message…", git_clean: "No changes — clean.",
       git_need_message: "Enter a commit message.", git_working: "Working…", git_done: "Done.", git_failed: "Git operation failed.",
       git_prompt_commit: "Commit message for this item:", git_prompt_commit_push: "Commit message (will also be pushed):",
+      history_button_title: "History & line authors",
+      history_tab_log: "History", history_tab_blame: "Line authors",
+      history_loading: "Loading…", history_empty: "This file has no git history yet.",
+      history_failed: "Failed to load history.", history_diff_empty: "This commit didn't change this file's text.",
+      blame_uncommitted: "not committed yet",
+      time_just_now: "just now",
       ctx_refresh: "Refresh tree", ctx_delete: "Delete",
       ctx_confirm_delete: "Click again to confirm",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
@@ -1525,6 +1545,12 @@ if (shell) {
       git_commit_placeholder: "Mensaje del commit…", git_clean: "Sin cambios — limpio.",
       git_need_message: "Escribe un mensaje de commit.", git_working: "Trabajando…", git_done: "Listo.", git_failed: "La operación git falló.",
       git_prompt_commit: "Mensaje del commit para este elemento:", git_prompt_commit_push: "Mensaje del commit (también se enviará):",
+      history_button_title: "Historial y autores de líneas",
+      history_tab_log: "Historial", history_tab_blame: "Autores de líneas",
+      history_loading: "Cargando…", history_empty: "Este archivo aún no tiene historial en git.",
+      history_failed: "No se pudo cargar el historial.", history_diff_empty: "Este commit no cambió el texto de este archivo.",
+      blame_uncommitted: "aún sin confirmar",
+      time_just_now: "hace un momento",
       ctx_refresh: "Refrescar árbol", ctx_delete: "Eliminar",
       ctx_confirm_delete: "Haz clic de nuevo para confirmar",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
@@ -1680,6 +1706,12 @@ if (shell) {
       git_commit_placeholder: "Commit-Nachricht…", git_clean: "Keine Änderungen — sauber.",
       git_need_message: "Gib eine Commit-Nachricht ein.", git_working: "Arbeite…", git_done: "Fertig.", git_failed: "Git-Vorgang fehlgeschlagen.",
       git_prompt_commit: "Commit-Nachricht für dieses Element:", git_prompt_commit_push: "Commit-Nachricht (wird auch gepusht):",
+      history_button_title: "Verlauf & Zeilenautoren",
+      history_tab_log: "Verlauf", history_tab_blame: "Zeilenautoren",
+      history_loading: "Lade…", history_empty: "Diese Datei hat noch keinen Git-Verlauf.",
+      history_failed: "Verlauf konnte nicht geladen werden.", history_diff_empty: "Dieser Commit hat den Text dieser Datei nicht geändert.",
+      blame_uncommitted: "noch nicht committet",
+      time_just_now: "gerade eben",
       ctx_refresh: "Baum aktualisieren", ctx_delete: "Löschen",
       ctx_confirm_delete: "Erneut klicken zum Bestätigen",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
@@ -1835,6 +1867,12 @@ if (shell) {
       git_commit_placeholder: "Сообщение коммита…", git_clean: "Изменений нет — чисто.",
       git_need_message: "Введите сообщение коммита.", git_working: "Выполняю…", git_done: "Готово.", git_failed: "Git-операция не удалась.",
       git_prompt_commit: "Сообщение коммита для этого элемента:", git_prompt_commit_push: "Сообщение коммита (также будет отправлено):",
+      history_button_title: "История и авторы строк",
+      history_tab_log: "История", history_tab_blame: "Авторы строк",
+      history_loading: "Загрузка…", history_empty: "У этого файла ещё нет истории в git.",
+      history_failed: "Не удалось загрузить историю.", history_diff_empty: "Этот коммит не менял текст этого файла.",
+      blame_uncommitted: "ещё не в истории",
+      time_just_now: "только что",
       ctx_refresh: "Обновить дерево", ctx_delete: "Удалить",
       ctx_confirm_delete: "Нажмите ещё раз для подтверждения",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
@@ -3971,6 +4009,7 @@ if (shell) {
         gitStatusByPath = {};
         gitDirtyDirs = new Set();
         gitMenu?.classList.add("hidden");
+        updateFileHistoryButton();
         if (rerender && treeData) renderTree(treeData);
         return;
       }
@@ -3980,6 +4019,7 @@ if (shell) {
       gitDirtyDirs = buildGitDirtyDirs(data.files || []);
       gitMenu?.classList.remove("hidden");
       renderGitMenu();
+      updateFileHistoryButton();
       if (rerender && treeData) renderTree(treeData);
     } catch {
       // Non-fatal — treat as "no git" for this round.
@@ -3987,6 +4027,7 @@ if (shell) {
       gitStatusByPath = {};
       gitDirtyDirs = new Set();
       gitMenu?.classList.add("hidden");
+      updateFileHistoryButton();
     }
   }
 
@@ -4126,6 +4167,227 @@ if (shell) {
     }
   }
 
+  // ── File history & blame ──────────────────────────────────────────
+  // A read-only modal: "History" lists commits touching the open file
+  // (click one → word-level diff), "Line authors" is a blame view with an
+  // author gutter and age tinting. Deliberately NOT built into the Toast UI
+  // editor — blame is line-based on the markdown source, WYSIWYG is not.
+
+  let historyPath = null;      // file the open modal describes
+  let blameLoadedFor = null;   // cache guard: blame fetched for this path
+
+  function updateFileHistoryButton() {
+    if (!fileHistoryButton) return;
+    fileHistoryButton.classList.toggle("hidden", !(gitIsActive() && selectedPath));
+  }
+
+  function formatRelativeTime(unixSeconds) {
+    if (!unixSeconds) return "";
+    const diff = Math.round(Date.now() / 1000) - unixSeconds;
+    if (diff < 60) return t("time_just_now");
+    const rtf = new Intl.RelativeTimeFormat(preferences?.language || "en", { numeric: "auto" });
+    const units = [
+      ["year", 31536000], ["month", 2592000], ["week", 604800],
+      ["day", 86400], ["hour", 3600], ["minute", 60],
+    ];
+    for (const [unit, secs] of units) {
+      if (diff >= secs) return rtf.format(-Math.round(diff / secs), unit);
+    }
+    return t("time_just_now");
+  }
+
+  function authorHue(email) {
+    let h = 0;
+    const s = email || "?";
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+    return h;
+  }
+
+  function authorDot(name, email) {
+    const dot = document.createElement("span");
+    dot.className = "history-author-dot";
+    dot.style.background = `hsl(${authorHue(email)} 55% 45%)`;
+    dot.textContent = ((name || email || "?").trim().charAt(0) || "?").toUpperCase();
+    dot.title = email ? `${name} <${email}>` : name;
+    return dot;
+  }
+
+  function blameAgeClass(unixSeconds) {
+    const days = (Date.now() / 1000 - unixSeconds) / 86400;
+    if (days < 1) return "blame-age-0";
+    if (days < 7) return "blame-age-1";
+    if (days < 30) return "blame-age-2";
+    return "blame-age-3";
+  }
+
+  function setHistoryTab(which) {
+    const log = which === "log";
+    historyTabLog?.classList.toggle("is-active", log);
+    historyTabBlame?.classList.toggle("is-active", !log);
+    historyLogView?.classList.toggle("hidden", !log);
+    historyBlameView?.classList.toggle("hidden", log);
+  }
+
+  async function openHistoryModal() {
+    if (!selectedPath || !historyModal) return;
+    historyPath = selectedPath;
+    blameLoadedFor = null;
+    if (historyTitle) historyTitle.textContent = selectedPath;
+    historyModal.classList.remove("hidden");
+    historyModal.setAttribute("aria-hidden", "false");
+    setHistoryTab("log");
+    await loadHistoryLog();
+  }
+
+  function closeHistoryModal() {
+    historyModal?.classList.add("hidden");
+    historyModal?.setAttribute("aria-hidden", "true");
+  }
+
+  async function loadHistoryLog() {
+    if (!historyLogView) return;
+    historyLogView.textContent = "";
+    const note = document.createElement("p");
+    note.className = "muted small-note";
+    note.textContent = t("history_loading");
+    historyLogView.appendChild(note);
+    try {
+      const data = await requestJson(
+        `${config.gitLogUrl}?path=${encodeURIComponent(historyPath)}&limit=50`,
+        { method: "GET" },
+      );
+      historyLogView.textContent = "";
+      const entries = data.entries || [];
+      if (!entries.length) {
+        note.textContent = t("history_empty");
+        historyLogView.appendChild(note);
+        return;
+      }
+      entries.forEach((entry) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "history-commit-row";
+        row.appendChild(authorDot(entry.author_name, entry.author_email));
+        const text = document.createElement("div");
+        text.className = "history-commit-text";
+        const subject = document.createElement("div");
+        subject.className = "history-commit-subject";
+        subject.textContent = entry.subject || entry.sha.slice(0, 8);
+        const meta = document.createElement("div");
+        meta.className = "history-commit-meta muted";
+        meta.textContent = `${entry.author_name || entry.author_email} · ${formatRelativeTime(entry.author_time)}`;
+        meta.title = new Date(entry.author_time * 1000).toLocaleString();
+        text.append(subject, meta);
+        row.appendChild(text);
+        const diffBox = document.createElement("div");
+        diffBox.className = "history-diff hidden";
+        row.addEventListener("click", () => toggleCommitDiff(entry, row, diffBox));
+        historyLogView.append(row, diffBox);
+      });
+    } catch (error) {
+      historyLogView.textContent = "";
+      note.textContent = error.message || t("history_failed");
+      historyLogView.appendChild(note);
+    }
+  }
+
+  async function toggleCommitDiff(entry, row, diffBox) {
+    const willOpen = diffBox.classList.contains("hidden");
+    diffBox.classList.toggle("hidden", !willOpen);
+    row.classList.toggle("is-open", willOpen);
+    if (!willOpen || diffBox.dataset.loaded) return;
+    diffBox.textContent = t("history_loading");
+    try {
+      const data = await requestJson(
+        `${config.gitDiffUrl}?path=${encodeURIComponent(historyPath)}&sha=${encodeURIComponent(entry.sha)}`,
+        { method: "GET" },
+      );
+      diffBox.dataset.loaded = "1";
+      renderWordDiff(diffBox, data.lines || []);
+    } catch (error) {
+      diffBox.textContent = error.message || t("history_failed");
+    }
+  }
+
+  function renderWordDiff(container, lines) {
+    container.textContent = "";
+    if (!lines.length) {
+      const note = document.createElement("p");
+      note.className = "muted small-note";
+      note.textContent = t("history_diff_empty");
+      container.appendChild(note);
+      return;
+    }
+    lines.forEach((line) => {
+      if (line.hunk) {
+        const sep = document.createElement("div");
+        sep.className = "history-hunk";
+        container.appendChild(sep);
+        return;
+      }
+      const row = document.createElement("div");
+      row.className = "history-diff-line";
+      (line.segments || []).forEach((seg) => {
+        const span = document.createElement("span");
+        span.className = `diff-${seg.kind}`;
+        span.textContent = seg.text;
+        row.appendChild(span);
+      });
+      if (!row.childNodes.length) row.appendChild(document.createTextNode(" "));
+      container.appendChild(row);
+    });
+  }
+
+  async function loadBlameView() {
+    if (!historyBlameView || blameLoadedFor === historyPath) return;
+    historyBlameView.textContent = t("history_loading");
+    try {
+      const data = await requestJson(
+        `${config.gitBlameUrl}?path=${encodeURIComponent(historyPath)}`,
+        { method: "GET" },
+      );
+      historyBlameView.textContent = "";
+      blameLoadedFor = historyPath;
+      let prevSha = null;
+      (data.lines || []).forEach((line) => {
+        const row = document.createElement("div");
+        row.className = `blame-line ${line.committed ? blameAgeClass(line.author_time) : "blame-age-0"}`;
+        const gutter = document.createElement("span");
+        gutter.className = "blame-gutter";
+        gutter.style.borderLeftColor = line.committed
+          ? `hsl(${authorHue(line.author_email)} 55% 45%)`
+          : "var(--muted)";
+        if (line.sha !== prevSha) {
+          const who = document.createElement("strong");
+          who.textContent = line.committed
+            ? (line.author_name || line.author_email)
+            : t("blame_uncommitted");
+          gutter.appendChild(who);
+          if (line.committed) {
+            const when = document.createElement("span");
+            when.className = "muted";
+            when.textContent = ` · ${formatRelativeTime(line.author_time)}`;
+            gutter.appendChild(when);
+          }
+          gutter.title = line.committed
+            ? `${line.author_name} <${line.author_email}> — ${line.summary}`
+            : t("blame_uncommitted");
+        }
+        const content = document.createElement("span");
+        content.className = "blame-content";
+        content.textContent = line.content || " ";
+        row.append(gutter, content);
+        historyBlameView.appendChild(row);
+        prevSha = line.sha;
+      });
+      if (!historyBlameView.childNodes.length) {
+        historyBlameView.textContent = t("history_empty");
+      }
+    } catch (error) {
+      historyBlameView.textContent = error.message || t("history_failed");
+    }
+  }
+
   function openGitMenu() {
     gitMenuDropdown?.classList.remove("hidden");
     gitMenuDropdown?.setAttribute("aria-hidden", "false");
@@ -4251,6 +4513,7 @@ if (shell) {
       updateHeader(file.name, file.path);
       saveButton.disabled = !file.editable;
       if (refreshFileButton) refreshFileButton.disabled = false;
+      updateFileHistoryButton();
       localStorage.setItem("last-opened-file", file.path);
 
       if (file.editable && selectedFileType === "json") {
@@ -4786,6 +5049,16 @@ if (shell) {
   });
   gitCommitButton?.addEventListener("click", () => gitCommit({ push: false }));
   gitCommitPushButton?.addEventListener("click", () => gitCommit({ push: true }));
+  fileHistoryButton?.addEventListener("click", openHistoryModal);
+  closeHistoryButton?.addEventListener("click", closeHistoryModal);
+  historyModal?.addEventListener("click", (event) => {
+    if (event.target === historyModal) closeHistoryModal();
+  });
+  historyTabLog?.addEventListener("click", () => setHistoryTab("log"));
+  historyTabBlame?.addEventListener("click", async () => {
+    setHistoryTab("blame");
+    await loadBlameView();
+  });
   gitFetchButton?.addEventListener("click", () => gitRemoteOp("fetch"));
   gitPullButton?.addEventListener("click", () => gitRemoteOp("pull"));
   gitPushButton?.addEventListener("click", () => gitRemoteOp("push"));

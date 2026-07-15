@@ -210,6 +210,11 @@
               </svg>
             </button>
           </div>
+          <button id="file-history-button" class="icon-button icon-button-small hidden" type="button" aria-label="File history and line authors" title="History &amp; authors" data-i18n-title="history_button_title">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M13 3a9 9 0 0 0-9 9H1.5L5 15.5 8.5 12H6a7 7 0 1 1 2.05 4.95l-1.41 1.41A9 9 0 1 0 13 3zm-1 4v5.25l4.05 2.4.76-1.28-3.31-1.97V7H12z" />
+            </svg>
+          </button>
           <button id="refresh-file" class="icon-button icon-button-small" type="button" aria-label="Reload file from disk" title="Reload file (it may have changed in the background)" data-i18n-title="refresh_file_title" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
               <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
@@ -535,6 +540,26 @@
       <footer class="modal-actions">
         <button id="cancel-directory-browser" class="button button-secondary" type="button">Cancel</button>
       </footer>
+    </section>
+  </div>
+
+  <div id="history-modal" class="modal-backdrop hidden" aria-hidden="true">
+    <section class="modal-card modal-card-history" role="dialog" aria-modal="true" aria-labelledby="history-title">
+      <header class="modal-header">
+        <div>
+          <div class="label">Git</div>
+          <h3 id="history-title">—</h3>
+        </div>
+        <button id="close-history" class="icon-button" type="button" aria-label="Close">X</button>
+      </header>
+      <div class="history-tabs">
+        <button id="history-tab-log" class="history-tab is-active" type="button" data-i18n="history_tab_log">Historia</button>
+        <button id="history-tab-blame" class="history-tab" type="button" data-i18n="history_tab_blame">Autorzy linii</button>
+      </div>
+      <div class="modal-content history-content">
+        <div id="history-log-view"></div>
+        <div id="history-blame-view" class="hidden"></div>
+      </div>
     </section>
   </div>
 

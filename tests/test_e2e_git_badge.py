@@ -323,3 +323,77 @@ def test_two_users_editing_simultaneously_get_own_signed_checkpoints(tmp_path):
                 ]
             finally:
                 browser.close()
+
+
+def test_history_modal_shows_commits_diff_and_blame(tmp_path):
+    """The blame/history UI end-to-end: a signed-in user's edit gets
+    checkpointed, then the History modal lists the commit with the author,
+    clicking it reveals a word-level diff of the added text, and the
+    Line-authors tab attributes the new line to that user."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+
+    secret = "e2e-session-secret"
+    marker = "sygnatura42"
+    extra_env = {
+        "NOTEELI_GIT_AUTOCOMMIT": "1",
+        "NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS": "2",
+        "NOTEELI_SESSION_SECRET": secret,
+    }
+    with _running_server(tmp_path, extra_env) as (base_url, content):
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch(headless=True)
+            except Exception as exc:
+                pytest.skip(f"Playwright Chromium unavailable: {exc}")
+            try:
+                context = _login_context(browser, base_url, secret, "anna@example.com", "Anna")
+                page = context.new_page()
+                page.goto(base_url, wait_until="networkidle")
+                page.locator(".tree-link-file", has_text="note.md").click()
+                editor = page.locator("#editor .ProseMirror >> visible=true")
+                editor.wait_for(state="visible", timeout=15_000)
+                editor.click()
+                page.keyboard.type(f"Nowy wiersz {marker} od Anny.")
+
+                # Wait for the idle checkpoint so history has Anna's commit.
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    log = subprocess.run(
+                        ["git", "-C", str(content), "log", "-1", "--format=%s"],
+                        capture_output=True,
+                        text=True,
+                    ).stdout.strip()
+                    if log.startswith("Checkpoint:"):
+                        break
+                    time.sleep(0.5)
+                assert log == "Checkpoint: note.md"
+
+                # History modal: button visible for a git workspace, commit
+                # list shows Anna's checkpoint plus the initial commit.
+                history_button = page.locator("#file-history-button")
+                expect(history_button).to_be_visible()
+                history_button.click()
+                expect(page.locator("#history-modal")).to_be_visible()
+                checkpoint_row = page.locator(
+                    ".history-commit-row", has_text="Checkpoint: note.md"
+                )
+                expect(checkpoint_row).to_be_visible(timeout=10_000)
+                expect(checkpoint_row).to_contain_text("Anna")
+                expect(
+                    page.locator(".history-commit-row", has_text="initial")
+                ).to_be_visible()
+
+                # Clicking the commit reveals the word-level diff with the
+                # typed text marked as added.
+                checkpoint_row.click()
+                added = page.locator(".history-diff .diff-added", has_text=marker)
+                expect(added.first).to_be_visible(timeout=10_000)
+
+                # Blame tab: the new line is attributed to Anna.
+                page.locator("#history-tab-blame").click()
+                blame_line = page.locator(".blame-line", has_text=marker)
+                expect(blame_line.first).to_be_visible(timeout=10_000)
+                expect(blame_line.first.locator(".blame-gutter")).to_contain_text("Anna")
+            finally:
+                browser.close()

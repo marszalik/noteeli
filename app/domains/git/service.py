@@ -26,7 +26,15 @@ from abc import ABC, abstractmethod
 from pathlib import Path, PurePosixPath
 
 from app.core.config import Settings, get_settings
-from app.domains.git.schemas import GitFileChange, GitOpResult, GitStatus
+from app.domains.git.schemas import (
+    GitBlameLine,
+    GitDiffLine,
+    GitDiffSegment,
+    GitFileChange,
+    GitLogEntry,
+    GitOpResult,
+    GitStatus,
+)
 from app.domains.preferences.service import PreferencesService
 
 
@@ -46,6 +54,7 @@ class GitNotConfiguredError(GitError):
 # bug constructing an unexpected argv.
 _ALLOWED_SUBCOMMANDS = {
     "rev-parse", "status", "add", "commit", "push", "pull", "fetch",
+    "log", "blame", "show",
 }
 
 
@@ -305,6 +314,152 @@ class GitService:
         if "M" in flags:
             return "modified"
         return "modified"
+
+    # ── History / blame / diff (read-only) ──────────────────────────
+
+    _NULL_SHA = "0" * 40
+
+    @staticmethod
+    def _safe_rev(rev: str) -> str:
+        """Validate a client-supplied revision before it reaches a shell.
+        Only bare hex object names are accepted — no ranges, refs or flags."""
+        cleaned = (rev or "").strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{4,40}", cleaned):
+            raise GitError("Invalid revision.")
+        return cleaned
+
+    def _require_repo(self) -> _GitRunner:
+        runner = self._require_runner()
+        if not self.is_repo():
+            raise GitNotConfiguredError("The workspace is not a git repository.")
+        return runner
+
+    def file_log(self, path: str, limit: int = 30) -> list[GitLogEntry]:
+        """Commits that touched a file, newest first. Follows renames."""
+        runner = self._require_repo()
+        safe = self._safe_rel(path)
+        limit = max(1, min(int(limit), 200))
+        code, out, err = runner.run(
+            [
+                "log",
+                f"-{limit}",
+                "--follow",
+                "--format=%H%x1f%an%x1f%ae%x1f%at%x1f%s%x1e",
+                "--",
+                safe,
+            ]
+        )
+        if code != 0:
+            raise GitError((err or out or "git log failed").strip())
+        entries: list[GitLogEntry] = []
+        for record in out.split("\x1e"):
+            parts = record.strip("\n").split("\x1f")
+            if len(parts) != 5:
+                continue
+            sha, name, email, timestamp, subject = parts
+            entries.append(
+                GitLogEntry(
+                    sha=sha.strip(),
+                    author_name=name,
+                    author_email=email,
+                    author_time=int(timestamp or 0),
+                    subject=subject,
+                )
+            )
+        return entries
+
+    def blame(self, path: str) -> list[GitBlameLine]:
+        """Per-line authorship of the working-tree version of a file."""
+        runner = self._require_repo()
+        safe = self._safe_rel(path)
+        code, out, err = runner.run(["blame", "--porcelain", "--", safe], timeout=60)
+        if code != 0:
+            raise GitError((err or out or "git blame failed").strip())
+        return self._parse_blame_porcelain(out)
+
+    @classmethod
+    def _parse_blame_porcelain(cls, raw: str) -> list[GitBlameLine]:
+        # Porcelain repeats a "<sha> <orig> <final> [count]" header before
+        # every line; full metadata (author, summary, …) appears only the
+        # first time a commit is seen, so it is accumulated per sha.
+        meta: dict[str, dict] = {}
+        lines: list[GitBlameLine] = []
+        current_sha = ""
+        for entry in raw.split("\n"):
+            if entry.startswith("\t"):
+                info = meta.get(current_sha, {})
+                email = info.get("author-mail", "").strip("<>")
+                committed = current_sha != cls._NULL_SHA
+                lines.append(
+                    GitBlameLine(
+                        sha=current_sha,
+                        author_name=info.get("author", "") if committed else "",
+                        author_email=email if committed else "",
+                        author_time=int(info.get("author-time") or 0),
+                        summary=info.get("summary", "") if committed else "",
+                        committed=committed,
+                        content=entry[1:],
+                    )
+                )
+                continue
+            head = entry.split(" ", 1)[0]
+            if re.fullmatch(r"[0-9a-f]{40}", head):
+                current_sha = head
+                meta.setdefault(current_sha, {})
+                continue
+            if current_sha and entry:
+                key, _, value = entry.partition(" ")
+                meta[current_sha].setdefault(key, value)
+        return lines
+
+    def commit_word_diff(self, path: str, sha: str) -> list[GitDiffLine]:
+        """Word-level diff a single commit introduced to a single file.
+        Word granularity because notes are prose — a reflowed paragraph as a
+        full-line diff is unreadable."""
+        runner = self._require_repo()
+        safe = self._safe_rel(path)
+        rev = self._safe_rev(sha)
+        # `show` (not `diff rev^ rev`) so root commits work too.
+        code, out, err = runner.run(
+            ["show", rev, "--format=", "--word-diff=porcelain", "--follow", "--", safe],
+            timeout=60,
+        )
+        if code != 0:
+            raise GitError((err or out or "git show failed").strip())
+        return self._parse_word_diff_porcelain(out)
+
+    @staticmethod
+    def _parse_word_diff_porcelain(raw: str) -> list[GitDiffLine]:
+        # Inside a hunk, porcelain word-diff emits one chunk per line
+        # (prefix ' ' context, '+' added, '-' removed) and a bare '~' to
+        # mark the end of each source line.
+        result: list[GitDiffLine] = []
+        segments: list[GitDiffSegment] = []
+        in_hunk = False
+        for entry in raw.split("\n"):
+            if entry.startswith("@@"):
+                if segments:
+                    result.append(GitDiffLine(segments=segments))
+                    segments = []
+                in_hunk = True
+                result.append(GitDiffLine(hunk=entry))
+                continue
+            if not in_hunk:
+                continue  # diff/index/---/+++ headers
+            if entry == "~":
+                result.append(GitDiffLine(segments=segments))
+                segments = []
+                continue
+            if not entry:
+                continue
+            prefix, text = entry[0], entry[1:]
+            kind = {"+": "added", "-": "removed", " ": "context"}.get(prefix)
+            if kind is None:
+                continue
+            segments.append(GitDiffSegment(kind=kind, text=text))
+        if segments:
+            result.append(GitDiffLine(segments=segments))
+        return result
 
     # ── Write ───────────────────────────────────────────────────────
 

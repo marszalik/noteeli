@@ -33,3 +33,48 @@ class GitOpResult(BaseModel):
     ok: bool
     message: str = ""
     output: str = ""
+
+
+class GitLogEntry(BaseModel):
+    sha: str
+    author_name: str = ""
+    author_email: str = ""
+    author_time: int = 0           # unix seconds
+    subject: str = ""
+
+
+class GitFileLog(BaseModel):
+    path: str
+    entries: list[GitLogEntry] = Field(default_factory=list)
+
+
+class GitBlameLine(BaseModel):
+    sha: str
+    author_name: str = ""
+    author_email: str = ""
+    author_time: int = 0
+    summary: str = ""
+    committed: bool = True         # False → working-tree line not committed yet
+    content: str = ""
+
+
+class GitBlameResponse(BaseModel):
+    path: str
+    lines: list[GitBlameLine] = Field(default_factory=list)
+
+
+class GitDiffSegment(BaseModel):
+    # context | added | removed — word-level chunks within one line
+    kind: str
+    text: str
+
+
+class GitDiffLine(BaseModel):
+    hunk: str = ""                 # non-empty → this row is a hunk separator
+    segments: list[GitDiffSegment] = Field(default_factory=list)
+
+
+class GitFileDiff(BaseModel):
+    path: str
+    sha: str
+    lines: list[GitDiffLine] = Field(default_factory=list)
