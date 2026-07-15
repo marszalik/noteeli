@@ -214,9 +214,40 @@ def test_public_view_redirects_wrong_slug(tmp_path: Path, client: TestClient):
     assert response.headers["location"] == f"/{item_id}/public"
 
 
-def test_public_view_404_for_unknown_id(client: TestClient):
+def test_public_view_404_for_unknown_id_is_a_human_page(client: TestClient):
+    """A dead public link must render a readable HTML page, not a bare
+    JSON `{"detail": …}` — visitors of a shared link are not API clients."""
     response = client.get("/99999/anything")
     assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+    assert "nie jest już opublikowana" in response.text
+    assert "no longer published" in response.text
+
+
+def test_public_link_shows_gone_page_after_unpublish(client: TestClient):
+    """Publish → visit (works) → unpublish → the old link serves the human
+    'gone' page. Regression for dead links rendering raw JSON. (The same
+    dead-link state arises when renaming/deleting the source file — that
+    cleanup path is covered by test_cleanup_for_removed_path_drops_descendants.)"""
+    from urllib.parse import urlsplit
+
+    # Requests from localhost pass the auth gate (local bypass), so the
+    # mutation API is reachable without a session.
+    local = TestClient(client.app, base_url="http://127.0.0.1")
+    created = local.post("/api/publish", json={"path": "public.md"})
+    assert created.status_code == 200, created.text
+    item = created.json()
+    public_url = urlsplit(item["public_url"]).path
+
+    assert local.get(public_url).status_code == 200  # live while published
+
+    removed = local.delete(f"/api/publish/{item['id']}")
+    assert removed.status_code == 200, removed.text
+
+    dead = client.get(public_url)
+    assert dead.status_code == 404
+    assert dead.headers["content-type"].startswith("text/html")
+    assert "nie jest już opublikowana" in dead.text
 
 
 # ── Server-side rendering ──────────────────────────────────────

@@ -11,6 +11,18 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-07-15
+
+### Fixed
+
+- **Dead public links now show a human page instead of raw JSON.**
+  When a published note is unpublished — or its source file is renamed
+  or deleted, which auto-drops the publish entry — visiting the old
+  public link used to dump `{"detail": "Published item #1 does not
+  exist."}` into the browser. It now renders a proper "this page is no
+  longer published" notice (PL + EN, light/dark aware) with a 404
+  status.
+
 ## [1.5.2] - 2026-07-15
 
 ### Changed
@@ -460,7 +472,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/marszalik/noteeli/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/marszalik/noteeli/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/marszalik/noteeli/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/marszalik/noteeli/compare/v1.4.1...v1.5.0

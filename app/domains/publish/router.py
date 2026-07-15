@@ -124,12 +124,50 @@ async def publish_delete_api(request: Request, item_id: int):
 # ── Public HTML (no auth) ────────────────────────────────────────
 
 
+def _gone_page() -> HTMLResponse:
+    """Human-readable 404 for dead public links. This is a browser-facing
+    HTML route — a bare JSON `{"detail": …}` here reads as a broken app.
+    Links die legitimately: unpublishing, or renaming/deleting the source
+    file auto-drops its publish entry."""
+    return HTMLResponse(
+        status_code=404,
+        content="""<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noteeli</title>
+<style>
+  body { font-family: system-ui, sans-serif; display: grid; place-items: center;
+         min-height: 100vh; margin: 0; background: #f6f4ef; color: #2b2a27; }
+  main { text-align: center; padding: 2rem; max-width: 26rem; }
+  h1 { font-size: 1.3rem; margin-bottom: 0.4rem; }
+  p { color: #6b6a66; line-height: 1.5; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #12151c; color: #e8e6e3; }
+    p { color: #9a999f; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ta strona nie jest już opublikowana</h1>
+  <p>Notatka została wycofana z publikacji albo przeniesiona.
+     Poproś autora o nowy link.</p>
+  <p lang="en">This page is no longer published. The note was unpublished
+     or moved — ask the author for a fresh link.</p>
+</main>
+</body>
+</html>""",
+    )
+
+
 @router.get("/{item_id:int}/{slug}", name="publish_view_page")
 async def publish_view_page(request: Request, item_id: int, slug: str):
     try:
         item = _publish_service().find_by_id(item_id)
-    except PublishedItemNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PublishedItemNotFoundError:
+        return _gone_page()
 
     # Slug mismatch → redirect to the canonical URL so users that
     # bookmark the wrong slug end up on the right page.

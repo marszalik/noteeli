@@ -178,7 +178,8 @@ private, and path tricks are rejected server-side.
 
 Published rows get a **globe badge** in the tree. The context menu then
 offers *Copy public link* and *Unpublish*. Renaming or deleting a published
-file cleans up its public entry automatically.
+file cleans up its public entry automatically — anyone opening the old link
+afterwards sees a friendly "no longer published" notice.
 
 ## 10. Git: history, sync and team checkpoints
 
