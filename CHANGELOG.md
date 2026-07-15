@@ -11,6 +11,24 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-15
+
+### Added
+
+- **File history & blame view.** A clock icon in the topbar (visible when
+  the workspace is a git repo and a file is open) opens a modal with two
+  tabs: **History** lists every commit that touched the file (author,
+  relative date, subject — renames followed); clicking a commit unfolds a
+  **word-level diff** of what it changed, which for prose is readable
+  where a line diff is not. **Line authors** is a blame view: each line
+  carries an author gutter (color-coded per person) and a freshness tint,
+  so "who wrote this and how recently" is visible at a glance; lines not
+  yet committed are marked as such. Read-only endpoints
+  (`/api/git/log|blame|diff`) with the same auth gate as the rest of the
+  git API and strict revision/path validation. Pairs with silent
+  checkpoints from 1.5.0 — history now has per-person, per-session
+  granularity worth looking at.
+
 ## [1.5.0] - 2026-07-15
 
 ### Added
@@ -433,7 +451,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/marszalik/noteeli/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/marszalik/noteeli/compare/v1.4.1...v1.5.0
 [1.1.0]: https://github.com/marszalik/noteeli/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/marszalik/noteeli/releases/tag/v1.0.0
