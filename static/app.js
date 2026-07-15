@@ -4476,6 +4476,13 @@ if (shell) {
   function handleContentLinkClick(event) {
     const anchor = event.target.closest?.("a[href]");
     if (!anchor) return;
+    // In the EDITOR a plain click must keep editing (cursor placement) —
+    // links follow on Ctrl/Cmd+click, like every code/markdown editor.
+    // The public read-only view keeps plain-click navigation.
+    const inPublicView = Boolean(
+      publicContentContainer && publicContentContainer.contains(anchor)
+    );
+    if (!inPublicView && !(event.ctrlKey || event.metaKey)) return;
     const href = anchor.getAttribute("href") || "";
     if (/^https?:/i.test(href) || href.startsWith("//")) {
       // External links: open in a new tab instead of tearing down the app.

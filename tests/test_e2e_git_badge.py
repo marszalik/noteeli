@@ -324,10 +324,15 @@ def test_internal_note_links_open_in_app(tmp_path):
                 page.locator(".tree-link-file", has_text="note.md").click()
                 editor = page.locator("#editor .ProseMirror >> visible=true")
                 editor.wait_for(state="visible", timeout=15_000)
+                # Plain click keeps editing (no navigation)…
                 editor.locator("a", has_text="harmonogram").click()
+                page.wait_for_timeout(500)
+                expect(editor).to_contain_text("Zobacz")
+                # …Ctrl+click follows the link.
+                editor.locator("a", has_text="harmonogram").click(modifiers=["Control"])
                 expect(editor).to_contain_text("terminy zjazdów", timeout=15_000)
                 # ...and back via a ../ link.
-                editor.locator("a", has_text="startu").click()
+                editor.locator("a", has_text="startu").click(modifiers=["Control"])
                 expect(editor).to_contain_text("Zobacz", timeout=15_000)
 
                 # Public folder view: a relative link swaps the rendered

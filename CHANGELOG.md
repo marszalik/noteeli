@@ -11,6 +11,17 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.11] - 2026-07-15
+
+### Fixed
+
+- **Editor links no longer hijack plain clicks.** 1.5.10 made a plain
+  click in the WYSIWYG follow internal links, so clicking into a note's
+  text near a link teleported you to another note mid-edit. Standard
+  editor behavior now: **Ctrl/Cmd+click** follows links in the editor,
+  a plain click just places the cursor. Published (read-only) pages
+  keep plain-click navigation.
+
 ## [1.5.10] - 2026-07-15
 
 ### Added
@@ -560,7 +571,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.10...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.11...HEAD
+[1.5.11]: https://github.com/marszalik/noteeli/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/marszalik/noteeli/compare/v1.5.9...v1.5.10
 [1.5.9]: https://github.com/marszalik/noteeli/compare/v1.5.8...v1.5.9
 [1.5.8]: https://github.com/marszalik/noteeli/compare/v1.5.7...v1.5.8

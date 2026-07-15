@@ -148,7 +148,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | User-pickable code highlighting theme (12 options) + auto | 🌐 | `code-theme-select`, lazy CSS loading |
 | Editor font size adjustment (12–28 px) | 🌐 | `applyEditorFontSize` |
 | Preview pane for images and PDFs (read-only) | 🌐 | `showPreviewMode` |
-| Internal note links open in-app (WYSIWYG + public view; `../` resolved, root-escapes ignored, external → new tab) | ✅ e2e `test_internal_note_links_open_in_app` | `resolveRelativeNotePath` + capture-phase click handler → `loadFile`; public renderer keeps `.md` hrefs relative (assets still rewritten) |
+| Internal note links open in-app (editor: Ctrl/Cmd+click, plain click edits; public view: plain click; `../` resolved, root-escapes ignored, external → new tab) | ✅ e2e `test_internal_note_links_open_in_app` | `resolveRelativeNotePath` + capture-phase click handler → `loadFile`; public renderer keeps `.md` hrefs relative (assets still rewritten) |
 | Preview pane for `.docx` (Word) — read-only HTML render | ✅ `test_render_docx_preview_returns_html`, `test_get_preview_kind_classifies_office_documents` | `render_office_preview`, `mammoth` |
 | Preview pane for `.xlsx` / `.xlsm` (Excel) — read-only HTML tables, one per sheet | ✅ `test_render_xlsx_preview_returns_html_table` | `render_office_preview`, `openpyxl`, 5000-row safety cap |
 | Office preview rejects non-office files | ✅ `test_render_office_preview_rejects_non_office_file` | |
