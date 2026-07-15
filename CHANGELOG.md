@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-07-15
+
+### Changed
+
+- **The public-view banner stopped being an ad.** The loud green
+  gradient bar on shared pages is now a slim near-black strip with
+  small gray text (and slightly less height), so the published note —
+  not the banner — is what the page is about.
+
 ## [1.5.4] - 2026-07-15
 
 ### Fixed
@@ -487,7 +496,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.5...HEAD
+[1.5.5]: https://github.com/marszalik/noteeli/compare/v1.5.4...v1.5.5
 [1.5.4]: https://github.com/marszalik/noteeli/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/marszalik/noteeli/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/marszalik/noteeli/compare/v1.5.1...v1.5.2
