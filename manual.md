@@ -177,7 +177,9 @@ Publishing a folder exposes that subtree only — siblings and parents stay
 private, and path tricks are rejected server-side.
 
 Published rows get a **globe badge** in the tree. The context menu then
-offers *Copy public link* and *Unpublish*. Renaming or deleting a published
+offers *Copy public link* and *Unpublish*. When more than one item is
+published, every shared page's sidebar shows a **Published notes**
+section (file names only) so visitors can move between them. Renaming or deleting a published
 file cleans up its public entry automatically — anyone opening the old link
 afterwards sees a friendly "no longer published" notice.
 

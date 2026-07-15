@@ -22,6 +22,20 @@ class PublishedItemsResponse(BaseModel):
     items: list[PublishedItem]
 
 
+class PublicNavItem(BaseModel):
+    """Public-safe projection of a published item for the shared-page
+    sidebar nav. Deliberately carries NO filesystem path — only the
+    display name (basename) and where the public page lives."""
+
+    name: str
+    kind: Literal["file", "directory"]
+    public_url: str
+
+
+class PublicNavResponse(BaseModel):
+    items: list[PublicNavItem]
+
+
 class PublishRequest(BaseModel):
     path: str
     # kind is inferred server-side from the actual filesystem state, but

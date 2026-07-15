@@ -11,6 +11,19 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-07-15
+
+### Added
+
+- **Shared pages can navigate between published notes.** The public
+  sidebar is back (also for single-file publishes) and now carries a
+  "Published notes" section listing every published item of the
+  instance — display names only, never filesystem paths — with the
+  current page highlighted. Visitors with one link can reach the other
+  things you've shared. The section hides itself when only one item is
+  published. New public endpoint `/api/public/published` returns
+  name + kind + public URL and deliberately nothing else.
+
 ## [1.5.5] - 2026-07-15
 
 ### Changed
@@ -496,7 +509,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.5...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.6...HEAD
+[1.5.6]: https://github.com/marszalik/noteeli/compare/v1.5.5...v1.5.6
 [1.5.5]: https://github.com/marszalik/noteeli/compare/v1.5.4...v1.5.5
 [1.5.4]: https://github.com/marszalik/noteeli/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/marszalik/noteeli/compare/v1.5.2...v1.5.3

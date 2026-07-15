@@ -19,6 +19,8 @@ from app.core.config import get_settings
 from app.core.templates import render_template
 from app.domains.auth.service import AuthService
 from app.domains.publish.schemas import (
+    PublicNavItem,
+    PublicNavResponse,
     PublishedItem,
     PublishedItemsResponse,
     PublishRequest,
@@ -184,6 +186,7 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
             request.url_for("publish_public_file_preview_api", id=item_id)
         ),
         "pygmentsCssUrl": str(request.url_for("publish_pygments_css")),
+        "publishedNavUrl": str(request.url_for("publish_public_published_api")),
         "isPublic": True,
     }
 
@@ -232,6 +235,27 @@ async def publish_pygments_css() -> Response:
 
 
 # ── Public scoped API (no auth) ──────────────────────────────────
+
+
+@router.get(
+    "/api/public/published",
+    response_model=PublicNavResponse,
+    name="publish_public_published_api",
+)
+async def publish_public_published_api() -> PublicNavResponse:
+    """All published items of this instance, as display names + public
+    URLs — powers the cross-item nav in the shared-page sidebar. Every
+    entry here is already public by definition; filesystem paths are
+    deliberately not included."""
+    items = [
+        PublicNavItem(
+            name=Path(item.path).name or item.slug,
+            kind=item.kind,
+            public_url=item.public_url,
+        )
+        for item in _publish_service().list_published()
+    ]
+    return PublicNavResponse(items=items)
 
 
 @router.get(

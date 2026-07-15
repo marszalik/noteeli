@@ -320,7 +320,8 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Frontend: globe badge on published tree rows | 🌐 | `appendPublishBadge` |
 | Frontend: Publish / Unpublish / Copy-public-link entries in the context menu | 🌐 | `renderTreeContextMenu` |
 | Frontend: read-only public view (banner + write UI hidden via `body[data-public]`) | 🌐 | `.app-shell.is-public` CSS scope |
-| Public file view is article-like: no sidebar/status line, centered column, note-titled tab | ✅ e2e `test_public_view_hides_editor_chrome` | `.is-public-file` shell class (kind=file), single-track grid overrides; folder publishes keep the sidebar |
+| Public view drops editor chrome: no status line/dotfiles toggle, centered column, note-titled tab | ✅ e2e `test_public_view_hides_editor_chrome` | `.is-public` CSS scope; single-track panel rows fix |
+| Public sidebar nav across published items (names only, active highlighted, hides when <2) | ✅ e2e `test_public_view_hides_editor_chrome` + `test_public_published_nav_lists_names_without_paths` | `GET /api/public/published` (no auth, no filesystem paths), `loadPublicNav`, `#public-nav` |
 | Demo mode blocks publish/unpublish at the API layer | ✅ (route-level guard, 403) | `if get_settings().demo_mode` in router |
 
 ## 20. Versioning & releases

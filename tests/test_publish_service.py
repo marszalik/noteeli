@@ -214,6 +214,22 @@ def test_public_view_redirects_wrong_slug(tmp_path: Path, client: TestClient):
     assert response.headers["location"] == f"/{item_id}/public"
 
 
+def test_public_published_nav_lists_names_without_paths(client: TestClient):
+    """The public nav endpoint returns display names + public URLs and
+    must never leak filesystem paths (nested files show their basename)."""
+    local = TestClient(client.app, base_url="http://127.0.0.1")
+    assert local.post("/api/publish", json={"path": "public.md"}).status_code == 200
+    assert local.post("/api/publish", json={"path": "shared/doc.md"}).status_code == 200
+
+    response = client.get("/api/public/published")  # no auth required
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert {i["name"] for i in items} == {"public.md", "doc.md"}
+    assert all("path" not in i for i in items)
+    assert all("shared" not in i["name"] for i in items)
+    assert all(i["public_url"].startswith("/") for i in items)
+
+
 def test_public_view_404_for_unknown_id_is_a_human_page(client: TestClient):
     """A dead public link must render a readable HTML page, not a bare
     JSON `{"detail": …}` — visitors of a shared link are not API clients."""

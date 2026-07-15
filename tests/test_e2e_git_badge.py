@@ -237,10 +237,9 @@ def _publish(base_url: str, path: str) -> str:
 
 
 def test_public_view_hides_editor_chrome(tmp_path):
-    """A published FILE reads like an article: no sidebar, no status line
-    ('File ready for editing' on a read-only page), title names the note.
-    A published FOLDER keeps the sidebar for navigation but still drops
-    the status line and the dotfiles toggle."""
+    """Shared pages drop editor chrome (status line, dotfiles toggle),
+    title themselves after the note, and the sidebar carries a nav of
+    every published item — display names only, no filesystem paths."""
     if not _cdn_reachable():
         pytest.skip("editor CDN unreachable — cannot load the real UI")
 
@@ -249,7 +248,7 @@ def test_public_view_hides_editor_chrome(tmp_path):
         project.mkdir()
         (project / "plan.md").write_text("# Plan\n\ntresc planu\n", encoding="utf-8")
         file_url = _publish(base_url, "note.md")
-        folder_url = _publish(base_url, "projekt")
+        _publish(base_url, "projekt")
 
         with sync_playwright() as p:
             try:
@@ -262,14 +261,24 @@ def test_public_view_hides_editor_chrome(tmp_path):
                 page.goto(file_url, wait_until="networkidle")
                 expect(page.locator("#public-content")).to_contain_text("Hello")
                 expect(page.locator(".statusbar")).to_be_hidden()
-                expect(page.locator("#sidebar")).to_be_hidden()
+                expect(page.locator("#toggle-hidden-files")).to_be_hidden()
                 assert "note — Noteeli" in page.title()
 
-                page.goto(folder_url, wait_until="networkidle")
+                # Sidebar stays, and lists all published items by name.
+                expect(page.locator("#sidebar")).to_be_visible()
+                nav = page.locator("#public-nav")
+                expect(nav).to_be_visible()
+                expect(nav.locator(".public-nav-item")).to_have_count(2)
+                expect(nav.locator(".public-nav-item.is-active")).to_have_text("note.md")
+                # Never a filesystem path in the public sidebar.
+                assert str(content) not in page.locator("#sidebar").inner_text()
+
+                # The nav actually navigates to the other published item.
+                nav.locator(".public-nav-item", has_text="projekt").click()
+                page.wait_for_load_state("networkidle")
                 expect(page.locator("#public-content")).to_contain_text("tresc planu")
                 expect(page.locator("#sidebar")).to_be_visible()
                 expect(page.locator(".statusbar")).to_be_hidden()
-                expect(page.locator("#toggle-hidden-files")).to_be_hidden()
             finally:
                 browser.close()
 

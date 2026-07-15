@@ -632,19 +632,44 @@ body[data-theme="noteeli"] .alert-error {
   height: 100%;
 }
 
-/* A published single FILE needs no navigation at all — drop the whole
-   sidebar and let the note read like an article. Folder publishes keep
-   the sidebar (it's the only way to move between notes). */
-.app-shell.is-public-file {
-  /* One-column grid (not --sidebar-w: 0): with the aside display:none'd,
-     the main panel auto-places into the FIRST track — which would be the
-     zero-width one. */
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 0 !important;
+/* Cross-item navigation on shared pages: every published item of this
+   instance, display names only (never filesystem paths). */
+.public-nav {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.app-shell.is-public-file .sidebar {
-  display: none !important;
+.public-nav-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0 0.5rem 0.35rem;
+}
+
+.public-nav-item {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-nav-item:hover {
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.public-nav-item.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  font-weight: 600;
 }
 
 /* Server-rendered markdown / code / json container used in public

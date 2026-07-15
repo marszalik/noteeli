@@ -54,7 +54,7 @@
   % endif
 
   <div
-    class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''} ${'is-public-file' if is_public and public_view.kind == 'file' else ''}"
+    class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''}"
     data-config='${frontend_config | n}'
     data-theme-mode="${preferences.theme_mode}"
     data-editor-font-size="${preferences.editor_font_size}"
@@ -113,6 +113,7 @@
       </div>
 
       <div id="tree-root" class="tree-root" aria-live="polite"></div>
+      <nav id="public-nav" class="public-nav hidden" aria-label="Published notes"></nav>
 
       <a
         class="sidebar-version"

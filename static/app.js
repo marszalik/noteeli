@@ -107,6 +107,7 @@ if (shell) {
   const statusMessage = document.getElementById("status-message");
   const editorContainer = document.getElementById("editor");
   const publicContentContainer = document.getElementById("public-content");
+  const publicNavContainer = document.getElementById("public-nav");
   const jsonEditorContainer = document.getElementById("json-editor");
   const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
@@ -1230,6 +1231,7 @@ if (shell) {
       history_failed: "Nie udało się wczytać historii.", history_diff_empty: "Ten commit nie zmienił tekstu tego pliku.",
       blame_uncommitted: "jeszcze nie w historii",
       time_just_now: "przed chwilą",
+      public_nav_label: "Opublikowane notatki",
       ctx_refresh: "Odśwież drzewo", ctx_delete: "Usuń",
       ctx_confirm_delete: "Kliknij ponownie, aby potwierdzić",
       no_file: "Wybierz notatkę Markdown", no_file_path: "Brak zaznaczonego pliku.",
@@ -1391,6 +1393,7 @@ if (shell) {
       history_failed: "Failed to load history.", history_diff_empty: "This commit didn't change this file's text.",
       blame_uncommitted: "not committed yet",
       time_just_now: "just now",
+      public_nav_label: "Published notes",
       ctx_refresh: "Refresh tree", ctx_delete: "Delete",
       ctx_confirm_delete: "Click again to confirm",
       no_file: "Select a Markdown note", no_file_path: "No file selected.",
@@ -1552,6 +1555,7 @@ if (shell) {
       history_failed: "No se pudo cargar el historial.", history_diff_empty: "Este commit no cambió el texto de este archivo.",
       blame_uncommitted: "aún sin confirmar",
       time_just_now: "hace un momento",
+      public_nav_label: "Notas publicadas",
       ctx_refresh: "Refrescar árbol", ctx_delete: "Eliminar",
       ctx_confirm_delete: "Haz clic de nuevo para confirmar",
       no_file: "Selecciona una nota Markdown", no_file_path: "Ningún archivo seleccionado.",
@@ -1713,6 +1717,7 @@ if (shell) {
       history_failed: "Verlauf konnte nicht geladen werden.", history_diff_empty: "Dieser Commit hat den Text dieser Datei nicht geändert.",
       blame_uncommitted: "noch nicht committet",
       time_just_now: "gerade eben",
+      public_nav_label: "Veröffentlichte Notizen",
       ctx_refresh: "Baum aktualisieren", ctx_delete: "Löschen",
       ctx_confirm_delete: "Erneut klicken zum Bestätigen",
       no_file: "Markdown-Notiz auswählen", no_file_path: "Keine Datei ausgewählt.",
@@ -1874,6 +1879,7 @@ if (shell) {
       history_failed: "Не удалось загрузить историю.", history_diff_empty: "Этот коммит не менял текст этого файла.",
       blame_uncommitted: "ещё не в истории",
       time_just_now: "только что",
+      public_nav_label: "Опубликованные заметки",
       ctx_refresh: "Обновить дерево", ctx_delete: "Удалить",
       ctx_confirm_delete: "Нажмите ещё раз для подтверждения",
       no_file: "Выберите заметку Markdown", no_file_path: "Файл не выбран.",
@@ -4393,6 +4399,38 @@ if (shell) {
     }
   }
 
+  // On shared pages, list every published item of this instance in the
+  // sidebar so visitors can hop between them. Display names only — the
+  // endpoint deliberately never exposes filesystem paths. Hidden when
+  // this is the only published item (nothing to navigate to).
+  async function loadPublicNav() {
+    if (!publicNavContainer || !config.publishedNavUrl) return;
+    try {
+      const data = await requestJson(config.publishedNavUrl, { method: "GET" });
+      const items = data.items || [];
+      if (items.length < 2) return;
+      publicNavContainer.textContent = "";
+      const label = document.createElement("div");
+      label.className = "public-nav-label";
+      label.textContent = t("public_nav_label");
+      publicNavContainer.appendChild(label);
+      items.forEach((item) => {
+        const link = document.createElement("a");
+        link.className = "public-nav-item";
+        if (item.public_url === window.location.pathname) {
+          link.classList.add("is-active");
+        }
+        link.href = item.public_url;
+        link.textContent = item.name;
+        link.title = item.name;
+        publicNavContainer.appendChild(link);
+      });
+      publicNavContainer.classList.remove("hidden");
+    } catch {
+      // Non-fatal — the shared page works fine without the nav.
+    }
+  }
+
   function openGitMenu() {
     gitMenuDropdown?.classList.remove("hidden");
     gitMenuDropdown?.setAttribute("aria-hidden", "false");
@@ -5306,6 +5344,7 @@ if (shell) {
   if (config.isPublic) {
     loadTree({ autoSelect: true })
       .catch((error) => setStatus(error.message, true));
+    loadPublicNav();
   } else {
     loadPreferences()
       .then(() => loadPreferenceProfiles())
