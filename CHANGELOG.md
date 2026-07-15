@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-07-15
+
+### Changed
+
+- **History & blame moved into the git menu.** The standalone topbar
+  clock icon read as "undo/revert changes"; the entry now lives in the
+  git dropdown as "History & authors" with the open file's name under
+  it, next to the other git actions where it belongs.
+
 ## [1.5.1] - 2026-07-15
 
 ### Added
@@ -451,7 +460,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/marszalik/noteeli/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/marszalik/noteeli/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/marszalik/noteeli/compare/v1.4.1...v1.5.0
 [1.1.0]: https://github.com/marszalik/noteeli/compare/v1.0.0...v1.1.0

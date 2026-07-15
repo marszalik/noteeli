@@ -181,6 +181,15 @@
                   <span id="git-sync-state" class="git-sync-state"></span>
                 </div>
               </div>
+              <button id="git-file-history" class="git-menu-history hidden" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M3 5h2v2H3V5zm4 0h14v2H7V5zM3 11h2v2H3v-2zm4 0h14v2H7v-2zM3 17h2v2H3v-2zm4 0h14v2H7v-2z" />
+                </svg>
+                <span class="git-menu-history-text">
+                  <span data-i18n="history_button_title">Historia i autorzy zmian</span>
+                  <span id="git-file-history-name" class="git-menu-history-file"></span>
+                </span>
+              </button>
               <div id="git-changes-list" class="git-changes-list"></div>
               <div class="git-commit-box">
                 <textarea id="git-commit-message" class="git-commit-message" rows="2" data-i18n-placeholder="git_commit_placeholder" placeholder="Commit message…"></textarea>
@@ -210,11 +219,6 @@
               </svg>
             </button>
           </div>
-          <button id="file-history-button" class="icon-button icon-button-small hidden" type="button" aria-label="File history and line authors" title="History &amp; authors" data-i18n-title="history_button_title">
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-              <path d="M13 3a9 9 0 0 0-9 9H1.5L5 15.5 8.5 12H6a7 7 0 1 1 2.05 4.95l-1.41 1.41A9 9 0 1 0 13 3zm-1 4v5.25l4.05 2.4.76-1.28-3.31-1.97V7H12z" />
-            </svg>
-          </button>
           <button id="refresh-file" class="icon-button icon-button-small" type="button" aria-label="Reload file from disk" title="Reload file (it may have changed in the background)" data-i18n-title="refresh_file_title" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
               <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />

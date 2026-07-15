@@ -29,7 +29,8 @@ if (shell) {
   const gitPullButton = document.getElementById("git-pull");
   const gitPushButton = document.getElementById("git-push");
   const gitStatusMsg = document.getElementById("git-status-msg");
-  const fileHistoryButton = document.getElementById("file-history-button");
+  const gitFileHistoryButton = document.getElementById("git-file-history");
+  const gitFileHistoryName = document.getElementById("git-file-history-name");
   const historyModal = document.getElementById("history-modal");
   const historyTitle = document.getElementById("history-title");
   const historyTabLog = document.getElementById("history-tab-log");
@@ -4177,8 +4178,12 @@ if (shell) {
   let blameLoadedFor = null;   // cache guard: blame fetched for this path
 
   function updateFileHistoryButton() {
-    if (!fileHistoryButton) return;
-    fileHistoryButton.classList.toggle("hidden", !(gitIsActive() && selectedPath));
+    if (!gitFileHistoryButton) return;
+    const show = gitIsActive() && Boolean(selectedPath);
+    gitFileHistoryButton.classList.toggle("hidden", !show);
+    if (show && gitFileHistoryName) {
+      gitFileHistoryName.textContent = selectedPath.split("/").pop();
+    }
   }
 
   function formatRelativeTime(unixSeconds) {
@@ -5049,7 +5054,10 @@ if (shell) {
   });
   gitCommitButton?.addEventListener("click", () => gitCommit({ push: false }));
   gitCommitPushButton?.addEventListener("click", () => gitCommit({ push: true }));
-  fileHistoryButton?.addEventListener("click", openHistoryModal);
+  gitFileHistoryButton?.addEventListener("click", () => {
+    closeGitMenu();
+    openHistoryModal();
+  });
   closeHistoryButton?.addEventListener("click", closeHistoryModal);
   historyModal?.addEventListener("click", (event) => {
     if (event.target === historyModal) closeHistoryModal();

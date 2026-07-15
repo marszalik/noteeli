@@ -206,8 +206,9 @@ made through Noteeli are signed with your name and email — history and blame
 in a shared workspace attribute work to the right person. Local/anonymous
 access uses the repository's own git identity.
 
-**File history and line authors (blame).** With a file open, the clock
-icon in the topbar opens the history panel:
+**File history and line authors (blame).** With a file open, the git
+menu has a **History & authors** entry (labeled with the file's name)
+that opens the history panel:
 
 - The **History** tab lists every commit that touched the file — who,
   when, and the commit message (renames are followed). Click a commit to

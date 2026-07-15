@@ -356,7 +356,7 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | File history API (`/api/git/log` — commits touching a file, follows renames) | ✅ `tests/test_git_history.py` | `GitService.file_log`, `%x1f`-separated format, limit clamped to [1,200] |
 | Blame API (`/api/git/blame` — per-line authorship incl. uncommitted lines) | ✅ `tests/test_git_history.py` | `blame --porcelain` parser; null-sha lines flagged `committed=false` |
 | Word-diff API (`/api/git/diff?sha=` — word-level changes of one commit to one file) | ✅ `tests/test_git_history.py` (incl. root commit, short sha, revision-injection rejects) | `show --word-diff=porcelain`; `_safe_rev` allows bare hex only |
-| History & blame modal (commit list → inline word-diff; Line-authors tab with author gutter + age tint) | ✅ e2e `test_history_modal_shows_commits_diff_and_blame` | `#file-history-button` in topbar (visible when git active + file open), `openHistoryModal`, `loadBlameView`; author colors hashed from email |
+| History & blame modal (commit list → inline word-diff; Line-authors tab with author gutter + age tint) | ✅ e2e `test_history_modal_shows_commits_diff_and_blame` | "History & authors" entry in the git dropdown (`#git-file-history`, shows open file's name; visible when git active + file open), `openHistoryModal`, `loadBlameView`; author colors hashed from email |
 
 ## 21b. Per-user preferences & profiles
 

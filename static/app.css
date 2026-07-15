@@ -2062,6 +2062,47 @@ body[data-theme="noteeli"] .git-dropdown {
   width: min(calc(100vw - 2rem), 860px);
 }
 
+/* "History & line authors" entry inside the git dropdown */
+.git-menu-history {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.git-menu-history:hover {
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.git-menu-history svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.git-menu-history-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.git-menu-history-file {
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .history-tabs {
   display: flex;
   gap: 0.35rem;

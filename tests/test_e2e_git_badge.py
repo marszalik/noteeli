@@ -369,11 +369,13 @@ def test_history_modal_shows_commits_diff_and_blame(tmp_path):
                     time.sleep(0.5)
                 assert log == "Checkpoint: note.md"
 
-                # History modal: button visible for a git workspace, commit
-                # list shows Anna's checkpoint plus the initial commit.
-                history_button = page.locator("#file-history-button")
-                expect(history_button).to_be_visible()
-                history_button.click()
+                # History modal opens from the git dropdown ("History &
+                # authors" entry, labeled with the open file's name).
+                page.locator("#git-menu-toggle").click()
+                history_entry = page.locator("#git-file-history")
+                expect(history_entry).to_be_visible()
+                expect(history_entry).to_contain_text("note.md")
+                history_entry.click()
                 expect(page.locator("#history-modal")).to_be_visible()
                 checkpoint_row = page.locator(
                     ".history-commit-row", has_text="Checkpoint: note.md"
