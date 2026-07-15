@@ -99,6 +99,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Path traversal protection (`..`, escape root) | ✅ `test_path_traversal_is_blocked`, `test_delete_blocks_path_traversal`, `test_create_item_rejects_separator_in_name` | `_sanitize_path` |
 | Path normalisation (Windows backslashes, double slashes) | ✅ `test_path_sanitisation_handles_windows_style_separators` | |
 | Last-opened-file persistence across reloads | 🌐 | `localStorage["last-opened-file"]` |
+| Sidebar root label relative to `NOTEELI_CONTENT_ROOT` (no server-path leak) | ✅ `test_content_root_display_is_relative_to_env_root` | `WorkspaceService.relativize_local_root`, `AppPreferences.content_root_display` (read-only, computed) |
 
 ## 4. File CRUD
 

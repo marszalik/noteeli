@@ -13,6 +13,12 @@ Language = Literal["pl", "en", "es", "de", "ru"]
 class AppPreferences(BaseModel):
     source_type: SourceType = "local"
     content_root: str
+    # Read-only, computed on the way out: the workspace root shown in the
+    # sidebar, relative to the instance's NOTEELI_CONTENT_ROOT ("/" when
+    # equal, "/sub/dir" inside it, absolute when the user pointed the
+    # workspace elsewhere). Never leaks the server's filesystem layout to
+    # shared-instance users.
+    content_root_display: str = ""
     sftp_host: str = ""
     sftp_port: int = Field(default=22, ge=1, le=65535)
     sftp_username: str = ""

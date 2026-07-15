@@ -147,3 +147,28 @@ def test_compact_chrome_round_trips(tmp_path):
     # Survives a fresh repo (i.e. it's in SQLite, not just memory)
     reloaded = PreferencesService(settings, PreferencesRepository(settings)).get_preferences()
     assert reloaded.compact_chrome is False
+
+
+def test_content_root_display_is_relative_to_env_root(tmp_path):
+    """The sidebar label must not leak the server's filesystem layout:
+    equal to NOTEELI_CONTENT_ROOT → "/", subdir → "/sub", outside → the
+    real (deliberately chosen) path."""
+    from app.core.config import Settings
+    from app.domains.workspace.service import WorkspaceService
+
+    root = tmp_path / "notes"
+    (root / "kurs" / "sylabus").mkdir(parents=True)
+    settings = Settings(
+        content_root=root, data_dir=tmp_path / ".noteeli", session_secret="t"
+    )
+    service = WorkspaceService(settings)
+
+    assert service.relativize_local_root(str(root)) == "/"
+    assert service.relativize_local_root(str(root / "kurs" / "sylabus")) == "/kurs/sylabus"
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    assert service.relativize_local_root(str(outside)) == str(outside)
+
+    # And the preferences API carries the computed display field.
+    prefs = service.get_preferences()
+    assert prefs.content_root_display == "/"

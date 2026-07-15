@@ -95,7 +95,23 @@ class WorkspaceService:
         return self._get_backend().root_display
 
     def get_preferences(self, user_key: str | None = None) -> AppPreferences:
-        return self.preferences_service.get_preferences(user_key)
+        prefs = self.preferences_service.get_preferences(user_key)
+        return prefs.model_copy(
+            update={"content_root_display": self.relativize_local_root(prefs.content_root)}
+        )
+
+    def relativize_local_root(self, root: str) -> str:
+        """Workspace root as shown to users: relative to the instance's
+        content root ("/" when equal, "/sub/dir" inside it), absolute only
+        when the workspace deliberately points outside it."""
+        try:
+            rel = Path(root).expanduser().resolve().relative_to(
+                self.settings.content_root.resolve()
+            )
+        except (ValueError, OSError):
+            return str(root)
+        rel_str = rel.as_posix()
+        return "/" if rel_str == "." else f"/{rel_str}"
 
     def save_sftp_credentials(
         self,
@@ -165,7 +181,7 @@ class WorkspaceService:
             gdrive_folder_id = current.gdrive_folder_id
             gdrive_credentials = None  # keep existing
         invalidate_sftp_cache()
-        return self.preferences_service.update_preferences(
+        updated = self.preferences_service.update_preferences(
             user_key=user_key,
             content_root=content_root,
             sort_mode=sort_mode,
@@ -184,6 +200,9 @@ class WorkspaceService:
             image_upload_subdir=image_upload_subdir,
             language=language,
             compact_chrome=compact_chrome,
+        )
+        return updated.model_copy(
+            update={"content_root_display": self.relativize_local_root(updated.content_root)}
         )
 
     def list_preference_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:

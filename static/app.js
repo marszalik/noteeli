@@ -2628,7 +2628,9 @@ if (shell) {
       return host ? `sftp://${user ? user + "@" : ""}${host}${path}` : "SFTP";
     }
     if (src === "gdrive") return "Google Drive";
-    return p.content_root || "";
+    // Server-computed: relative to the instance's content root, so the
+    // sidebar never leaks the server's filesystem layout.
+    return p.content_root_display || p.content_root || "";
   }
 
   function applyPreferencesToUi(nextPreferences) {

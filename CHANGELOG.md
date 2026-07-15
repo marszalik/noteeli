@@ -11,6 +11,19 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-07-15
+
+### Changed
+
+- **The sidebar no longer shows the server's full filesystem path.**
+  The workspace root is displayed relative to the instance's
+  `NOTEELI_CONTENT_ROOT`: "/" when they're the same, "/sub/dir" for a
+  subdirectory — so users of a shared instance see a clean label
+  instead of the server's directory layout. A workspace deliberately
+  pointed outside the content root still shows its real path, and the
+  Settings input keeps the full path (it's an input, not a label).
+  SFTP/GDrive labels unchanged.
+
 ## [1.5.7] - 2026-07-15
 
 ### Added
@@ -524,7 +537,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.7...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.8...HEAD
+[1.5.8]: https://github.com/marszalik/noteeli/compare/v1.5.7...v1.5.8
 [1.5.7]: https://github.com/marszalik/noteeli/compare/v1.5.6...v1.5.7
 [1.5.6]: https://github.com/marszalik/noteeli/compare/v1.5.5...v1.5.6
 [1.5.5]: https://github.com/marszalik/noteeli/compare/v1.5.4...v1.5.5

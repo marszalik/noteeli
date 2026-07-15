@@ -129,6 +129,10 @@ async def workspace_page(request: Request):
     else:
         try:
             content_root_label = workspace_service.root_display
+            if getattr(preferences, "source_type", "local") == "local":
+                content_root_label = workspace_service.relativize_local_root(
+                    content_root_label
+                )
         except StorageNotConfiguredError:
             content_root_label = "(not configured)"
             needs_storage_setup = True
