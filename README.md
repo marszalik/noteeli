@@ -4,7 +4,7 @@ Noteeli is a Markdown-first web workspace built around real folders, plain files
 
 It is designed for people who want an Obsidian-like workflow in the browser without moving their notes into a proprietary format or storage model.
 
-Website: [noteeli.com](https://noteeli.com)
+Website: [noteeli.com](https://noteeli.com) · User manual: [manual.md](./manual.md)
 
 ![Noteeli](https://noteeli.com/static/screenshots/noteeli-markdown-workspace.png?v=1.2.0)
 

@@ -15,6 +15,7 @@ install.sh          one-line installer for end users (curl | bash)
 ARCHITECTURE.md     architectural conventions (domain-oriented layout, etc.)
 CHANGELOG.md        user-facing changelog (Keep a Changelog format)
 functionalities.md  inventory of every feature + test coverage status
+manual.md           user-facing manual — update it when behaviour users see changes
 ```
 
 ## Before you change anything

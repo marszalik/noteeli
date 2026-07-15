@@ -13,6 +13,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **User manual** (`manual.md`) — a complete user-facing guide to every
+  feature: workspace tour, files & folders, editors, saving/autosave,
+  images, diagrams, publishing, git (including the new silent
+  checkpoints), personalisation, storage backends, accounts, and an
+  admin env-var reference. Linked from the README.
+
 - **Silent checkpoint commits** (`NOTEELI_GIT_AUTOCOMMIT=1`). "End of an
   editing session" isn't an observable event, so it's approximated with
   an idle debounce: every save queues the file, and once it has been
