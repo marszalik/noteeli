@@ -612,7 +612,38 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-public .tree-row-menu,
 .app-shell.is-public #editor,
 .app-shell.is-public #json-editor,
-.app-shell.is-public #code-editor {
+.app-shell.is-public #code-editor,
+/* Editor chrome that makes no sense on a read-only page: the status
+   line ("File ready for editing…") and the dotfiles toggle. */
+.app-shell.is-public .statusbar,
+.app-shell.is-public #toggle-hidden-files {
+  display: none !important;
+}
+
+/* With the topbar and statusbar display:none'd, the panel's row grid
+   (auto 1fr auto) would auto-place the stage into the small `auto`
+   track and leave the 1fr row empty — collapse to a single full row. */
+.app-shell.is-public .workspace-panel {
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+.app-shell.is-public .editor-stage,
+.app-shell.is-public #public-content {
+  height: 100%;
+}
+
+/* A published single FILE needs no navigation at all — drop the whole
+   sidebar and let the note read like an article. Folder publishes keep
+   the sidebar (it's the only way to move between notes). */
+.app-shell.is-public-file {
+  /* One-column grid (not --sidebar-w: 0): with the aside display:none'd,
+     the main panel auto-places into the FIRST track — which would be the
+     zero-width one. */
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+
+.app-shell.is-public-file .sidebar {
   display: none !important;
 }
 
@@ -622,7 +653,9 @@ body[data-theme="noteeli"] .alert-error {
 .public-content {
   height: 100%;
   overflow: auto;
-  padding: 1.5rem 2rem;
+  /* Horizontal padding centers a readable article column (~62rem) on
+     wide screens and degrades to plain 2rem padding on narrow ones. */
+  padding: 2rem max(2rem, calc((100% - 62rem) / 2)) 4rem;
   color: var(--text);
   background: transparent;
   line-height: 1.65;

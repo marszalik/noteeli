@@ -11,6 +11,21 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-07-15
+
+### Fixed
+
+- **Public view no longer looks like a crippled editor.** A published
+  single file now reads like an article: the sidebar (which only
+  repeated the file's own name) is gone, the content takes the full
+  page in a readable centered column, and the browser tab is titled
+  after the note instead of just "Noteeli". The editor status line
+  ("File ready for editing…" — on a read-only page!) and the dotfiles
+  toggle are hidden in every public view. Folder publishes keep the
+  sidebar for navigation. Also fixed the content area collapsing into
+  the wrong (zero-height/width) grid track when the topbar/sidebar are
+  hidden.
+
 ## [1.5.3] - 2026-07-15
 
 ### Fixed
@@ -472,7 +487,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/marszalik/noteeli/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/marszalik/noteeli/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/marszalik/noteeli/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/marszalik/noteeli/compare/v1.5.0...v1.5.1

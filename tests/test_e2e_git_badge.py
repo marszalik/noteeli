@@ -224,6 +224,56 @@ def test_autocommit_checkpoints_after_idle(tmp_path):
                 browser.close()
 
 
+def _publish(base_url: str, path: str) -> str:
+    """Publish a path via the localhost-bypassed API; returns the public URL."""
+    request = urllib.request.Request(
+        f"{base_url}/api/publish",
+        data=json.dumps({"path": path}).encode(),
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    item = json.loads(urllib.request.urlopen(request).read())
+    return base_url + item["public_url"]
+
+
+def test_public_view_hides_editor_chrome(tmp_path):
+    """A published FILE reads like an article: no sidebar, no status line
+    ('File ready for editing' on a read-only page), title names the note.
+    A published FOLDER keeps the sidebar for navigation but still drops
+    the status line and the dotfiles toggle."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+
+    with _running_server(tmp_path) as (base_url, content):
+        project = content / "projekt"
+        project.mkdir()
+        (project / "plan.md").write_text("# Plan\n\ntresc planu\n", encoding="utf-8")
+        file_url = _publish(base_url, "note.md")
+        folder_url = _publish(base_url, "projekt")
+
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch(headless=True)
+            except Exception as exc:
+                pytest.skip(f"Playwright Chromium unavailable: {exc}")
+            try:
+                page = browser.new_page()
+
+                page.goto(file_url, wait_until="networkidle")
+                expect(page.locator("#public-content")).to_contain_text("Hello")
+                expect(page.locator(".statusbar")).to_be_hidden()
+                expect(page.locator("#sidebar")).to_be_hidden()
+                assert "note — Noteeli" in page.title()
+
+                page.goto(folder_url, wait_until="networkidle")
+                expect(page.locator("#public-content")).to_contain_text("tresc planu")
+                expect(page.locator("#sidebar")).to_be_visible()
+                expect(page.locator(".statusbar")).to_be_hidden()
+                expect(page.locator("#toggle-hidden-files")).to_be_hidden()
+            finally:
+                browser.close()
+
+
 def _mint_session_cookie(secret: str, user: dict) -> str:
     """Forge a valid starlette session cookie. Works because the test
     controls NOTEELI_SESSION_SECRET — same signing scheme as

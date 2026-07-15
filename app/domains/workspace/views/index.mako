@@ -1,6 +1,8 @@
 <%inherit file="/views/base.mako"/>
 
-<%def name="page_title()">Noteeli</%def>
+<%def name="page_title()"><%
+    _pv = context.get('public_view')
+%>${(_pv.slug + " — Noteeli") if _pv else "Noteeli"}</%def>
 <%def name="initial_theme()">${preferences.theme_mode}</%def>
 
 <%def name="head_extra()">
@@ -52,7 +54,7 @@
   % endif
 
   <div
-    class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''}"
+    class="app-shell ${'is-demo' if demo_mode else ''} ${'is-public' if is_public else ''} ${'is-public-file' if is_public and public_view.kind == 'file' else ''}"
     data-config='${frontend_config | n}'
     data-theme-mode="${preferences.theme_mode}"
     data-editor-font-size="${preferences.editor_font_size}"
