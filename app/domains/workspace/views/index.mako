@@ -234,6 +234,13 @@
             aria-label="Toggle edit mode"
             title="Toggle mode: WYSIWYG <-> Markdown"
           >WYSIWYG</button>
+          <button
+            id="kanban-mode-toggle"
+            class="button button-secondary button-sm editor-mode-toggle hidden"
+            type="button"
+            aria-label="Toggle board view"
+            title="Toggle view: Board <-> Markdown"
+          >Board</button>
 
           <div class="user-menu">
             <button id="user-menu-toggle" class="icon-button" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown" title="Account">
@@ -276,6 +283,7 @@
         <div id="editor"></div>
         <div id="json-editor" class="json-editor-panel hidden"></div>
         <div id="code-editor" class="code-editor-panel hidden"></div>
+        <div id="kanban-board" class="kanban-board hidden"></div>
         <div id="public-content" class="public-content hidden"></div>
 
         <div id="preview-stage" class="file-preview hidden">

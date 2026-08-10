@@ -11,7 +11,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.5.11] - 2026-07-15
+### Added
+
+- **Markdown-backed kanban boards** (Obsidian Kanban compatible). Any `.md`
+  file with `kanban-plugin:` in its frontmatter opens as a drag & drop
+  board: `## ` headings are columns, list items are cards. Nested list
+  items render as separate subtask cards (arbitrary depth) indented under
+  their parent with a progress chip; a parent card cannot leave its column
+  until its subtasks are moved away, and a subtask dragged to another
+  column becomes a standalone card. Cards, subtasks and columns can be
+  added, edited and deleted on the board; a topbar toggle switches to the
+  raw Markdown editor. Unrecognised file content (frontmatter, prose,
+  card descriptions, `%% kanban:settings`) round-trips untouched.
+  Detection is purely content-based — there is no separate board file
+  type; a regular note becomes a board by adding the frontmatter.
 
 ### Fixed
 

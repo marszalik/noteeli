@@ -781,6 +781,7 @@ if (shell) {
     editorContainer.classList.add("hidden");
     jsonEditorContainer.classList.remove("hidden");
     codeEditorContainer.classList.add("hidden");
+    document.getElementById("kanban-board")?.classList.add("hidden");
     hidePreview();
     hideUploadStage();
     // hide the WYSIWYG/Markdown toggle — not relevant for JSON
@@ -797,6 +798,7 @@ if (shell) {
     editorContainer.classList.add("hidden");
     jsonEditorContainer.classList.add("hidden");
     codeEditorContainer.classList.remove("hidden");
+    document.getElementById("kanban-board")?.classList.add("hidden");
     hidePreview();
     hideUploadStage();
     if (editorModeToggle) editorModeToggle.classList.add("hidden");
@@ -808,11 +810,696 @@ if (shell) {
     codeEditorContainer.classList.add("hidden");
   }
 
+  // ── Kanban board (markdown-backed, Obsidian Kanban compatible) ────────────
+  //
+  // A board is a plain .md file whose frontmatter contains `kanban-plugin:`.
+  // Columns are `## ` headings, cards are list items (`- [ ] text`), and
+  // subtasks are nested list items rendered as separate, indented cards.
+  // A card that still has subtasks cannot leave its column; a subtask moved
+  // to another column becomes a standalone card (the relationship exists
+  // only while parent and child sit together — the file stays pure markdown).
+  //
+  // The parser is conservative: lines it doesn't understand (frontmatter,
+  // prose between headings, `%% kanban:settings` blocks, card descriptions)
+  // are carried through verbatim so a board round-trips without data loss.
+
+  const kanbanContainer = document.getElementById("kanban-board");
+  const kanbanModeToggle = document.getElementById("kanban-mode-toggle");
+  let kanbanBoard = null;
+  let kanbanViewActive = false;
+  let kanbanDragCard = null;
+  // Keeps the "add card / add subtask" input open across re-renders:
+  // {type:"card", col} | {type:"subtask", card} | {type:"column"} | null
+  let kanbanPendingInput = null;
+
+  const KANBAN_ITEM_RE = /^(\s*)([-*+])\s+(\[( |x|X)\]\s*)?(.*)$/;
+
+  function kanbanIndentWidth(prefix) {
+    let width = 0;
+    for (const ch of prefix) width += ch === "\t" ? 4 : 1;
+    return width;
+  }
+
+  function isKanbanContent(content) {
+    const lines = (content || "").split(/\r?\n/);
+    if ((lines[0] || "").trim() !== "---") return false;
+    for (let i = 1; i < Math.min(lines.length, 60); i++) {
+      const line = lines[i].trim();
+      if (line === "---" || line === "...") return false;
+      if (/^kanban-plugin\s*:/.test(line)) return true;
+    }
+    return false;
+  }
+
+  function parseKanban(content) {
+    const lines = (content || "").replace(/\r\n/g, "\n").split("\n");
+    // Frontmatter is opaque prelude — column scan starts after it so a
+    // stray "## " inside frontmatter can never become a column.
+    let scanFrom = 0;
+    if ((lines[0] || "").trim() === "---") {
+      for (let i = 1; i < lines.length; i++) {
+        const t = lines[i].trim();
+        if (t === "---" || t === "...") { scanFrom = i + 1; break; }
+      }
+    }
+    let firstHeading = lines.length;
+    for (let i = scanFrom; i < lines.length; i++) {
+      if (/^##\s+/.test(lines[i]) && !/^###/.test(lines[i])) { firstHeading = i; break; }
+    }
+    const board = { prelude: lines.slice(0, firstHeading), columns: [], indentUnit: 4 };
+    let unitGuess = null;
+
+    let i = firstHeading;
+    while (i < lines.length) {
+      const title = lines[i].replace(/^##\s+/, "").trim();
+      let end = i + 1;
+      while (end < lines.length && !(/^##\s+/.test(lines[end]) && !/^###/.test(lines[end]))) end++;
+      const column = { title, leading: [], cards: [], trailing: [] };
+      // stack of open list items: { indent, card }
+      const stack = [];
+      for (let j = i + 1; j < end; j++) {
+        const line = lines[j];
+        const m = KANBAN_ITEM_RE.exec(line);
+        if (m) {
+          const indent = kanbanIndentWidth(m[1]);
+          const card = {
+            marker: m[2],
+            checked: m[3] ? m[4] : null,
+            text: m[5],
+            origIndent: indent,
+            blocks: [],
+          };
+          while (stack.length && indent <= stack[stack.length - 1].indent) stack.pop();
+          if (!stack.length) {
+            column.cards.push(card);
+          } else {
+            stack[stack.length - 1].card.blocks.push({ t: "card", c: card });
+            if (unitGuess == null) {
+              const delta = indent - stack[stack.length - 1].indent;
+              if (delta > 0) unitGuess = delta;
+            }
+          }
+          stack.push({ indent, card });
+          continue;
+        }
+        if (!line.trim()) {
+          if (stack.length) stack[stack.length - 1].card.blocks.push({ t: "line", s: line });
+          else if (!column.cards.length) column.leading.push(line);
+          // blank between heading regions with no open card: drop — the
+          // serializer re-emits canonical spacing.
+          continue;
+        }
+        const indent = kanbanIndentWidth(line.match(/^\s*/)[0]);
+        while (stack.length && indent <= stack[stack.length - 1].indent) stack.pop();
+        if (stack.length) stack[stack.length - 1].card.blocks.push({ t: "line", s: line });
+        else if (!column.cards.length) column.leading.push(line);
+        else column.trailing.push(line);
+      }
+      board.columns.push(column);
+      i = end;
+    }
+    if (unitGuess) board.indentUnit = unitGuess;
+    return board;
+  }
+
+  function kanbanReindentLine(line, delta) {
+    if (!line.trim()) return "";
+    if (delta > 0) return " ".repeat(delta) + line;
+    if (delta < 0) {
+      let strip = -delta;
+      let i = 0;
+      while (i < line.length && strip > 0 && (line[i] === " " || line[i] === "\t")) {
+        strip -= line[i] === "\t" ? 4 : 1;
+        i += 1;
+      }
+      return line.slice(i);
+    }
+    return line;
+  }
+
+  function serializeKanbanCard(out, card, depth, unit) {
+    const indent = " ".repeat(depth * unit);
+    const box = card.checked == null ? "" : `[${card.checked}] `;
+    out.push(`${indent}${card.marker} ${box}${card.text}`.trimEnd());
+    const delta = depth * unit - card.origIndent;
+    const blocks = card.blocks.slice();
+    while (blocks.length) {
+      const last = blocks[blocks.length - 1];
+      if (last.t === "line" && !last.s.trim()) blocks.pop();
+      else break;
+    }
+    for (const block of blocks) {
+      if (block.t === "card") serializeKanbanCard(out, block.c, depth + 1, unit);
+      else out.push(kanbanReindentLine(block.s, delta));
+    }
+  }
+
+  function serializeKanban(board) {
+    const out = [];
+    const prelude = board.prelude.slice();
+    while (prelude.length && !prelude[prelude.length - 1].trim()) prelude.pop();
+    if (prelude.length) out.push(...prelude, "");
+    for (const column of board.columns) {
+      out.push(`## ${column.title}`, "");
+      const leading = column.leading.slice();
+      while (leading.length && !leading[0].trim()) leading.shift();
+      while (leading.length && !leading[leading.length - 1].trim()) leading.pop();
+      if (leading.length) out.push(...leading, "");
+      for (const card of column.cards) serializeKanbanCard(out, card, 0, board.indentUnit);
+      if (column.cards.length) out.push("");
+      const trailing = column.trailing.slice();
+      while (trailing.length && !trailing[0].trim()) trailing.shift();
+      while (trailing.length && !trailing[trailing.length - 1].trim()) trailing.pop();
+      if (trailing.length) out.push(...trailing, "");
+    }
+    while (out.length && !out[out.length - 1].trim()) out.pop();
+    return out.join("\n") + "\n";
+  }
+
+  // Test hook: lets the e2e suite exercise parse/serialize round-trips
+  // without reaching into closure state.
+  window.__noteeliKanban = { parse: parseKanban, serialize: serializeKanban, isKanban: isKanbanContent };
+
+  // ── model helpers ──
+  function kanbanChildCards(card) {
+    return card.blocks.filter((b) => b.t === "card").map((b) => b.c);
+  }
+
+  function kanbanHasChildren(card) {
+    return card.blocks.some((b) => b.t === "card");
+  }
+
+  function kanbanSubtreeCounts(card) {
+    let total = 0;
+    let done = 0;
+    for (const child of kanbanChildCards(card)) {
+      total += 1;
+      if (child.checked === "x" || child.checked === "X") done += 1;
+      const sub = kanbanSubtreeCounts(child);
+      total += sub.total;
+      done += sub.done;
+    }
+    return { total, done };
+  }
+
+  function kanbanColumnCardCount(column) {
+    let total = 0;
+    for (const card of column.cards) total += 1 + kanbanSubtreeCounts(card).total;
+    return total;
+  }
+
+  function kanbanLocateInCard(parent, target) {
+    for (let i = 0; i < parent.blocks.length; i++) {
+      const block = parent.blocks[i];
+      if (block.t !== "card") continue;
+      if (block.c === target) return { kind: "blocks", parent, index: i };
+      const found = kanbanLocateInCard(block.c, target);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function kanbanLocateCard(board, target) {
+    for (const column of board.columns) {
+      for (let i = 0; i < column.cards.length; i++) {
+        if (column.cards[i] === target) return { kind: "col", column, index: i };
+        const found = kanbanLocateInCard(column.cards[i], target);
+        if (found) { found.column = column; return found; }
+      }
+    }
+    return null;
+  }
+
+  function kanbanCardColumn(board, card) {
+    const loc = kanbanLocateCard(board, card);
+    return loc ? loc.column : null;
+  }
+
+  function kanbanRemoveCard(board, card) {
+    const loc = kanbanLocateCard(board, card);
+    if (!loc) return false;
+    if (loc.kind === "col") loc.column.cards.splice(loc.index, 1);
+    else loc.parent.blocks.splice(loc.index, 1);
+    return true;
+  }
+
+  function kanbanCardContains(ancestor, card) {
+    return Boolean(kanbanLocateInCard(ancestor, card));
+  }
+
+  function kanbanNewCard(text) {
+    return { marker: "-", checked: " ", text, origIndent: 0, blocks: [] };
+  }
+
+  function markKanbanChanged({ rerender = true } = {}) {
+    if (rerender) renderKanbanBoard();
+    markEditorDirty();
+  }
+
+  // ── inline markdown for card titles ──
+  function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, (ch) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+    ));
+  }
+
+  function renderKanbanInline(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    html = html.replace(/\[([^\]]*)\]\(([^)\s]+)\)/g, '<a href="$2" class="kanban-link">$1</a>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    return html;
+  }
+
+  // ── mode switching ──
+  function showKanbanMode() {
+    editorContainer.classList.add("hidden");
+    jsonEditorContainer.classList.add("hidden");
+    codeEditorContainer.classList.add("hidden");
+    hidePreview();
+    hideUploadStage();
+    kanbanContainer.classList.remove("hidden");
+    if (editorModeToggle) editorModeToggle.classList.add("hidden");
+  }
+
+  function hideKanbanMode() {
+    kanbanContainer.classList.add("hidden");
+  }
+
+  function updateKanbanToggleLabel() {
+    if (!kanbanModeToggle) return;
+    kanbanModeToggle.textContent = kanbanViewActive ? t("kanban_view_board") : t("markdown_mode");
+    kanbanModeToggle.setAttribute("aria-pressed", String(kanbanViewActive));
+  }
+
+  function openKanbanBoardView(content) {
+    kanbanBoard = parseKanban(content);
+    kanbanViewActive = true;
+    kanbanPendingInput = null;
+    showKanbanMode();
+    renderKanbanBoard();
+    if (kanbanModeToggle) kanbanModeToggle.classList.remove("hidden");
+    updateKanbanToggleLabel();
+  }
+
+  kanbanModeToggle?.addEventListener("click", () => {
+    if (!selectedPath) return;
+    if (kanbanViewActive) {
+      // board → raw markdown in the regular editor
+      const markdown = kanbanBoard ? serializeKanban(kanbanBoard) : "";
+      kanbanViewActive = false;
+      hideKanbanMode();
+      showEditorMode();
+      const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
+      setEditorMode(savedMode, { persist: false });
+      const wasApplying = isApplyingDocument;
+      isApplyingDocument = true;
+      editor.setMarkdown(markdown, false);
+      try { editor.moveCursorToStart(); } catch {}
+      isApplyingDocument = wasApplying;
+      setTimeout(renderWysiwygDiagrams, 200);
+    } else {
+      // markdown → board (re-parse whatever the user typed)
+      const markdown = cleanEmbeddedUrls(editor.getMarkdown());
+      kanbanBoard = parseKanban(markdown);
+      kanbanViewActive = true;
+      kanbanPendingInput = null;
+      showKanbanMode();
+      renderKanbanBoard();
+    }
+    updateKanbanToggleLabel();
+  });
+
+  // ── drag & drop ──
+  function clearKanbanDropIndicators() {
+    kanbanContainer.querySelectorAll(".drop-before, .drop-after, .drop-into, .drop-append")
+      .forEach((el) => el.classList.remove("drop-before", "drop-after", "drop-into", "drop-append"));
+  }
+
+  function kanbanDropZone(event, cardEl) {
+    const rect = cardEl.getBoundingClientRect();
+    const ratio = (event.clientY - rect.top) / Math.max(rect.height, 1);
+    if (ratio < 0.3) return "before";
+    if (ratio > 0.7) return "after";
+    return "into";
+  }
+
+  function kanbanCanDrop(dragged, targetColumn, targetCard) {
+    if (!dragged || !kanbanBoard) return false;
+    if (targetCard && (targetCard === dragged || kanbanCardContains(dragged, targetCard))) return false;
+    const sourceColumn = kanbanCardColumn(kanbanBoard, dragged);
+    if (sourceColumn !== targetColumn && kanbanHasChildren(dragged)) return false;
+    return true;
+  }
+
+  function kanbanPerformDrop(dragged, targetColumn, targetCard, zone) {
+    if (!kanbanCanDrop(dragged, targetColumn, targetCard)) return;
+    kanbanRemoveCard(kanbanBoard, dragged);
+    if (!targetCard) {
+      targetColumn.cards.push(dragged);
+    } else if (zone === "into") {
+      targetCard.blocks.push({ t: "card", c: dragged });
+    } else {
+      // sibling insert — locate the target again after removal
+      const loc = kanbanLocateCard(kanbanBoard, targetCard);
+      if (!loc) {
+        targetColumn.cards.push(dragged);
+      } else if (loc.kind === "col") {
+        loc.column.cards.splice(zone === "before" ? loc.index : loc.index + 1, 0, dragged);
+      } else {
+        loc.parent.blocks.splice(zone === "before" ? loc.index : loc.index + 1, 0, { t: "card", c: dragged });
+      }
+    }
+    markKanbanChanged();
+  }
+
+  function attachKanbanCardDnD(cardEl, card, column) {
+    cardEl.draggable = true;
+    cardEl.addEventListener("dragstart", (event) => {
+      event.stopPropagation();
+      kanbanDragCard = card;
+      cardEl.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      try { event.dataTransfer.setData("text/plain", card.text); } catch {}
+    });
+    cardEl.addEventListener("dragend", () => {
+      kanbanDragCard = null;
+      cardEl.classList.remove("is-dragging");
+      clearKanbanDropIndicators();
+    });
+    cardEl.addEventListener("dragover", (event) => {
+      if (!kanbanDragCard) return;
+      event.stopPropagation();
+      const sourceColumn = kanbanCardColumn(kanbanBoard, kanbanDragCard);
+      if (sourceColumn !== column && kanbanHasChildren(kanbanDragCard)) {
+        setStatus(t("kanban_parent_locked"), true);
+        return; // no preventDefault → browser shows "not allowed"
+      }
+      if (!kanbanCanDrop(kanbanDragCard, column, card)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const zone = kanbanDropZone(event, cardEl);
+      clearKanbanDropIndicators();
+      cardEl.classList.add(`drop-${zone}`);
+    });
+    cardEl.addEventListener("dragleave", () => {
+      cardEl.classList.remove("drop-before", "drop-after", "drop-into");
+    });
+    cardEl.addEventListener("drop", (event) => {
+      if (!kanbanDragCard) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const zone = kanbanDropZone(event, cardEl);
+      clearKanbanDropIndicators();
+      kanbanPerformDrop(kanbanDragCard, column, card, zone);
+      kanbanDragCard = null;
+    });
+  }
+
+  // ── rendering ──
+  function kanbanInlineInput(placeholderKey, onCommit, { multiline = false } = {}) {
+    const input = document.createElement(multiline ? "textarea" : "input");
+    input.className = "kanban-inline-input";
+    input.placeholder = t(placeholderKey);
+    if (multiline) input.rows = 2;
+    const commit = () => {
+      const value = input.value.trim();
+      if (value) onCommit(value);
+      else {
+        kanbanPendingInput = null;
+        renderKanbanBoard();
+      }
+    };
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        commit();
+      } else if (event.key === "Escape") {
+        kanbanPendingInput = null;
+        renderKanbanBoard();
+      }
+    });
+    input.addEventListener("blur", () => {
+      // Blur commits typed text; an empty blur closes the input.
+      setTimeout(() => {
+        if (!input.isConnected) return;
+        commit();
+      }, 0);
+    });
+    return input;
+  }
+
+  function startKanbanTextEdit(target, currentText, onCommit) {
+    const input = document.createElement("input");
+    input.className = "kanban-inline-input";
+    input.value = currentText;
+    let finished = false;
+    const finish = (save) => {
+      if (finished) return;
+      finished = true;
+      const value = input.value.trim();
+      if (save && value && value !== currentText) onCommit(value);
+      else renderKanbanBoard();
+    };
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); finish(true); }
+      else if (event.key === "Escape") finish(false);
+    });
+    input.addEventListener("blur", () => finish(true));
+    target.replaceWith(input);
+    input.focus();
+    input.select();
+  }
+
+  function renderKanbanCard(card, column, depth) {
+    const cardEl = document.createElement("div");
+    cardEl.className = "kanban-card";
+    if (card.checked === "x" || card.checked === "X") cardEl.classList.add("is-done");
+
+    const main = document.createElement("div");
+    main.className = "kanban-card-main";
+
+    if (card.checked != null) {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "kanban-card-checkbox";
+      checkbox.checked = card.checked === "x" || card.checked === "X";
+      checkbox.addEventListener("change", () => {
+        card.checked = checkbox.checked ? "x" : " ";
+        markKanbanChanged();
+      });
+      main.appendChild(checkbox);
+    }
+
+    const text = document.createElement("span");
+    text.className = "kanban-card-text";
+    text.innerHTML = renderKanbanInline(card.text);
+    text.title = t("kanban_edit_card");
+    text.addEventListener("click", (event) => {
+      if (event.target.closest("a")) return; // links navigate, they don't edit
+      event.stopPropagation();
+      startKanbanTextEdit(text, card.text, (value) => {
+        card.text = value;
+        markKanbanChanged();
+      });
+    });
+    main.appendChild(text);
+
+    if (kanbanHasChildren(card)) {
+      const counts = kanbanSubtreeCounts(card);
+      const progress = document.createElement("span");
+      progress.className = "kanban-card-progress";
+      progress.textContent = `${counts.done}/${counts.total}`;
+      progress.title = t("kanban_parent_locked");
+      main.appendChild(progress);
+    }
+
+    const actions = document.createElement("span");
+    actions.className = "kanban-card-actions";
+    const addSub = document.createElement("button");
+    addSub.type = "button";
+    addSub.className = "kanban-icon-button";
+    addSub.textContent = "+";
+    addSub.title = t("kanban_add_subtask");
+    addSub.addEventListener("click", (event) => {
+      event.stopPropagation();
+      kanbanPendingInput = { type: "subtask", card };
+      renderKanbanBoard();
+    });
+    actions.appendChild(addSub);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "kanban-icon-button kanban-icon-danger";
+    del.textContent = "×";
+    del.title = t("kanban_delete_card");
+    del.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (kanbanHasChildren(card) && !window.confirm(t("kanban_delete_card_confirm"))) return;
+      kanbanRemoveCard(kanbanBoard, card);
+      markKanbanChanged();
+    });
+    actions.appendChild(del);
+    main.appendChild(actions);
+    cardEl.appendChild(main);
+
+    const noteLines = card.blocks
+      .filter((b) => b.t === "line" && b.s.trim())
+      .map((b) => b.s.trim());
+    if (noteLines.length) {
+      const note = document.createElement("div");
+      note.className = "kanban-card-note";
+      note.textContent = noteLines.join("\n");
+      cardEl.appendChild(note);
+    }
+
+    const children = kanbanChildCards(card);
+    const wantsSubtaskInput = kanbanPendingInput?.type === "subtask" && kanbanPendingInput.card === card;
+    if (children.length || wantsSubtaskInput) {
+      const childrenEl = document.createElement("div");
+      childrenEl.className = "kanban-children";
+      children.forEach((child) => childrenEl.appendChild(renderKanbanCard(child, column, depth + 1)));
+      if (wantsSubtaskInput) {
+        const input = kanbanInlineInput("kanban_new_card_placeholder", (value) => {
+          card.blocks.push({ t: "card", c: kanbanNewCard(value) });
+          markKanbanChanged();
+        });
+        input.dataset.kanbanFocus = "1";
+        childrenEl.appendChild(input);
+      }
+      cardEl.appendChild(childrenEl);
+    }
+
+    attachKanbanCardDnD(cardEl, card, column);
+    return cardEl;
+  }
+
+  function renderKanbanColumn(column) {
+    const columnEl = document.createElement("div");
+    columnEl.className = "kanban-column";
+
+    const header = document.createElement("div");
+    header.className = "kanban-column-header";
+    const title = document.createElement("span");
+    title.className = "kanban-column-title";
+    title.textContent = column.title;
+    title.addEventListener("click", () => {
+      startKanbanTextEdit(title, column.title, (value) => {
+        column.title = value;
+        markKanbanChanged();
+      });
+    });
+    header.appendChild(title);
+    const count = document.createElement("span");
+    count.className = "kanban-column-count";
+    count.textContent = String(kanbanColumnCardCount(column));
+    header.appendChild(count);
+    columnEl.appendChild(header);
+
+    const cardsEl = document.createElement("div");
+    cardsEl.className = "kanban-cards";
+    column.cards.forEach((card) => cardsEl.appendChild(renderKanbanCard(card, column, 0)));
+    cardsEl.addEventListener("dragover", (event) => {
+      if (!kanbanDragCard) return;
+      const sourceColumn = kanbanCardColumn(kanbanBoard, kanbanDragCard);
+      if (sourceColumn !== column && kanbanHasChildren(kanbanDragCard)) {
+        setStatus(t("kanban_parent_locked"), true);
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      clearKanbanDropIndicators();
+      cardsEl.classList.add("drop-append");
+    });
+    cardsEl.addEventListener("dragleave", (event) => {
+      if (event.target === cardsEl) cardsEl.classList.remove("drop-append");
+    });
+    cardsEl.addEventListener("drop", (event) => {
+      if (!kanbanDragCard) return;
+      event.preventDefault();
+      clearKanbanDropIndicators();
+      kanbanPerformDrop(kanbanDragCard, column, null, "append");
+      kanbanDragCard = null;
+    });
+    columnEl.appendChild(cardsEl);
+
+    if (kanbanPendingInput?.type === "card" && kanbanPendingInput.col === column) {
+      const input = kanbanInlineInput("kanban_new_card_placeholder", (value) => {
+        column.cards.push(kanbanNewCard(value));
+        markKanbanChanged();
+      });
+      input.dataset.kanbanFocus = "1";
+      columnEl.appendChild(input);
+    } else {
+      const addCard = document.createElement("button");
+      addCard.type = "button";
+      addCard.className = "kanban-add-card";
+      addCard.textContent = `+ ${t("kanban_add_card")}`;
+      addCard.addEventListener("click", () => {
+        kanbanPendingInput = { type: "card", col: column };
+        renderKanbanBoard();
+      });
+      columnEl.appendChild(addCard);
+    }
+    return columnEl;
+  }
+
+  function renderKanbanBoard() {
+    if (!kanbanBoard) return;
+    kanbanContainer.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.className = "kanban-columns";
+    kanbanBoard.columns.forEach((column) => wrap.appendChild(renderKanbanColumn(column)));
+
+    if (kanbanPendingInput?.type === "column") {
+      const holder = document.createElement("div");
+      holder.className = "kanban-column kanban-column-ghost";
+      const input = kanbanInlineInput("kanban_new_column_placeholder", (value) => {
+        kanbanBoard.columns.push({ title: value, leading: [], cards: [], trailing: [] });
+        kanbanPendingInput = null;
+        markKanbanChanged();
+      });
+      input.dataset.kanbanFocus = "1";
+      holder.appendChild(input);
+      wrap.appendChild(holder);
+    } else {
+      const addColumn = document.createElement("button");
+      addColumn.type = "button";
+      addColumn.className = "kanban-add-column";
+      addColumn.textContent = `+ ${t("kanban_add_column")}`;
+      addColumn.addEventListener("click", () => {
+        kanbanPendingInput = { type: "column" };
+        renderKanbanBoard();
+      });
+      wrap.appendChild(addColumn);
+    }
+
+    kanbanContainer.appendChild(wrap);
+    const pendingFocus = kanbanContainer.querySelector("[data-kanban-focus]");
+    if (pendingFocus) setTimeout(() => pendingFocus.focus(), 0);
+  }
+
+  // Card-title links: plain click follows them (a board is not a text editor).
+  kanbanContainer?.addEventListener("click", (event) => {
+    const anchor = event.target.closest?.("a.kanban-link");
+    if (!anchor) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const href = anchor.getAttribute("href") || "";
+    if (/^https?:/i.test(href) || href.startsWith("//")) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+    const target = resolveRelativeNotePath(href);
+    if (target) loadFile(target);
+  }, true);
+
   const editorStage = editorContainer.closest(".editor-stage") || editorContainer;
 
   editorStage.addEventListener("dragover", (event) => {
     if (!dragState || dragState.kind === "directory") return;
     if (!selectedPath || !selectedEditable) return;
+    if (kanbanViewActive) return; // board handles its own drags
     event.preventDefault();
     event.dataTransfer.dropEffect = "link";
     editorStage.classList.add("is-drop-target-link");
@@ -829,6 +1516,7 @@ if (shell) {
     editorStage.classList.remove("is-drop-target-link");
     if (!dragState || dragState.kind === "directory") return;
     if (!selectedPath || !selectedEditable) return;
+    if (kanbanViewActive) return;
     event.preventDefault();
     event.stopPropagation();
     const droppedPath = dragState.path;
@@ -1287,6 +1975,16 @@ if (shell) {
       st_tree_ready: "Drzewo plików gotowe.",
       st_loading_file: "Wczytuję plik...",
       st_file_ready: "Plik gotowy do edycji.",
+      kanban_view_board: "Tablica",
+      kanban_add_card: "Dodaj kartę",
+      kanban_add_column: "Dodaj kolumnę",
+      kanban_add_subtask: "Dodaj podzadanie",
+      kanban_edit_card: "Edytuj kartę",
+      kanban_delete_card: "Usuń kartę",
+      kanban_delete_card_confirm: "Usunąć kartę razem z jej podzadaniami?",
+      kanban_parent_locked: "Karta ma podzadania — najpierw przenieś je do innej kolumny.",
+      kanban_new_card_placeholder: "Treść karty…",
+      kanban_new_column_placeholder: "Nazwa kolumny…",
       st_file_reloaded: "Plik przeładowany z dysku.",
       refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
       toolbar_undo: "Cofnij", toolbar_redo: "Ponów",
@@ -1449,6 +2147,16 @@ if (shell) {
       st_tree_ready: "File tree ready.",
       st_loading_file: "Loading file...",
       st_file_ready: "File ready to edit.",
+      kanban_view_board: "Board",
+      kanban_add_card: "Add card",
+      kanban_add_column: "Add column",
+      kanban_add_subtask: "Add subtask",
+      kanban_edit_card: "Edit card",
+      kanban_delete_card: "Delete card",
+      kanban_delete_card_confirm: "Delete this card together with its subtasks?",
+      kanban_parent_locked: "This card has subtasks — move them to another column first.",
+      kanban_new_card_placeholder: "Card text…",
+      kanban_new_column_placeholder: "Column name…",
       st_file_reloaded: "File reloaded from disk.",
       refresh_file_title: "Reload file (it may have changed in the background)",
       toolbar_undo: "Undo", toolbar_redo: "Redo",
@@ -1611,6 +2319,16 @@ if (shell) {
       st_tree_ready: "Árbol de archivos listo.",
       st_loading_file: "Cargando archivo...",
       st_file_ready: "Archivo listo para editar.",
+      kanban_view_board: "Tablero",
+      kanban_add_card: "Añadir tarjeta",
+      kanban_add_column: "Añadir columna",
+      kanban_add_subtask: "Añadir subtarea",
+      kanban_edit_card: "Editar tarjeta",
+      kanban_delete_card: "Eliminar tarjeta",
+      kanban_delete_card_confirm: "¿Eliminar la tarjeta junto con sus subtareas?",
+      kanban_parent_locked: "Esta tarjeta tiene subtareas — muévelas primero a otra columna.",
+      kanban_new_card_placeholder: "Texto de la tarjeta…",
+      kanban_new_column_placeholder: "Nombre de la columna…",
       st_file_reloaded: "Archivo recargado desde el disco.",
       refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
       toolbar_undo: "Deshacer", toolbar_redo: "Rehacer",
@@ -1773,6 +2491,16 @@ if (shell) {
       st_tree_ready: "Dateibaum bereit.",
       st_loading_file: "Datei wird geladen...",
       st_file_ready: "Datei bereit zur Bearbeitung.",
+      kanban_view_board: "Board",
+      kanban_add_card: "Karte hinzufügen",
+      kanban_add_column: "Spalte hinzufügen",
+      kanban_add_subtask: "Teilaufgabe hinzufügen",
+      kanban_edit_card: "Karte bearbeiten",
+      kanban_delete_card: "Karte löschen",
+      kanban_delete_card_confirm: "Karte samt Teilaufgaben löschen?",
+      kanban_parent_locked: "Diese Karte hat Teilaufgaben — verschiebe sie zuerst in eine andere Spalte.",
+      kanban_new_card_placeholder: "Kartentext…",
+      kanban_new_column_placeholder: "Spaltenname…",
       st_file_reloaded: "Datei von der Festplatte neu geladen.",
       refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
       toolbar_undo: "Rückgängig", toolbar_redo: "Wiederholen",
@@ -1935,6 +2663,16 @@ if (shell) {
       st_tree_ready: "Дерево файлов готово.",
       st_loading_file: "Загрузка файла...",
       st_file_ready: "Файл готов к редактированию.",
+      kanban_view_board: "Доска",
+      kanban_add_card: "Добавить карточку",
+      kanban_add_column: "Добавить колонку",
+      kanban_add_subtask: "Добавить подзадачу",
+      kanban_edit_card: "Редактировать карточку",
+      kanban_delete_card: "Удалить карточку",
+      kanban_delete_card_confirm: "Удалить карточку вместе с подзадачами?",
+      kanban_parent_locked: "У карточки есть подзадачи — сначала перенесите их в другую колонку.",
+      kanban_new_card_placeholder: "Текст карточки…",
+      kanban_new_column_placeholder: "Название колонки…",
       st_file_reloaded: "Файл перезагружен с диска.",
       refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
       toolbar_undo: "Отменить", toolbar_redo: "Повторить",
@@ -2013,6 +2751,8 @@ if (shell) {
       const modeKey = currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode";
       editorModeToggle.textContent = t[modeKey] || editorModeToggle.textContent;
     }
+    updateKanbanToggleLabel();
+    if (kanbanViewActive && kanbanBoard) renderKanbanBoard();
   }
 
   function t(key) {
@@ -2287,6 +3027,7 @@ if (shell) {
     editorContainer.classList.remove("hidden");
     hideJsonEditorMode();
     hideCodeEditorMode();
+    hideKanbanMode();
     hidePreview();
     hideUploadStage();
     if (editorModeToggle) editorModeToggle.classList.remove("hidden");
@@ -2296,6 +3037,7 @@ if (shell) {
     editorContainer.classList.add("hidden");
     hideJsonEditorMode();
     hideCodeEditorMode();
+    hideKanbanMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
     const isOffice =
@@ -2332,6 +3074,7 @@ if (shell) {
     editorContainer.classList.add("hidden");
     hideJsonEditorMode();
     hideCodeEditorMode();
+    hideKanbanMode();
     hidePreview();
     hideUploadStage();
   }
@@ -2373,6 +3116,9 @@ if (shell) {
   function showUploadMode(targetPath) {
     uploadTargetPath = targetPath || "";
     editorContainer.classList.add("hidden");
+    hideKanbanMode();
+    kanbanViewActive = false;
+    if (kanbanModeToggle) kanbanModeToggle.classList.add("hidden");
     hidePreview();
     uploadStage.classList.remove("hidden");
     saveButton.disabled = true;
@@ -4615,6 +5361,10 @@ if (shell) {
       selectedEditable = file.editable;
       selectedFileType = file.file_type || "markdown";
       selectedCodeMode = null;
+      kanbanViewActive = false;
+      kanbanBoard = null;
+      kanbanPendingInput = null;
+      if (kanbanModeToggle) kanbanModeToggle.classList.add("hidden");
       if (selectedFileType === "text") {
         // All non-md/non-json text content goes through CodeMirror so we never
         // accidentally render markdown preview for plain config / code files.
@@ -4653,6 +5403,12 @@ if (shell) {
           codeEditor.setOption("mode", selectedCodeMode);
           CodeMirror.autoLoadMode(codeEditor, selectedCodeMode);
         }
+        toggleOverlay({ empty: false, unsupported: false });
+        setStatus(t("st_file_ready"));
+      } else if (file.editable && isKanbanContent(file.content || "")) {
+        // Markdown boards (frontmatter `kanban-plugin:`) open as a kanban
+        // board; the topbar toggle switches back to the raw markdown editor.
+        openKanbanBoardView(file.content || "");
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
       } else if (file.editable) {
@@ -4710,6 +5466,9 @@ if (shell) {
   }
 
   function getCurrentEditorContent() {
+    if (kanbanViewActive && kanbanBoard) {
+      return serializeKanban(kanbanBoard);
+    }
     if (selectedFileType === "json") {
       try {
         return JSON.stringify(jsonEditor.get(), null, 2);

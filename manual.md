@@ -120,6 +120,52 @@ everywhere (Noteeli, GitHub, Azure DevOps) instead of only in Obsidian.
 a script, a git pull), the reload button in the topbar re-reads it — and
 warns you first if you have unsaved edits.
 
+### Kanban boards
+
+A kanban board in Noteeli is a **plain Markdown file** — the same format as
+Obsidian's Kanban plugin, so boards travel freely between both apps:
+
+```markdown
+---
+kanban-plugin: board
+---
+
+## To do
+
+- [ ] Prepare the course
+    - [ ] Write the syllabus
+    - [ ] Module 1 slides
+
+## In progress
+
+## Done
+```
+
+Any `.md` file whose frontmatter contains `kanban-plugin:` opens as a board:
+`## ` headings become columns, list items become cards. There is no special
+"board" file type — create a regular new file and paste the frontmatter
+above (or open a board made in Obsidian). While a board file is open, the
+topbar mode button reads **Board / Markdown** instead of WYSIWYG/Markdown
+and switches between the two views at any time.
+
+**Subtasks are cards too.** A nested list item renders as its own card,
+indented under its parent with a connecting line — nest as deep as you like.
+The parent shows a progress chip (`1/3`) and **cannot leave its column while
+it still has subtasks**: move (or finish) the subtasks first. A subtask
+dragged to another column becomes a standalone card — in the file it simply
+moves out of the nested list, so the Markdown stays clean.
+
+On the board you can drag cards between and within columns (drop onto a
+card's middle to nest it as a subtask), tick checkboxes, click a card to edit
+its text, add cards, subtasks and columns, and delete cards. Everything else
+in the file — frontmatter, notes under a card, Obsidian's settings block —
+is preserved untouched. Renaming columns, archiving and anything the board
+view doesn't cover is one toggle away in the Markdown view.
+
+Boards save through the regular autosave/save path, so git history,
+checkpoints and publishing work exactly as for any other note. (Drag & drop
+needs a mouse — on touch devices use the Markdown view.)
+
 ## 5. Saving and autosave
 
 - **Manual save** — `Ctrl+S` or the Save button. The button stays disabled

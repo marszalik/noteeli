@@ -11,6 +11,7 @@ The most-used features, by everyday name. Each links to its detail row.
 ### Daily writing
 
 - **WYSIWYG Markdown editor** → [§6 Editors](#6-editors)
+- **Kanban board view for markdown files (Obsidian Kanban compatible)** → [§6 Editors](#6-editors)
 - **Auto-save (debounced)** → [§5 Reading & saving](#5-reading--saving-documents)
 - **Manual save (Ctrl+S / button)** → [§5 Reading & saving](#5-reading--saving-documents)
 - **Inserting / pasting / dragging an image** → [§7 Embedded assets & images](#7-embedded-assets--images)
@@ -149,6 +150,15 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Editor font size adjustment (12–28 px) | 🌐 | `applyEditorFontSize` |
 | Preview pane for images and PDFs (read-only) | 🌐 | `showPreviewMode` |
 | Internal note links open in-app (editor: Ctrl/Cmd+click, plain click edits; public view: plain click; `../` resolved, root-escapes ignored, external → new tab) | ✅ e2e `test_internal_note_links_open_in_app` | `resolveRelativeNotePath` + capture-phase click handler → `loadFile`; public renderer keeps `.md` hrefs relative (assets still rewritten) |
+| Kanban board view — `.md` with `kanban-plugin:` frontmatter opens as a board (columns = `## ` headings, cards = list items) | ✅ e2e `test_board_renders_columns_cards_and_subtask_thread` | `isKanbanContent` → `openKanbanBoardView`; Obsidian Kanban compatible |
+| Kanban — drag & drop between/within columns persists to markdown via autosave | ✅ e2e `test_drag_card_between_columns_persists_markdown` | HTML5 DnD; `serializeKanban` through regular save path |
+| Kanban — subtasks as separate indented cards (arbitrary nesting), progress chip on parent | ✅ e2e `test_board_renders_columns_cards_and_subtask_thread` | nested list items; `.kanban-children` thread |
+| Kanban — parent card locked in its column until subtasks moved away; moved subtask detaches into a standalone card | ✅ e2e `test_parent_locked_until_subtasks_moved` | `kanbanCanDrop` cross-column rule |
+| Kanban — subtask checkbox toggle rewrites exactly its nested `[ ]` line | ✅ e2e `test_subtask_checkbox_toggle_persists_nested_line` | |
+| Kanban — parser round-trips unknown content byte-identically (frontmatter, prose, card notes, `%% kanban:settings`) | ✅ e2e `test_parser_roundtrip_preserves_foreign_content` | conservative line-based parser; `window.__noteeliKanban` test hook |
+| Kanban — board ↔ raw markdown toggle in topbar | ✅ e2e `test_board_renders_columns_cards_and_subtask_thread` | re-parses editor content on the way back |
+| Kanban — add/edit/delete cards & subtasks, add/rename columns, inline card link/bold/code rendering | 🌐 | card links: plain click follows (board is not a text editor) |
+| Kanban — no dedicated file type: boards are created by adding the frontmatter to a regular new file (deliberate — creation stays file/dir only) | 🌐 | detection is purely content-based (`isKanbanContent`) |
 | Preview pane for `.docx` (Word) — read-only HTML render | ✅ `test_render_docx_preview_returns_html`, `test_get_preview_kind_classifies_office_documents` | `render_office_preview`, `mammoth` |
 | Preview pane for `.xlsx` / `.xlsm` (Excel) — read-only HTML tables, one per sheet | ✅ `test_render_xlsx_preview_returns_html_table` | `render_office_preview`, `openpyxl`, 5000-row safety cap |
 | Office preview rejects non-office files | ✅ `test_render_office_preview_rejects_non_office_file` | |
