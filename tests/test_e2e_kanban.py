@@ -119,19 +119,23 @@ def test_board_renders_columns_cards_and_subtask_thread(board_server):
                 page.locator(".kanban-card.is-done", has_text="Shipped thing")
             ).to_be_visible()
 
-            # One mode button cycles all four views:
-            # Kanban → Text (CodeMirror raw) → WYSIWYG → Markdown → Kanban.
+            # The mode button opens a dropdown with all four views; pick
+            # them directly: Text (CodeMirror raw), WYSIWYG, back to Kanban.
             toggle = page.locator("#editor-mode-toggle")
             expect(toggle).to_have_text("Kanban")
-            toggle.click()
+
+            def pick_mode(label):
+                toggle.click()
+                page.locator(".editor-mode-menu-item", has_text=label).click()
+
+            pick_mode("Tekst")
             expect(page.locator("#code-editor")).to_be_visible()
             expect(page.locator("#code-editor")).to_contain_text("kanban-plugin")
-            toggle.click()
+            pick_mode("WYSIWYG")
             editor = page.locator("#editor .ProseMirror >> visible=true")
             editor.wait_for(state="visible", timeout=15_000)
             expect(editor).to_contain_text("Parent task")
-            toggle.click()  # markdown source (still Toast UI)
-            toggle.click()  # …and back to the board
+            pick_mode("Kanban")
             expect(page.locator(".kanban-column")).to_have_count(3)
         finally:
             browser.close()
@@ -267,8 +271,8 @@ def test_mode_toggle_converts_plain_note_to_board(board_server):
             editor.wait_for(state="visible", timeout=15_000)
 
             toggle = page.locator("#editor-mode-toggle")
-            toggle.click()  # markdown
-            toggle.click()  # kanban
+            toggle.click()
+            page.locator(".editor-mode-menu-item", has_text="Kanban").click()
             expect(page.locator(".kanban-column-title")).to_have_text(["Pomysły"])
             expect(
                 page.locator(".kanban-card", has_text="Istniejące zadanie")
@@ -301,8 +305,8 @@ def test_mode_toggle_converts_plain_note_to_board(board_server):
             page.locator(".tree-link-file", has_text="pusta.md").click()
             editor = page.locator("#editor .ProseMirror >> visible=true")
             editor.wait_for(state="visible", timeout=15_000)
-            toggle.click()  # markdown
-            toggle.click()  # kanban
+            toggle.click()
+            page.locator(".editor-mode-menu-item", has_text="Kanban").click()
             expect(page.locator(".kanban-column")).to_have_count(3)
         finally:
             browser.close()

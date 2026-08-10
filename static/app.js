@@ -1886,17 +1886,51 @@ if (shell) {
     }
     currentEditorMode = mode;
     editorModeToggle.textContent = editorModeLabel(mode);
-    editorModeToggle.setAttribute("aria-pressed", String(mode !== "wysiwyg"));
+  }
+
+  // The button opens a dropdown listing the views — picking one directly
+  // beats cycling through four modes.
+  const editorModeMenu = document.getElementById("editor-mode-menu");
+
+  function availableEditorModes() {
+    const extraModes = Boolean(selectedPath) && selectedFileType === "markdown" && selectedEditable;
+    return extraModes ? ["wysiwyg", "markdown", "kanban", "code"] : ["wysiwyg", "markdown"];
+  }
+
+  function renderEditorModeMenu() {
+    if (!editorModeMenu) return;
+    editorModeMenu.innerHTML = "";
+    for (const mode of availableEditorModes()) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "editor-mode-menu-item" + (mode === currentEditorMode ? " is-active" : "");
+      item.setAttribute("role", "menuitemradio");
+      item.setAttribute("aria-checked", String(mode === currentEditorMode));
+      item.textContent = editorModeLabel(mode);
+      item.addEventListener("click", () => {
+        closeEditorModeMenu();
+        if (mode !== currentEditorMode) setEditorMode(mode);
+      });
+      editorModeMenu.appendChild(item);
+    }
+  }
+
+  function openEditorModeMenu() {
+    renderEditorModeMenu();
+    editorModeMenu?.classList.remove("hidden");
+    editorModeMenu?.setAttribute("aria-hidden", "false");
+    editorModeToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function closeEditorModeMenu() {
+    editorModeMenu?.classList.add("hidden");
+    editorModeMenu?.setAttribute("aria-hidden", "true");
+    editorModeToggle.setAttribute("aria-expanded", "false");
   }
 
   editorModeToggle.addEventListener("click", () => {
-    const extraModes = Boolean(selectedPath) && selectedFileType === "markdown" && selectedEditable;
-    let next;
-    if (currentEditorMode === "wysiwyg") next = "markdown";
-    else if (currentEditorMode === "markdown") next = extraModes ? "kanban" : "wysiwyg";
-    else if (currentEditorMode === "kanban") next = extraModes ? "code" : "wysiwyg";
-    else next = "wysiwyg";
-    setEditorMode(next);
+    if (editorModeMenu?.classList.contains("hidden")) openEditorModeMenu();
+    else closeEditorModeMenu();
   });
 
   function clampFontSize(value) {
@@ -6099,6 +6133,14 @@ if (shell) {
     ) {
       closeGitMenu();
     }
+    if (
+      editorModeMenu &&
+      !editorModeMenu.classList.contains("hidden") &&
+      !editorModeMenu.contains(event.target) &&
+      !editorModeToggle?.contains(event.target)
+    ) {
+      closeEditorModeMenu();
+    }
   });
   document.addEventListener("contextmenu", (event) => {
     if (!event.target.closest(".tree-row")) {
@@ -6131,6 +6173,10 @@ if (shell) {
     }
     if (event.key === "Escape" && gitMenuDropdown && !gitMenuDropdown.classList.contains("hidden")) {
       closeGitMenu();
+      return;
+    }
+    if (event.key === "Escape" && editorModeMenu && !editorModeMenu.classList.contains("hidden")) {
+      closeEditorModeMenu();
       return;
     }
     if (event.key === "Escape" && !directoryBrowserModal.classList.contains("hidden")) {
