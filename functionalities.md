@@ -275,7 +275,8 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Account menu (user icon) — email/local label + Settings + Logout dropdown | 🌐 | `userMenuToggle`, `#user-menu-dropdown` |
 | File search box (magnifier toggle) — filter tree by name fragment, auto-expands matching folders | 🌐 | `filterTreeBySearch`, `treeSearchQuery`, toggle `#tree-search-toggle` |
 | New file / new directory toolbar buttons | 🌐 | `openCreateModal` |
-| Tree-row context menu with icons + i18n labels (open / scope / upload / new file / new folder / download / copy path / rename / duplicate / refresh / delete) | 🌐 | `renderTreeContextMenu` (recent overhaul) |
+| Tree-row context menu with icons + i18n labels (open in new tab / scope / upload / new file / new folder / download / copy path / rename / duplicate / refresh / delete) | 🌐 | `renderTreeContextMenu` (recent overhaul) |
+| "Open in new tab" (context menu, files) — serves the file verbatim with inline disposition via `/api/file/raw`: browser-native viewer for PDF/images, download → native app for pptx/docx | ✅ `tests/test_file_raw_endpoint.py` | replaced the old "Open" entry, which duplicated a plain click |
 | Duplicate file (context menu) → copy in same folder as `<name>_N.<ext>` | ✅ | `duplicate_item`, `test_duplicate_item_*` |
 
 ## 16. Internationalisation

@@ -11,6 +11,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-10
+
+### Added
+
+- **"Open in new tab" in the file context menu.** Serves the file
+  verbatim (new `/api/file/raw` endpoint, inline disposition): PDFs and
+  images open in the browser's native viewer, formats the browser can't
+  render (pptx, docx…) download for the user's native application. It
+  replaces the old "Open" entry, which merely duplicated a plain click.
+
 ## [1.6.3] - 2026-08-10
 
 ### Fixed
@@ -639,7 +649,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.3...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/marszalik/noteeli/compare/v1.6.3...v1.7.0
 [1.6.3]: https://github.com/marszalik/noteeli/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/marszalik/noteeli/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/marszalik/noteeli/compare/v1.6.0...v1.6.1

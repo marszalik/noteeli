@@ -64,10 +64,13 @@ you don't type an extension. On tablets and phones, long-press a row to open
 the context menu.
 
 **The context menu** (right-click any row) is the hub for file operations:
-open, focus on folder, upload here, new file/folder, download, copy path,
-rename, duplicate, refresh, delete — plus publish and git actions described
-in their own sections below.
+open in new tab, focus on folder, upload here, new file/folder, download,
+copy path, rename, duplicate, refresh, delete — plus publish and git actions
+described in their own sections below.
 
+- **Open in new tab** hands the file to the browser as-is: PDFs and images
+  render in the browser's native viewer, formats it can't display (pptx,
+  docx…) download so your native application can open them.
 - **Rename** keeps the original extension unless you explicitly type a new
   one — renaming `photo.png` to `holiday` gives you `holiday.png`, not a
   broken file.

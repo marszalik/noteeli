@@ -108,6 +108,7 @@ async def workspace_page(request: Request):
             "directoriesUrl": str(request.url_for("workspace_directories_api")),
             "createDirectoryUrl": str(request.url_for("workspace_create_directory_api")),
             "previewUrl": str(request.url_for("workspace_file_preview_api")),
+            "rawUrl": str(request.url_for("workspace_file_raw_api")),
             "embeddedAssetUrl": str(request.url_for("workspace_embedded_asset_preview_api")),
             "publishUrl": str(request.url_for("publish_create_api")),
             "publishListUrl": str(request.url_for("publish_list_api")),
@@ -198,6 +199,32 @@ async def workspace_file_preview_api(request: Request, background_tasks: Backgro
 
     media_type, _ = mimetypes.guess_type(str(local_path))
     return FileResponse(path=local_path, media_type=media_type or "application/octet-stream")
+
+
+@router.get("/api/file/raw", name="workspace_file_raw_api")
+async def workspace_file_raw_api(request: Request, background_tasks: BackgroundTasks, path: str):
+    """Serve any file verbatim with an inline disposition — for "open in
+    new tab": the browser renders what it can natively (PDF, images,
+    text) and downloads the rest for the user's native application."""
+    auth_service.require_api_access(request)
+    try:
+        rel_path = workspace_service.get_document_path(path)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    local_path, is_temporary = workspace_service.get_local_path(rel_path)
+    if is_temporary:
+        background_tasks.add_task(Path.unlink, local_path, missing_ok=True)
+
+    media_type, _ = mimetypes.guess_type(str(local_path))
+    return FileResponse(
+        path=local_path,
+        media_type=media_type or "application/octet-stream",
+        filename=Path(rel_path).name,
+        content_disposition_type="inline",
+    )
 
 
 @router.get("/api/embedded-asset", name="workspace_embedded_asset_preview_api")

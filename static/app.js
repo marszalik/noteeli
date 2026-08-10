@@ -2254,7 +2254,7 @@ if (shell) {
       demo_banner_suffix: "żeby pisać i zapisywać własne notatki.",
       ctx_publish: "Publikuj", ctx_unpublish: "Cofnij publikację", ctx_copy_link: "Kopiuj link publiczny",
       st_published: "Opublikowano", st_unpublished: "Cofnięto publikację", st_link_copied: "Skopiowano",
-      ctx_open: "Otwórz", ctx_collapse: "Zwiń", ctx_expand: "Rozwiń",
+      ctx_open_new_tab: "Otwórz w nowej karcie", ctx_collapse: "Zwiń", ctx_expand: "Rozwiń",
       ctx_scope: "Skup się na folderze", ctx_upload: "Wgraj tutaj",
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
@@ -2432,7 +2432,7 @@ if (shell) {
       demo_banner_suffix: "to write and keep your own notes.",
       ctx_publish: "Publish", ctx_unpublish: "Unpublish", ctx_copy_link: "Copy public link",
       st_published: "Published", st_unpublished: "Unpublished", st_link_copied: "Link copied",
-      ctx_open: "Open", ctx_collapse: "Collapse", ctx_expand: "Expand",
+      ctx_open_new_tab: "Open in new tab", ctx_collapse: "Collapse", ctx_expand: "Expand",
       ctx_scope: "Focus on this folder", ctx_upload: "Upload here",
       ctx_new_file: "New file", ctx_new_dir: "New folder",
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
@@ -2610,7 +2610,7 @@ if (shell) {
       demo_banner_suffix: "para escribir y guardar tus propias notas.",
       ctx_publish: "Publicar", ctx_unpublish: "Despublicar", ctx_copy_link: "Copiar enlace público",
       st_published: "Publicado", st_unpublished: "Despublicado", st_link_copied: "Enlace copiado",
-      ctx_open: "Abrir", ctx_collapse: "Contraer", ctx_expand: "Expandir",
+      ctx_open_new_tab: "Abrir en una pestaña nueva", ctx_collapse: "Contraer", ctx_expand: "Expandir",
       ctx_scope: "Enfocar esta carpeta", ctx_upload: "Subir aquí",
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
@@ -2788,7 +2788,7 @@ if (shell) {
       demo_banner_suffix: ", um eigene Notizen zu schreiben und zu speichern.",
       ctx_publish: "Veröffentlichen", ctx_unpublish: "Veröffentlichung aufheben", ctx_copy_link: "Öffentlichen Link kopieren",
       st_published: "Veröffentlicht", st_unpublished: "Veröffentlichung aufgehoben", st_link_copied: "Link kopiert",
-      ctx_open: "Öffnen", ctx_collapse: "Einklappen", ctx_expand: "Aufklappen",
+      ctx_open_new_tab: "In neuem Tab öffnen", ctx_collapse: "Einklappen", ctx_expand: "Aufklappen",
       ctx_scope: "Auf diesen Ordner fokussieren", ctx_upload: "Hier hochladen",
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
@@ -2966,7 +2966,7 @@ if (shell) {
       demo_banner_suffix: ", чтобы писать и хранить свои заметки.",
       ctx_publish: "Опубликовать", ctx_unpublish: "Отменить публикацию", ctx_copy_link: "Скопировать публичную ссылку",
       st_published: "Опубликовано", st_unpublished: "Публикация отменена", st_link_copied: "Ссылка скопирована",
-      ctx_open: "Открыть", ctx_collapse: "Свернуть", ctx_expand: "Развернуть",
+      ctx_open_new_tab: "Открыть в новой вкладке", ctx_collapse: "Свернуть", ctx_expand: "Развернуть",
       ctx_scope: "Сфокусироваться на папке", ctx_upload: "Загрузить сюда",
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
@@ -4288,8 +4288,16 @@ if (shell) {
       );
     } else {
       treeContextMenu.appendChild(
-        createContextMenuButton(t("ctx_open"), CONTEXT_ICONS.open, async () => {
-          await loadFile(node.path);
+        // Plain click already opens the file in-app — this entry hands it
+        // to the browser instead: native viewer when it can render the
+        // type (PDF, images…), download for the user's native app when
+        // it can't (pptx, docx…).
+        createContextMenuButton(t("ctx_open_new_tab"), CONTEXT_ICONS.open, async () => {
+          window.open(
+            `${config.rawUrl}?path=${encodeURIComponent(node.path)}`,
+            "_blank",
+            "noopener",
+          );
         }),
       );
     }
