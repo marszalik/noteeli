@@ -1050,6 +1050,110 @@ if (shell) {
     return { marker: "-", checked: " ", text, origIndent: 0, blocks: [] };
   }
 
+  // ── Jira-style parent links ──
+  // card.text is stored RAW (round-trip safe). Two markers, both native
+  // Obsidian syntax, are parsed out of it on demand:
+  //   "… ^k3f9a"      — block id: this card can be referenced as a parent
+  //   "… [[#^k3f9a]]" — parent ref: this card is a subtask of block k3f9a
+  // A nested subtask needs no marker (the relation is the nesting itself);
+  // the ref is written when a subtask is dragged out of its parent's nest,
+  // so the relation survives cross-column moves.
+  const KANBAN_BLOCK_ID_RE = /\s+\^([A-Za-z0-9-]+)\s*$/;
+  const KANBAN_PARENT_REF_RE = /\s*\[\[#\^([A-Za-z0-9-]+)\]\]/;
+
+  function kanbanCardMeta(card) {
+    let display = card.text;
+    let blockId = null;
+    let parentId = null;
+    const idMatch = KANBAN_BLOCK_ID_RE.exec(display);
+    if (idMatch) {
+      blockId = idMatch[1];
+      display = display.slice(0, idMatch.index);
+    }
+    const refMatch = KANBAN_PARENT_REF_RE.exec(display);
+    if (refMatch) {
+      parentId = refMatch[1];
+      display = (display.slice(0, refMatch.index) + display.slice(refMatch.index + refMatch[0].length));
+    }
+    return { display: display.trim(), blockId, parentId };
+  }
+
+  function kanbanComposeText(display, parentId, blockId) {
+    let text = display.trim();
+    if (parentId) text += ` [[#^${parentId}]]`;
+    if (blockId) text += ` ^${blockId}`;
+    return text;
+  }
+
+  function kanbanAllCards(board) {
+    const out = [];
+    const walk = (card) => {
+      out.push(card);
+      for (const child of kanbanChildCards(card)) walk(child);
+    };
+    for (const column of board.columns) column.cards.forEach(walk);
+    return out;
+  }
+
+  function kanbanFindByBlockId(board, blockId) {
+    if (!blockId) return null;
+    return kanbanAllCards(board).find((c) => kanbanCardMeta(c).blockId === blockId) || null;
+  }
+
+  function kanbanEnsureBlockId(board, card) {
+    const meta = kanbanCardMeta(card);
+    if (meta.blockId) return meta.blockId;
+    const existing = new Set(kanbanAllCards(board).map((c) => kanbanCardMeta(c).blockId).filter(Boolean));
+    let id;
+    do {
+      id = Math.random().toString(36).slice(2, 7);
+    } while (existing.has(id));
+    card.text = kanbanComposeText(meta.display, meta.parentId, id);
+    return id;
+  }
+
+  function kanbanSetParentRef(card, parentId) {
+    const meta = kanbanCardMeta(card);
+    card.text = kanbanComposeText(meta.display, parentId, meta.blockId);
+  }
+
+  // Detached subtasks of `card`: top-level cards anywhere that reference
+  // its block id.
+  function kanbanDetachedChildren(board, card) {
+    const meta = kanbanCardMeta(card);
+    if (!meta.blockId) return [];
+    return kanbanAllCards(board).filter(
+      (c) => c !== card && kanbanCardMeta(c).parentId === meta.blockId,
+    );
+  }
+
+  // Progress over ALL subtasks — nested subtree plus detached-by-id cards
+  // (each with its own nested subtree), wherever they live.
+  function kanbanSubtaskStats(board, card) {
+    let total = 0;
+    let done = 0;
+    const bump = (c) => {
+      total += 1;
+      if (c.checked === "x" || c.checked === "X") done += 1;
+      const sub = kanbanSubtreeCounts(c);
+      total += sub.total;
+      done += sub.done;
+    };
+    for (const child of kanbanChildCards(card)) bump(child);
+    for (const child of kanbanDetachedChildren(board, card)) bump(child);
+    return { total, done };
+  }
+
+  // A parent may leave its column only when none of its subtasks are still
+  // in that column (nested ones always are; detached ones may have moved).
+  function kanbanCardLocked(board, card) {
+    if (kanbanHasChildren(card)) return true;
+    const column = kanbanCardColumn(board, card);
+    return kanbanDetachedChildren(board, card).some(
+      (c) => kanbanCardColumn(board, c) === column,
+    );
+  }
+
   function markKanbanChanged({ rerender = true } = {}) {
     if (rerender) renderKanbanBoard();
     markEditorDirty();
@@ -1148,17 +1252,23 @@ if (shell) {
     if (!dragged || !kanbanBoard) return false;
     if (targetCard && (targetCard === dragged || kanbanCardContains(dragged, targetCard))) return false;
     const sourceColumn = kanbanCardColumn(kanbanBoard, dragged);
-    if (sourceColumn !== targetColumn && kanbanHasChildren(dragged)) return false;
+    if (sourceColumn !== targetColumn && kanbanCardLocked(kanbanBoard, dragged)) return false;
     return true;
   }
 
   function kanbanPerformDrop(dragged, targetColumn, targetCard, zone) {
     if (!kanbanCanDrop(dragged, targetColumn, targetCard)) return;
+    // Remember the nest the card leaves, to maintain the parent link.
+    const fromLoc = kanbanLocateCard(kanbanBoard, dragged);
+    const formerParent = fromLoc && fromLoc.kind === "blocks" ? fromLoc.parent : null;
+
     kanbanRemoveCard(kanbanBoard, dragged);
+    let nestedInto = null;
     if (!targetCard) {
       targetColumn.cards.push(dragged);
     } else if (zone === "into") {
       targetCard.blocks.push({ t: "card", c: dragged });
+      nestedInto = targetCard;
     } else {
       // sibling insert — locate the target again after removal
       const loc = kanbanLocateCard(kanbanBoard, targetCard);
@@ -1168,7 +1278,17 @@ if (shell) {
         loc.column.cards.splice(zone === "before" ? loc.index : loc.index + 1, 0, dragged);
       } else {
         loc.parent.blocks.splice(zone === "before" ? loc.index : loc.index + 1, 0, { t: "card", c: dragged });
+        nestedInto = loc.parent;
       }
+    }
+
+    // Jira-style link maintenance:
+    // – leaving a nest as a standalone card → write the parent ref
+    // – landing inside a nest → the nesting itself is the relation
+    if (nestedInto) {
+      kanbanSetParentRef(dragged, null);
+    } else if (formerParent) {
+      kanbanSetParentRef(dragged, kanbanEnsureBlockId(kanbanBoard, formerParent));
     }
     markKanbanChanged();
   }
@@ -1191,7 +1311,7 @@ if (shell) {
       if (!kanbanDragCard) return;
       event.stopPropagation();
       const sourceColumn = kanbanCardColumn(kanbanBoard, kanbanDragCard);
-      if (sourceColumn !== column && kanbanHasChildren(kanbanDragCard)) {
+      if (sourceColumn !== column && kanbanCardLocked(kanbanBoard, kanbanDragCard)) {
         setStatus(t("kanban_parent_locked"), true);
         return; // no preventDefault → browser shows "not allowed"
       }
@@ -1291,26 +1411,29 @@ if (shell) {
       main.appendChild(checkbox);
     }
 
+    const meta = kanbanCardMeta(card);
     const text = document.createElement("span");
     text.className = "kanban-card-text";
-    text.innerHTML = renderKanbanInline(card.text);
+    text.innerHTML = renderKanbanInline(meta.display);
     text.title = t("kanban_edit_card");
     text.addEventListener("click", (event) => {
       if (event.target.closest("a")) return; // links navigate, they don't edit
       event.stopPropagation();
-      startKanbanTextEdit(text, card.text, (value) => {
-        card.text = value;
+      // Edit the human text only — id / parent-ref markers are re-attached
+      // on commit so a title edit can never sever the relation.
+      startKanbanTextEdit(text, meta.display, (value) => {
+        card.text = kanbanComposeText(value, meta.parentId, meta.blockId);
         markKanbanChanged();
       });
     });
     main.appendChild(text);
 
-    if (kanbanHasChildren(card)) {
-      const counts = kanbanSubtreeCounts(card);
+    const stats = kanbanSubtaskStats(kanbanBoard, card);
+    if (stats.total) {
       const progress = document.createElement("span");
       progress.className = "kanban-card-progress";
-      progress.textContent = `${counts.done}/${counts.total}`;
-      progress.title = t("kanban_parent_locked");
+      progress.textContent = `${stats.done}/${stats.total}`;
+      if (kanbanCardLocked(kanbanBoard, card)) progress.title = t("kanban_parent_locked");
       main.appendChild(progress);
     }
 
@@ -1340,6 +1463,17 @@ if (shell) {
     });
     actions.appendChild(del);
     main.appendChild(actions);
+
+    // Detached subtask: a chip pointing back at its parent, wherever it is.
+    if (meta.parentId) {
+      const parent = kanbanFindByBlockId(kanbanBoard, meta.parentId);
+      if (parent) {
+        const chip = document.createElement("div");
+        chip.className = "kanban-card-parent";
+        chip.textContent = `↳ ${kanbanCardMeta(parent).display}`;
+        cardEl.appendChild(chip);
+      }
+    }
     cardEl.appendChild(main);
 
     const noteLines = card.blocks
@@ -1401,7 +1535,7 @@ if (shell) {
     cardsEl.addEventListener("dragover", (event) => {
       if (!kanbanDragCard) return;
       const sourceColumn = kanbanCardColumn(kanbanBoard, kanbanDragCard);
-      if (sourceColumn !== column && kanbanHasChildren(kanbanDragCard)) {
+      if (sourceColumn !== column && kanbanCardLocked(kanbanBoard, kanbanDragCard)) {
         setStatus(t("kanban_parent_locked"), true);
         return;
       }

@@ -17,9 +17,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   file with `kanban-plugin:` in its frontmatter opens as a drag & drop
   board: `## ` headings are columns, list items are cards. Nested list
   items render as separate subtask cards (arbitrary depth) indented under
-  their parent with a progress chip; a parent card cannot leave its column
-  until its subtasks are moved away, and a subtask dragged to another
-  column becomes a standalone card. Cards, subtasks and columns can be
+  their parent with a progress chip. Subtasks are Jira-style: dragged to
+  another column they become full cards that keep their parent link
+  (native Obsidian block-id syntax: `^id` on the parent, `[[#^id]]` on
+  the moved card), show a `↳ parent` chip and still count toward the
+  parent's progress; a parent cannot leave its column until all its
+  subtasks have left it. Cards, subtasks and columns can be
   added, edited and deleted on the board. Unrecognised file content
   (frontmatter, prose, card descriptions, `%% kanban:settings`)
   round-trips untouched. Detection is purely content-based — there is no

@@ -12,6 +12,7 @@ editor stack from CDNs, so the tests skip without outbound network or a
 Playwright Chromium build.
 """
 
+import re
 import time
 from pathlib import Path
 
@@ -308,6 +309,48 @@ def test_mode_toggle_converts_plain_note_to_board(board_server):
             toggle.click()
             page.locator(".editor-mode-menu-item", has_text="Kanban").click()
             expect(page.locator(".kanban-column")).to_have_count(3)
+        finally:
+            browser.close()
+
+
+def test_detached_subtask_keeps_parent_link(board_server):
+    """Jira-style: a subtask dragged to another column stays a subtask.
+    The file gets a block id on the parent (`^abc12`, native Obsidian
+    syntax) and a `[[#^abc12]]` ref on the moved card; on the board the
+    moved card shows a parent chip, and the parent's progress counts it —
+    ticking the moved subtask updates the parent's counter."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = board_server
+    board_path = content / "board.md"
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            _open_board(page, base_url)
+
+            doing = page.locator(".kanban-column").nth(1).locator(".kanban-cards")
+            page.locator(".kanban-card-main", has_text="Child one").drag_to(doing)
+
+            text = _wait_for_file_text(
+                board_path, lambda t: "Child one" in _column_section(t, "Doing")
+            )
+            id_match = re.search(r"- \[ \] Parent task \^([a-z0-9]+)", text)
+            assert id_match, f"parent got no block id:\n{text}"
+            parent_id = id_match.group(1)
+            assert f"- [ ] Child one [[#^{parent_id}]]" in _column_section(text, "Doing")
+
+            # The moved card shows where it belongs…
+            moved = page.locator(".kanban-column").nth(1).locator(
+                ".kanban-card", has_text="Child one")
+            expect(moved.locator(".kanban-card-parent")).to_have_text("↳ Parent task")
+
+            # …and the parent still counts it: 0/2, then 1/2 once ticked.
+            parent_main = page.locator(".kanban-card-main", has_text="Parent task")
+            expect(parent_main.locator(".kanban-card-progress")).to_have_text("0/2")
+            moved.locator("input.kanban-card-checkbox").check()
+            expect(parent_main.locator(".kanban-card-progress")).to_have_text("1/2")
         finally:
             browser.close()
 

@@ -155,12 +155,17 @@ disk — the `kanban-plugin` frontmatter is written together with your first
 real board edit, and from then on the file opens as a board by itself.
 Boards made in Obsidian work as-is.
 
-**Subtasks are cards too.** A nested list item renders as its own card,
-indented under its parent with a connecting line — nest as deep as you like.
-The parent shows a progress chip (`1/3`) and **cannot leave its column while
-it still has subtasks**: move (or finish) the subtasks first. A subtask
-dragged to another column becomes a standalone card — in the file it simply
-moves out of the nested list, so the Markdown stays clean.
+**Subtasks are cards too — Jira-style.** A nested list item renders as its
+own card, indented under its parent with a connecting line (nest as deep as
+you like). Dragged to another column it becomes a full, equal card that
+**keeps its link to the parent**: it shows a `↳ parent` chip, and the
+parent's progress counter (`1/3`) keeps counting it wherever it lives.
+Under the hood this uses native Obsidian syntax — a block id on the parent
+(`^k3f9a`) and a `[[#^k3f9a]]` ref on the moved card — so boards stay
+Obsidian-compatible. A parent **cannot leave its column while any of its
+subtasks is still in it**; once they have all moved on, the parent follows.
+Dropping a subtask back onto its parent re-nests it and removes the
+markers.
 
 On the board you can drag cards between and within columns (drop onto a
 card's middle to nest it as a subtask), tick checkboxes, click a card to edit
