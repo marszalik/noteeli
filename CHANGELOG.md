@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-08-10
+
 ### Added
 
 - **Markdown-backed kanban boards** (Obsidian Kanban compatible). Any `.md`
@@ -592,7 +594,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.5.11...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/marszalik/noteeli/compare/v1.5.11...v1.6.0
 [1.5.11]: https://github.com/marszalik/noteeli/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/marszalik/noteeli/compare/v1.5.9...v1.5.10
 [1.5.9]: https://github.com/marszalik/noteeli/compare/v1.5.8...v1.5.9
