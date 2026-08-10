@@ -514,6 +514,10 @@ if (shell) {
     usageStatistics: false,
     hideModeSwitch: true,
     autofocus: false,
+    // Preserve `---` frontmatter blocks. Without this, WYSIWYG parses the
+    // fences as thematic breaks and getMarkdown() re-serializes them as
+    // `***` — silently destroying e.g. the kanban-plugin frontmatter.
+    frontMatter: true,
     previewBeforeHook(markdown) {
       return decorateMarkdownForPreview(markdown, selectedPath);
     },
@@ -839,14 +843,19 @@ if (shell) {
     return width;
   }
 
+  // `***` counts as a fence too: before frontMatter:true was set on the
+  // Toast UI editor, a WYSIWYG round-trip re-serialized `---` fences as
+  // `***`, silently mangling board files. Those files must still be
+  // recognized (and are healed back to `---` by ensureKanbanFrontmatter).
   function isKanbanContent(content) {
     const lines = (content || "").replace(/^﻿/, "").split(/\r?\n/);
     let start = 0;
     while (start < lines.length && !lines[start].trim()) start += 1;
-    if ((lines[start] || "").trim() !== "---") return false;
+    const open = (lines[start] || "").trim();
+    if (open !== "---" && open !== "***") return false;
     for (let i = start + 1; i < Math.min(lines.length, start + 60); i++) {
       const line = lines[i].trim();
-      if (line === "---" || line === "...") return false;
+      if (line === "---" || line === "..." || line === "***") return false;
       if (/^kanban-plugin\s*:/.test(line)) return true;
     }
     return false;
@@ -1199,14 +1208,23 @@ if (shell) {
   // actually saves, never by merely switching the view.
   function ensureKanbanFrontmatter(board) {
     const prelude = board.prelude;
-    if ((prelude[0] || "").trim() === "---") {
-      for (let i = 1; i < prelude.length; i++) {
+    let start = 0;
+    while (start < prelude.length && !prelude[start].trim()) start += 1;
+    const open = (prelude[start] || "").trim();
+    if (open === "---" || open === "***") {
+      let hasPlugin = false;
+      let closeAt = -1;
+      for (let i = start + 1; i < prelude.length; i++) {
         const line = prelude[i].trim();
-        if (/^kanban-plugin\s*:/.test(line)) return;
-        if (line === "---" || line === "...") {
-          prelude.splice(i, 0, "kanban-plugin: board");
-          return;
-        }
+        if (/^kanban-plugin\s*:/.test(line)) hasPlugin = true;
+        if (line === "---" || line === "..." || line === "***") { closeAt = i; break; }
+      }
+      if (closeAt !== -1 && (hasPlugin || open === "---")) {
+        // Heal fences mangled by pre-frontMatter WYSIWYG round-trips.
+        if (prelude[start].trim() === "***") prelude[start] = "---";
+        if (prelude[closeAt].trim() === "***") prelude[closeAt] = "---";
+        if (!hasPlugin) prelude.splice(closeAt, 0, "kanban-plugin: board");
+        return;
       }
     }
     board.prelude = ["---", "kanban-plugin: board", "---", ""].concat(prelude);
@@ -5766,12 +5784,13 @@ if (shell) {
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
       } else if (file.editable) {
-        // Markdown view resolution: the view this file was last opened in
-        // wins, then kanban frontmatter auto-detection, then the global
-        // wysiwyg/markdown default.
-        const fileMode = getStoredFileViewMode(file.path);
-        const mode = fileMode
-          || (isKanbanContent(file.content || "") ? "kanban" : null)
+        // Markdown view resolution, in order:
+        //   1. kanban frontmatter — a board file ALWAYS opens as a board
+        //   2. the view this file was last opened in (boards made via the
+        //      toggle but never saved, text/code preferences per note)
+        //   3. the global wysiwyg/markdown default
+        const mode = (isKanbanContent(file.content || "") ? "kanban" : null)
+          || getStoredFileViewMode(file.path)
           || (localStorage.getItem("markdown-editor-mode") === "markdown" ? "markdown" : "wysiwyg");
         if (mode === "kanban") {
           openKanbanBoardView(file.content || "");

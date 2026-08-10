@@ -329,6 +329,26 @@ def test_mode_toggle_converts_plain_note_to_board(board_server):
             expect(page.locator("#editor-mode-toggle")).to_have_text(
                 "Kanban", timeout=15_000)
             expect(page.locator(".kanban-column")).to_have_count(3)
+
+            # …and survives a full page reload (last-opened file restore).
+            page.reload(wait_until="networkidle")
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)
+            expect(page.locator(".kanban-column")).to_have_count(3)
+
+            # Frontmatter always beats the remembered view: a board file
+            # opened once in WYSIWYG still comes back as a board.
+            page.locator(".tree-link-file", has_text="board.md").click()
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)
+            toggle.click()
+            page.locator(".editor-mode-menu-item", has_text="WYSIWYG").click()
+            page.locator(".tree-link-file", has_text="notatka.md").click()
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)  # notatka.md remembered its board
+            page.locator(".tree-link-file", has_text="board.md").click()
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)
         finally:
             browser.close()
 
@@ -371,6 +391,78 @@ def test_detached_subtask_keeps_parent_link(board_server):
             expect(parent_main.locator(".kanban-card-progress")).to_have_text("0/2")
             moved.locator("input.kanban-card-checkbox").check()
             expect(parent_main.locator(".kanban-card-progress")).to_have_text("1/2")
+        finally:
+            browser.close()
+
+
+def test_wysiwyg_roundtrip_preserves_frontmatter(board_server):
+    """Editing a board file in the WYSIWYG view must not destroy its
+    frontmatter. Toast UI without frontMatter:true parsed the `---` fences
+    as thematic breaks and re-serialized them as `***` — which silently
+    broke board detection for the file forever."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = board_server
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            _open_board(page, base_url)
+
+            toggle = page.locator("#editor-mode-toggle")
+            toggle.click()
+            page.locator(".editor-mode-menu-item", has_text="WYSIWYG").click()
+            editor = page.locator("#editor .ProseMirror >> visible=true")
+            editor.wait_for(state="visible", timeout=15_000)
+            editor.click()
+            page.keyboard.press("Control+End")
+            page.keyboard.type(" dopisek z edytora")
+
+            text = _wait_for_file_text(
+                content / "board.md", lambda t: "dopisek z edytora" in t
+            )
+            assert text.lstrip().startswith("---"), text[:80]
+            assert "kanban-plugin: board" in text
+
+            # …so the file still opens as a board afterwards.
+            page.locator(".tree-link-file", has_text="second.md").click()
+            page.locator(".tree-link-file", has_text="board.md").click()
+            expect(page.locator(".kanban-column")).to_have_count(3, timeout=15_000)
+        finally:
+            browser.close()
+
+
+def test_mangled_frontmatter_board_recognized_and_healed(board_server):
+    """Board files whose fences were already mangled to `***` by older
+    versions still open as boards, and the first board edit heals the
+    fences back to `---`."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = board_server
+    mangled = content / "mangled.md"
+    mangled.write_text(
+        "***\n\nkanban-plugin: board\n\n***\n\n## Todo\n\n- [ ] Old card\n\n## Done\n",
+        encoding="utf-8",
+    )
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            page.goto(base_url, wait_until="networkidle")
+            page.locator(".tree-link-file", has_text="mangled.md").click()
+            expect(page.locator(".kanban-column")).to_have_count(2, timeout=15_000)
+
+            # First real edit writes the healed frontmatter.
+            page.locator(".kanban-add-card").first.click()
+            entry = page.locator(".kanban-inline-input")
+            entry.fill("Fresh card")
+            entry.press("Enter")
+            text = _wait_for_file_text(mangled, lambda t: "Fresh card" in t)
+            assert text.startswith("---"), text[:80]
+            assert "***" not in text.split("## Todo")[0]
+            assert "kanban-plugin: board" in text
         finally:
             browser.close()
 

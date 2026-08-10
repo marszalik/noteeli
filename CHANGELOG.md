@@ -11,6 +11,21 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-08-10
+
+### Fixed
+
+- **WYSIWYG no longer destroys frontmatter.** Toast UI parsed the `---`
+  fences as thematic breaks and re-serialized them as `***` on save,
+  silently breaking kanban detection for any board file ever edited in
+  WYSIWYG. The editor now runs with `frontMatter: true`; files already
+  mangled by older versions are still recognized as boards and their
+  fences heal back to `---` with the first board edit.
+- **A board file always opens as a board.** 1.6.2 let the per-file view
+  memory override frontmatter detection, so a board once opened in
+  Markdown kept opening as Markdown. Order is now: kanban frontmatter →
+  remembered per-file view → global WYSIWYG/Markdown default.
+
 ## [1.6.2] - 2026-08-10
 
 ### Added
@@ -624,7 +639,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/marszalik/noteeli/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/marszalik/noteeli/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/marszalik/noteeli/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/marszalik/noteeli/compare/v1.5.11...v1.6.0
