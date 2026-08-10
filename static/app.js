@@ -840,9 +840,11 @@ if (shell) {
   }
 
   function isKanbanContent(content) {
-    const lines = (content || "").split(/\r?\n/);
-    if ((lines[0] || "").trim() !== "---") return false;
-    for (let i = 1; i < Math.min(lines.length, 60); i++) {
+    const lines = (content || "").replace(/^﻿/, "").split(/\r?\n/);
+    let start = 0;
+    while (start < lines.length && !lines[start].trim()) start += 1;
+    if ((lines[start] || "").trim() !== "---") return false;
+    for (let i = start + 1; i < Math.min(lines.length, start + 60); i++) {
       const line = lines[i].trim();
       if (line === "---" || line === "...") return false;
       if (/^kanban-plugin\s*:/.test(line)) return true;
@@ -1235,9 +1237,56 @@ if (shell) {
   }
 
   // ── drag & drop ──
+  // The drop target is shown as a real placeholder: a ghost slot the size
+  // of the dragged card, inserted where the card would land. Nesting
+  // (drop onto a card's middle) keeps a highlight ring instead.
+  let kanbanPlaceholderEl = null;
+  let kanbanDragHeight = 0;
+
+  function kanbanPlaceholder() {
+    if (!kanbanPlaceholderEl) {
+      kanbanPlaceholderEl = document.createElement("div");
+      kanbanPlaceholderEl.className = "kanban-drop-placeholder";
+      kanbanPlaceholderEl.style.pointerEvents = "none";
+    }
+    return kanbanPlaceholderEl;
+  }
+
+  function placeKanbanPlaceholder(refEl, zone, container = null) {
+    const ph = kanbanPlaceholder();
+    ph.style.height = `${Math.min(Math.max(kanbanDragHeight, 34), 110)}px`;
+    if (container) {
+      if (ph.parentElement !== container || ph.nextSibling) container.appendChild(ph);
+      return;
+    }
+    const desiredNext = zone === "before" ? refEl : refEl.nextSibling;
+    if (ph.nextSibling !== desiredNext || ph.parentElement !== refEl.parentElement) {
+      refEl.parentElement.insertBefore(ph, desiredNext);
+    }
+  }
+
   function clearKanbanDropIndicators() {
+    kanbanPlaceholderEl?.remove();
     kanbanContainer.querySelectorAll(".drop-before, .drop-after, .drop-into, .drop-append")
       .forEach((el) => el.classList.remove("drop-before", "drop-after", "drop-into", "drop-append"));
+  }
+
+  // For drags over the column's empty space / gaps: the top-level card
+  // nearest to the cursor decides where the placeholder goes.
+  function kanbanContainerDropSpot(cardsEl, clientY) {
+    let best = null;
+    let bestDist = Infinity;
+    for (const entry of cardsEl._topCards || []) {
+      if (!entry.el.isConnected || entry.el.classList.contains("is-dragging")) continue;
+      const rect = entry.el.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      const dist = Math.abs(clientY - mid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { el: entry.el, card: entry.card, zone: clientY < mid ? "before" : "after" };
+      }
+    }
+    return best; // null → column has no cards
   }
 
   function kanbanDropZone(event, cardEl) {
@@ -1298,6 +1347,7 @@ if (shell) {
     cardEl.addEventListener("dragstart", (event) => {
       event.stopPropagation();
       kanbanDragCard = card;
+      kanbanDragHeight = cardEl.offsetHeight;
       cardEl.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
       try { event.dataTransfer.setData("text/plain", card.text); } catch {}
@@ -1319,11 +1369,17 @@ if (shell) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       const zone = kanbanDropZone(event, cardEl);
-      clearKanbanDropIndicators();
-      cardEl.classList.add(`drop-${zone}`);
+      if (zone === "into") {
+        clearKanbanDropIndicators();
+        cardEl.classList.add("drop-into");
+      } else {
+        kanbanContainer.querySelectorAll(".drop-into")
+          .forEach((el) => el.classList.remove("drop-into"));
+        placeKanbanPlaceholder(cardEl, zone);
+      }
     });
     cardEl.addEventListener("dragleave", () => {
-      cardEl.classList.remove("drop-before", "drop-after", "drop-into");
+      cardEl.classList.remove("drop-into");
     });
     cardEl.addEventListener("drop", (event) => {
       if (!kanbanDragCard) return;
@@ -1531,7 +1587,12 @@ if (shell) {
 
     const cardsEl = document.createElement("div");
     cardsEl.className = "kanban-cards";
-    column.cards.forEach((card) => cardsEl.appendChild(renderKanbanCard(card, column, 0)));
+    cardsEl._topCards = [];
+    column.cards.forEach((card) => {
+      const el = renderKanbanCard(card, column, 0);
+      cardsEl._topCards.push({ el, card });
+      cardsEl.appendChild(el);
+    });
     cardsEl.addEventListener("dragover", (event) => {
       if (!kanbanDragCard) return;
       const sourceColumn = kanbanCardColumn(kanbanBoard, kanbanDragCard);
@@ -1541,17 +1602,19 @@ if (shell) {
       }
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      clearKanbanDropIndicators();
-      cardsEl.classList.add("drop-append");
-    });
-    cardsEl.addEventListener("dragleave", (event) => {
-      if (event.target === cardsEl) cardsEl.classList.remove("drop-append");
+      // Gaps and empty space behave like the nearest card, so the
+      // placeholder always sits exactly where the card would land.
+      const spot = kanbanContainerDropSpot(cardsEl, event.clientY);
+      if (spot) placeKanbanPlaceholder(spot.el, spot.zone);
+      else placeKanbanPlaceholder(null, null, cardsEl);
     });
     cardsEl.addEventListener("drop", (event) => {
       if (!kanbanDragCard) return;
       event.preventDefault();
+      const spot = kanbanContainerDropSpot(cardsEl, event.clientY);
       clearKanbanDropIndicators();
-      kanbanPerformDrop(kanbanDragCard, column, null, "append");
+      if (spot) kanbanPerformDrop(kanbanDragCard, column, spot.card, spot.zone);
+      else kanbanPerformDrop(kanbanDragCard, column, null, "append");
       kanbanDragCard = null;
     });
     columnEl.appendChild(cardsEl);
@@ -1967,9 +2030,41 @@ if (shell) {
   //   raw plain text) → WYSIWYG …
   // Entering Kanban on a plain note converts it in the view only — the
   // frontmatter reaches the file when the first real board edit saves.
+  // Per-file view memory: once you pick a view for a note (Kanban, Code…),
+  // reopening that note lands on the same view. Kept in localStorage,
+  // pruned to the most recent 200 files.
+  const FILE_VIEW_MODES_KEY = "noteeli-file-view-modes";
+
+  function getStoredFileViewMode(path) {
+    try {
+      const map = JSON.parse(localStorage.getItem(FILE_VIEW_MODES_KEY) || "{}");
+      const mode = map[path];
+      return ["wysiwyg", "markdown", "kanban", "text", "code"].includes(mode) ? mode : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function storeFileViewMode(path, mode) {
+    try {
+      let map = {};
+      try { map = JSON.parse(localStorage.getItem(FILE_VIEW_MODES_KEY) || "{}"); } catch {}
+      delete map[path];
+      map[path] = mode; // re-insert so string-key order doubles as recency
+      const keys = Object.keys(map);
+      while (keys.length > 200) delete map[keys.shift()];
+      localStorage.setItem(FILE_VIEW_MODES_KEY, JSON.stringify(map));
+    } catch {}
+  }
+
   function editorModeLabel(mode) {
-    const key = { wysiwyg: "wysiwyg_mode", markdown: "markdown_mode", kanban: "kanban_mode", code: "plain_mode" }[mode]
-      || "wysiwyg_mode";
+    const key = {
+      wysiwyg: "wysiwyg_mode",
+      markdown: "markdown_mode",
+      kanban: "kanban_mode",
+      text: "text_mode",
+      code: "plain_mode",
+    }[mode] || "wysiwyg_mode";
     return t(key);
   }
 
@@ -1978,29 +2073,35 @@ if (shell) {
     // so content follows the user across kanban/code/editor switches.
     let markdown = null;
     if (kanbanViewActive && kanbanBoard) markdown = serializeKanban(kanbanBoard);
-    else if (currentEditorMode === "code" && codeEditor) markdown = codeEditor.getValue();
+    else if ((currentEditorMode === "code" || currentEditorMode === "text") && codeEditor) {
+      markdown = codeEditor.getValue();
+    }
 
     if (mode === "kanban") {
       enterKanbanView(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
-    } else if (mode === "code") {
+    } else if (mode === "code" || mode === "text") {
+      // Both live in the CodeMirror panel — "text" is the bare file,
+      // "code" adds markdown syntax highlighting.
       kanbanViewActive = false;
       hideKanbanMode();
       showCodeEditorMode();
-      // showCodeEditorMode hides the toggle (real code files don't cycle
-      // views) — for a markdown file shown as text it must stay visible.
+      // showCodeEditorMode hides the toggle (real code files don't switch
+      // views) — for a markdown file shown as text/code it must stay visible.
       if (editorModeToggle) editorModeToggle.classList.remove("hidden");
       const wasApplying = isApplyingDocument;
       isApplyingDocument = true;
       codeEditor.setOption("mode", null);
       codeEditor.setValue(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
       codeEditor.clearHistory();
-      // A code view should highlight — markdown mode is lazy-loaded like
-      // any other CodeMirror language.
-      codeEditor.setOption("mode", "markdown");
-      CodeMirror.autoLoadMode(codeEditor, "markdown");
+      if (mode === "code") {
+        codeEditor.setOption("mode", "markdown");
+        CodeMirror.autoLoadMode(codeEditor, "markdown");
+      }
       isApplyingDocument = wasApplying;
     } else {
-      const fromForeign = kanbanViewActive || currentEditorMode === "code";
+      const fromForeign = kanbanViewActive
+        || currentEditorMode === "code"
+        || currentEditorMode === "text";
       const wasApplying = isApplyingDocument;
       isApplyingDocument = true;
       if (fromForeign) {
@@ -2024,6 +2125,11 @@ if (shell) {
     }
     currentEditorMode = mode;
     editorModeToggle.textContent = editorModeLabel(mode);
+    // An explicit pick (persist=true) is remembered for this file, so the
+    // note reopens in the same view next time.
+    if (persist && selectedPath && selectedFileType === "markdown" && selectedEditable) {
+      storeFileViewMode(selectedPath, mode);
+    }
   }
 
   // The button opens a dropdown listing the views — picking one directly
@@ -2032,7 +2138,7 @@ if (shell) {
 
   function availableEditorModes() {
     const extraModes = Boolean(selectedPath) && selectedFileType === "markdown" && selectedEditable;
-    return extraModes ? ["wysiwyg", "markdown", "kanban", "code"] : ["wysiwyg", "markdown"];
+    return extraModes ? ["wysiwyg", "markdown", "kanban", "text", "code"] : ["wysiwyg", "markdown"];
   }
 
   function renderEditorModeMenu() {
@@ -2214,6 +2320,7 @@ if (shell) {
       kanban_new_card_placeholder: "Treść karty…",
       kanban_new_column_placeholder: "Nazwa kolumny…",
       kanban_mode: "Kanban",
+      text_mode: "Tekst",
       plain_mode: "Kod",
       kanban_col_todo: "Do zrobienia",
       kanban_col_doing: "W toku",
@@ -2391,6 +2498,7 @@ if (shell) {
       kanban_new_card_placeholder: "Card text…",
       kanban_new_column_placeholder: "Column name…",
       kanban_mode: "Kanban",
+      text_mode: "Text",
       plain_mode: "Code",
       kanban_col_todo: "To do",
       kanban_col_doing: "In progress",
@@ -2568,6 +2676,7 @@ if (shell) {
       kanban_new_card_placeholder: "Texto de la tarjeta…",
       kanban_new_column_placeholder: "Nombre de la columna…",
       kanban_mode: "Kanban",
+      text_mode: "Texto",
       plain_mode: "Código",
       kanban_col_todo: "Por hacer",
       kanban_col_doing: "En curso",
@@ -2745,6 +2854,7 @@ if (shell) {
       kanban_new_card_placeholder: "Kartentext…",
       kanban_new_column_placeholder: "Spaltenname…",
       kanban_mode: "Kanban",
+      text_mode: "Text",
       plain_mode: "Code",
       kanban_col_todo: "Zu erledigen",
       kanban_col_doing: "In Arbeit",
@@ -2922,6 +3032,7 @@ if (shell) {
       kanban_new_card_placeholder: "Текст карточки…",
       kanban_new_column_placeholder: "Название колонки…",
       kanban_mode: "Kanban",
+      text_mode: "Текст",
       plain_mode: "Код",
       kanban_col_todo: "Сделать",
       kanban_col_doing: "В работе",
@@ -5654,28 +5765,35 @@ if (shell) {
         }
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
-      } else if (file.editable && isKanbanContent(file.content || "")) {
-        // Markdown boards (frontmatter `kanban-plugin:`) open as a kanban
-        // board; the topbar toggle switches back to the raw markdown editor.
-        openKanbanBoardView(file.content || "");
-        toggleOverlay({ empty: false, unsupported: false });
-        setStatus(t("st_file_ready"));
       } else if (file.editable) {
-        // Markdown files: restore persisted mode, default to wysiwyg
-        showEditorMode();
-        if (editorModeToggle) editorModeToggle.classList.remove("hidden");
-        // Only wysiwyg/markdown are ever persisted; guard against any
-        // stray stored value so a fresh file never opens in kanban/text.
-        const savedMode = localStorage.getItem("markdown-editor-mode") === "markdown" ? "markdown" : "wysiwyg";
-        setEditorMode(savedMode, { persist: false });
-        editor.setMarkdown(file.content || "", false);
-        // Toast UI keeps the previous cursor position after setMarkdown, which
-        // points into the *old* document — toolbar buttons (Task, lists, …)
-        // then operate on stale, off-screen positions and look like they did
-        // nothing. Reset the cursor to the start of the new document so any
-        // toolbar action lands where the user expects.
-        try { editor.moveCursorToStart(); } catch {}
-        setTimeout(renderWysiwygDiagrams, 200);
+        // Markdown view resolution: the view this file was last opened in
+        // wins, then kanban frontmatter auto-detection, then the global
+        // wysiwyg/markdown default.
+        const fileMode = getStoredFileViewMode(file.path);
+        const mode = fileMode
+          || (isKanbanContent(file.content || "") ? "kanban" : null)
+          || (localStorage.getItem("markdown-editor-mode") === "markdown" ? "markdown" : "wysiwyg");
+        if (mode === "kanban") {
+          openKanbanBoardView(file.content || "");
+        } else if (mode === "code" || mode === "text") {
+          showEditorMode();
+          editor.setMarkdown(file.content || "", false);
+          try { editor.moveCursorToStart(); } catch {}
+          currentEditorMode = "wysiwyg"; // capture source for the switch below
+          setEditorMode(mode, { persist: false });
+        } else {
+          showEditorMode();
+          if (editorModeToggle) editorModeToggle.classList.remove("hidden");
+          setEditorMode(mode, { persist: false });
+          editor.setMarkdown(file.content || "", false);
+          // Toast UI keeps the previous cursor position after setMarkdown, which
+          // points into the *old* document — toolbar buttons (Task, lists, …)
+          // then operate on stale, off-screen positions and look like they did
+          // nothing. Reset the cursor to the start of the new document so any
+          // toolbar action lands where the user expects.
+          try { editor.moveCursorToStart(); } catch {}
+          setTimeout(renderWysiwygDiagrams, 200);
+        }
         toggleOverlay({ empty: false, unsupported: false });
         setStatus(t("st_file_ready"));
       } else if (file.previewable) {
@@ -5720,8 +5838,12 @@ if (shell) {
     if (kanbanViewActive && kanbanBoard) {
       return serializeKanban(kanbanBoard);
     }
-    // Markdown file viewed as plain text (mode toggle → "Text")
-    if (selectedFileType === "markdown" && currentEditorMode === "code" && codeEditor) {
+    // Markdown file viewed in the CodeMirror panel ("Text" or "Code")
+    if (
+      selectedFileType === "markdown"
+      && (currentEditorMode === "code" || currentEditorMode === "text")
+      && codeEditor
+    ) {
       return codeEditor.getValue();
     }
     if (selectedFileType === "json") {

@@ -120,18 +120,28 @@ def test_board_renders_columns_cards_and_subtask_thread(board_server):
                 page.locator(".kanban-card.is-done", has_text="Shipped thing")
             ).to_be_visible()
 
-            # The mode button opens a dropdown with all four views; pick
-            # them directly: Text (CodeMirror raw), WYSIWYG, back to Kanban.
+            # The mode button opens a dropdown with all five views:
+            # WYSIWYG / Markdown / Kanban / Tekst (plain) / Kod (highlighted).
             toggle = page.locator("#editor-mode-toggle")
             expect(toggle).to_have_text("Kanban")
+            toggle.click()
+            expect(page.locator(".editor-mode-menu-item")).to_have_count(5)
+            page.keyboard.press("Escape")
 
             def pick_mode(label):
                 toggle.click()
                 page.locator(".editor-mode-menu-item", has_text=label).click()
 
-            pick_mode("Kod")
+            pick_mode("Tekst")
             expect(page.locator("#code-editor")).to_be_visible()
             expect(page.locator("#code-editor")).to_contain_text("kanban-plugin")
+            # Plain text: no markdown token spans in the CodeMirror body.
+            assert page.locator("#code-editor .cm-header").count() == 0
+            pick_mode("Kod")
+            expect(page.locator("#code-editor")).to_be_visible()
+            # Highlighted: heading lines get CodeMirror markdown token classes.
+            expect(page.locator("#code-editor .cm-header").first).to_be_visible(
+                timeout=15_000)
             pick_mode("WYSIWYG")
             editor = page.locator("#editor .ProseMirror >> visible=true")
             editor.wait_for(state="visible", timeout=15_000)
@@ -308,6 +318,16 @@ def test_mode_toggle_converts_plain_note_to_board(board_server):
             editor.wait_for(state="visible", timeout=15_000)
             toggle.click()
             page.locator(".editor-mode-menu-item", has_text="Kanban").click()
+            expect(page.locator(".kanban-column")).to_have_count(3)
+
+            # The picked view is remembered per file: pusta.md reopens as a
+            # board even though nothing was ever saved to the file itself.
+            page.locator(".tree-link-file", has_text="board.md").click()
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)
+            page.locator(".tree-link-file", has_text="pusta.md").click()
+            expect(page.locator("#editor-mode-toggle")).to_have_text(
+                "Kanban", timeout=15_000)
             expect(page.locator(".kanban-column")).to_have_count(3)
         finally:
             browser.close()

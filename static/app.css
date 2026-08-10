@@ -5152,3 +5152,11 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Ghost slot showing where a dragged card will land */
+.kanban-drop-placeholder {
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  flex: none;
+}

@@ -11,6 +11,28 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-08-10
+
+### Added
+
+- The plain **Text** view is back alongside **Code** — the mode dropdown
+  now offers five views: WYSIWYG, Markdown, Kanban, Text (bare
+  plain-text) and Code (markdown-highlighted).
+- **Per-file view memory.** The view you pick for a note (Kanban, Code…)
+  is remembered and restored when you reopen that note — no more
+  switching manually every time. Kanban frontmatter auto-detection still
+  covers files you haven't opened yet.
+
+### Fixed
+
+- **Board drag & drop shows a real placeholder.** Dragging a card now
+  displays a card-sized ghost slot exactly where the card will land
+  (the previous indicator was a barely visible 3 px line), and dropping
+  into the space between cards inserts the card there instead of at the
+  end of the column.
+- Kanban detection tolerates leading blank lines / BOM before the
+  frontmatter fence.
+
 ## [1.6.1] - 2026-08-10
 
 ### Changed
@@ -602,7 +624,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/marszalik/noteeli/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/marszalik/noteeli/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/marszalik/noteeli/compare/v1.5.11...v1.6.0
 [1.5.11]: https://github.com/marszalik/noteeli/compare/v1.5.10...v1.5.11
