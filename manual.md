@@ -100,12 +100,12 @@ Markdown files open in a **WYSIWYG editor** — headings, lists, tables, task
 lists, links and images render as you type, with a toolbar for formatting and
 undo/redo buttons.
 
-Prefer raw Markdown? The **mode button** in the topbar cycles through four
-views of the same note: **WYSIWYG → Markdown** (source view) **→ Kanban**
-(board, see below) **→ Text** (plain-text editor). Your WYSIWYG/Markdown
-choice is remembered per browser; Kanban and Text are picked per file. All
-views edit the same plain `.md` file — there is no proprietary format
-underneath.
+Prefer raw Markdown? The **mode button** in the topbar opens a dropdown
+with four views of the same note: **WYSIWYG**, **Markdown** (source view),
+**Kanban** (board, see below) and **Code** (CodeMirror with Markdown
+syntax highlighting). Your WYSIWYG/Markdown choice is remembered per
+browser; Kanban and Code are picked per file. All views edit the same
+plain `.md` file — there is no proprietary format underneath.
 
 The editor font size can be adjusted from the topbar (12–28 px) and is
 remembered. Task-list checkboxes, tables and code blocks all follow the

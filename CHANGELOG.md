@@ -11,6 +11,14 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-08-10
+
+### Changed
+
+- The fourth markdown view mode is labeled **Code** (was "Text") and now
+  highlights Markdown syntax in the CodeMirror view instead of showing
+  plain unstyled text.
+
 ## [1.6.0] - 2026-08-10
 
 ### Added
@@ -594,7 +602,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 - Top-bar buttons (Save, Logout, mode toggle) shrunk and translated.
 - Settings inputs and buttons compacted to reduce visual noise.
 
-[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/marszalik/noteeli/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/marszalik/noteeli/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/marszalik/noteeli/compare/v1.5.11...v1.6.0
 [1.5.11]: https://github.com/marszalik/noteeli/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/marszalik/noteeli/compare/v1.5.9...v1.5.10

@@ -1994,6 +1994,10 @@ if (shell) {
       codeEditor.setOption("mode", null);
       codeEditor.setValue(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
       codeEditor.clearHistory();
+      // A code view should highlight — markdown mode is lazy-loaded like
+      // any other CodeMirror language.
+      codeEditor.setOption("mode", "markdown");
+      CodeMirror.autoLoadMode(codeEditor, "markdown");
       isApplyingDocument = wasApplying;
     } else {
       const fromForeign = kanbanViewActive || currentEditorMode === "code";
@@ -2210,7 +2214,7 @@ if (shell) {
       kanban_new_card_placeholder: "Treść karty…",
       kanban_new_column_placeholder: "Nazwa kolumny…",
       kanban_mode: "Kanban",
-      plain_mode: "Tekst",
+      plain_mode: "Kod",
       kanban_col_todo: "Do zrobienia",
       kanban_col_doing: "W toku",
       kanban_col_done: "Gotowe",
@@ -2387,7 +2391,7 @@ if (shell) {
       kanban_new_card_placeholder: "Card text…",
       kanban_new_column_placeholder: "Column name…",
       kanban_mode: "Kanban",
-      plain_mode: "Text",
+      plain_mode: "Code",
       kanban_col_todo: "To do",
       kanban_col_doing: "In progress",
       kanban_col_done: "Done",
@@ -2564,7 +2568,7 @@ if (shell) {
       kanban_new_card_placeholder: "Texto de la tarjeta…",
       kanban_new_column_placeholder: "Nombre de la columna…",
       kanban_mode: "Kanban",
-      plain_mode: "Texto",
+      plain_mode: "Código",
       kanban_col_todo: "Por hacer",
       kanban_col_doing: "En curso",
       kanban_col_done: "Hecho",
@@ -2741,7 +2745,7 @@ if (shell) {
       kanban_new_card_placeholder: "Kartentext…",
       kanban_new_column_placeholder: "Spaltenname…",
       kanban_mode: "Kanban",
-      plain_mode: "Text",
+      plain_mode: "Code",
       kanban_col_todo: "Zu erledigen",
       kanban_col_doing: "In Arbeit",
       kanban_col_done: "Erledigt",
@@ -2918,7 +2922,7 @@ if (shell) {
       kanban_new_card_placeholder: "Текст карточки…",
       kanban_new_column_placeholder: "Название колонки…",
       kanban_mode: "Kanban",
-      plain_mode: "Текст",
+      plain_mode: "Код",
       kanban_col_todo: "Сделать",
       kanban_col_doing: "В работе",
       kanban_col_done: "Готово",

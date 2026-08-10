@@ -129,7 +129,7 @@ def test_board_renders_columns_cards_and_subtask_thread(board_server):
                 toggle.click()
                 page.locator(".editor-mode-menu-item", has_text=label).click()
 
-            pick_mode("Tekst")
+            pick_mode("Kod")
             expect(page.locator("#code-editor")).to_be_visible()
             expect(page.locator("#code-editor")).to_contain_text("kanban-plugin")
             pick_mode("WYSIWYG")
