@@ -119,13 +119,19 @@ def test_board_renders_columns_cards_and_subtask_thread(board_server):
                 page.locator(".kanban-card.is-done", has_text="Shipped thing")
             ).to_be_visible()
 
-            # Toggle → raw markdown editor with the same content.
-            page.locator("#kanban-mode-toggle").click()
+            # One mode button cycles all four views:
+            # Kanban → Text (CodeMirror raw) → WYSIWYG → Markdown → Kanban.
+            toggle = page.locator("#editor-mode-toggle")
+            expect(toggle).to_have_text("Kanban")
+            toggle.click()
+            expect(page.locator("#code-editor")).to_be_visible()
+            expect(page.locator("#code-editor")).to_contain_text("kanban-plugin")
+            toggle.click()
             editor = page.locator("#editor .ProseMirror >> visible=true")
             editor.wait_for(state="visible", timeout=15_000)
             expect(editor).to_contain_text("Parent task")
-            # …and back to the board.
-            page.locator("#kanban-mode-toggle").click()
+            toggle.click()  # markdown source (still Toast UI)
+            toggle.click()  # …and back to the board
             expect(page.locator(".kanban-column")).to_have_count(3)
         finally:
             browser.close()
@@ -232,6 +238,72 @@ def test_parent_locked_until_subtasks_moved(board_server):
             )
             assert "- [ ] Parent task" in _column_section(text, "Doing")
             assert "Parent task" not in _column_section(text, "Todo")
+        finally:
+            browser.close()
+
+
+def test_mode_toggle_converts_plain_note_to_board(board_server):
+    """Cycling the mode button to Kanban on a regular note (no frontmatter)
+    shows its `## ` headings as columns. Just switching views writes
+    nothing; the first real board edit saves the note with the
+    `kanban-plugin` frontmatter added, and from then on the file opens as
+    a board. A note with no headings gets three default columns."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = board_server
+    note = content / "notatka.md"
+    note.write_text(
+        "# Projekt\n\n## Pomysły\n\n- [ ] Istniejące zadanie\n", encoding="utf-8"
+    )
+    (content / "pusta.md").write_text("tylko tekst\n", encoding="utf-8")
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            page.goto(base_url, wait_until="networkidle")
+            page.locator(".tree-link-file", has_text="notatka.md").click()
+            editor = page.locator("#editor .ProseMirror >> visible=true")
+            editor.wait_for(state="visible", timeout=15_000)
+
+            toggle = page.locator("#editor-mode-toggle")
+            toggle.click()  # markdown
+            toggle.click()  # kanban
+            expect(page.locator(".kanban-column-title")).to_have_text(["Pomysły"])
+            expect(
+                page.locator(".kanban-card", has_text="Istniejące zadanie")
+            ).to_be_visible()
+
+            # Merely switching views must not touch the file.
+            page.wait_for_timeout(2_500)
+            assert "kanban-plugin" not in note.read_text(encoding="utf-8")
+
+            # First real edit → the save carries the added frontmatter.
+            page.locator(".kanban-add-card").click()
+            entry = page.locator(".kanban-inline-input")
+            entry.fill("Nowa karta")
+            entry.press("Enter")
+            text = _wait_for_file_text(
+                note, lambda t: "kanban-plugin" in t and "Nowa karta" in t
+            )
+            assert "## Pomysły" in text
+            assert "# Projekt" in text  # prelude content preserved
+
+            # Reopening the note now lands straight on the board.
+            page.locator(".tree-link-file", has_text="board.md").click()
+            expect(page.locator(".kanban-column")).to_have_count(3, timeout=15_000)
+            page.locator(".tree-link-file", has_text="notatka.md").click()
+            expect(
+                page.locator(".kanban-card", has_text="Nowa karta")
+            ).to_be_visible(timeout=15_000)
+
+            # No headings at all → three default (localized) columns.
+            page.locator(".tree-link-file", has_text="pusta.md").click()
+            editor = page.locator("#editor .ProseMirror >> visible=true")
+            editor.wait_for(state="visible", timeout=15_000)
+            toggle.click()  # markdown
+            toggle.click()  # kanban
+            expect(page.locator(".kanban-column")).to_have_count(3)
         finally:
             browser.close()
 

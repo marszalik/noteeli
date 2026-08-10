@@ -824,7 +824,6 @@ if (shell) {
   // are carried through verbatim so a board round-trips without data loss.
 
   const kanbanContainer = document.getElementById("kanban-board");
-  const kanbanModeToggle = document.getElementById("kanban-mode-toggle");
   let kanbanBoard = null;
   let kanbanViewActive = false;
   let kanbanDragCard = null;
@@ -1080,56 +1079,56 @@ if (shell) {
     hidePreview();
     hideUploadStage();
     kanbanContainer.classList.remove("hidden");
-    if (editorModeToggle) editorModeToggle.classList.add("hidden");
+    // the topbar mode toggle stays visible — it is how you leave the board
+    if (editorModeToggle) editorModeToggle.classList.remove("hidden");
   }
 
   function hideKanbanMode() {
     kanbanContainer.classList.add("hidden");
   }
 
-  function updateKanbanToggleLabel() {
-    if (!kanbanModeToggle) return;
-    kanbanModeToggle.textContent = kanbanViewActive ? t("kanban_view_board") : t("markdown_mode");
-    kanbanModeToggle.setAttribute("aria-pressed", String(kanbanViewActive));
+  // Make sure the board model carries the `kanban-plugin` frontmatter, so
+  // a note converted via the mode toggle self-identifies on next open.
+  // Called on the parsed model only — the file changes when a board edit
+  // actually saves, never by merely switching the view.
+  function ensureKanbanFrontmatter(board) {
+    const prelude = board.prelude;
+    if ((prelude[0] || "").trim() === "---") {
+      for (let i = 1; i < prelude.length; i++) {
+        const line = prelude[i].trim();
+        if (/^kanban-plugin\s*:/.test(line)) return;
+        if (line === "---" || line === "...") {
+          prelude.splice(i, 0, "kanban-plugin: board");
+          return;
+        }
+      }
+    }
+    board.prelude = ["---", "kanban-plugin: board", "---", ""].concat(prelude);
   }
 
-  function openKanbanBoardView(content) {
-    kanbanBoard = parseKanban(content);
+  function enterKanbanView(markdown) {
+    const board = parseKanban(markdown);
+    ensureKanbanFrontmatter(board);
+    if (!board.columns.length) {
+      for (const key of ["kanban_col_todo", "kanban_col_doing", "kanban_col_done"]) {
+        board.columns.push({ title: t(key), leading: [], cards: [], trailing: [] });
+      }
+    }
+    kanbanBoard = board;
     kanbanViewActive = true;
     kanbanPendingInput = null;
     showKanbanMode();
     renderKanbanBoard();
-    if (kanbanModeToggle) kanbanModeToggle.classList.remove("hidden");
-    updateKanbanToggleLabel();
   }
 
-  kanbanModeToggle?.addEventListener("click", () => {
-    if (!selectedPath) return;
-    if (kanbanViewActive) {
-      // board → raw markdown in the regular editor
-      const markdown = kanbanBoard ? serializeKanban(kanbanBoard) : "";
-      kanbanViewActive = false;
-      hideKanbanMode();
-      showEditorMode();
-      const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
-      setEditorMode(savedMode, { persist: false });
-      const wasApplying = isApplyingDocument;
-      isApplyingDocument = true;
-      editor.setMarkdown(markdown, false);
-      try { editor.moveCursorToStart(); } catch {}
-      isApplyingDocument = wasApplying;
-      setTimeout(renderWysiwygDiagrams, 200);
-    } else {
-      // markdown → board (re-parse whatever the user typed)
-      const markdown = cleanEmbeddedUrls(editor.getMarkdown());
-      kanbanBoard = parseKanban(markdown);
-      kanbanViewActive = true;
-      kanbanPendingInput = null;
-      showKanbanMode();
-      renderKanbanBoard();
+  function openKanbanBoardView(content) {
+    enterKanbanView(content);
+    currentEditorMode = "kanban";
+    if (editorModeToggle) {
+      editorModeToggle.textContent = editorModeLabel("kanban");
+      editorModeToggle.setAttribute("aria-pressed", "true");
     }
-    updateKanbanToggleLabel();
-  });
+  }
 
   // ── drag & drop ──
   function clearKanbanDropIndicators() {
@@ -1829,18 +1828,75 @@ if (shell) {
   }
 
   // ── Mode switch button in topbar ──────────────────────────
+  // Four views for markdown files, cycled by one button:
+  //   WYSIWYG → Markdown (Toast UI source) → Kanban → Text (CodeMirror,
+  //   raw plain text) → WYSIWYG …
+  // Entering Kanban on a plain note converts it in the view only — the
+  // frontmatter reaches the file when the first real board edit saves.
+  function editorModeLabel(mode) {
+    const key = { wysiwyg: "wysiwyg_mode", markdown: "markdown_mode", kanban: "kanban_mode", code: "plain_mode" }[mode]
+      || "wysiwyg_mode";
+    return t(key);
+  }
+
   function setEditorMode(mode, { persist = true } = {}) {
+    // Capture the current markdown from whichever foreign view is active,
+    // so content follows the user across kanban/code/editor switches.
+    let markdown = null;
+    if (kanbanViewActive && kanbanBoard) markdown = serializeKanban(kanbanBoard);
+    else if (currentEditorMode === "code" && codeEditor) markdown = codeEditor.getValue();
+
+    if (mode === "kanban") {
+      enterKanbanView(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
+    } else if (mode === "code") {
+      kanbanViewActive = false;
+      hideKanbanMode();
+      showCodeEditorMode();
+      // showCodeEditorMode hides the toggle (real code files don't cycle
+      // views) — for a markdown file shown as text it must stay visible.
+      if (editorModeToggle) editorModeToggle.classList.remove("hidden");
+      const wasApplying = isApplyingDocument;
+      isApplyingDocument = true;
+      codeEditor.setOption("mode", null);
+      codeEditor.setValue(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
+      codeEditor.clearHistory();
+      isApplyingDocument = wasApplying;
+    } else {
+      const fromForeign = kanbanViewActive || currentEditorMode === "code";
+      const wasApplying = isApplyingDocument;
+      isApplyingDocument = true;
+      if (fromForeign) {
+        kanbanViewActive = false;
+        hideKanbanMode();
+        showEditorMode();
+        if (markdown != null) editor.setMarkdown(markdown, false);
+        try { editor.moveCursorToStart(); } catch {}
+      }
+      // changeMode fires a Toast UI "change" event — guard it so a mere
+      // view switch never marks the document dirty (and never autosaves).
+      editor.changeMode(mode);
+      isApplyingDocument = wasApplying;
+      if (mode === "wysiwyg") scheduleWysiwygDiagramRender();
+      else scheduleMermaidPreviewRender();
+    }
+    // Only wysiwyg/markdown persist as the default — kanban and text are
+    // chosen per file (by content or an explicit click).
+    if (persist && (mode === "wysiwyg" || mode === "markdown")) {
+      localStorage.setItem("markdown-editor-mode", mode);
+    }
     currentEditorMode = mode;
-    editor.changeMode(currentEditorMode);
-    editorModeToggle.textContent = t(currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode");
-    editorModeToggle.setAttribute("aria-pressed", String(currentEditorMode === "markdown"));
-    if (currentEditorMode === "wysiwyg") scheduleWysiwygDiagramRender();
-    else scheduleMermaidPreviewRender();
-    if (persist) localStorage.setItem("markdown-editor-mode", mode);
+    editorModeToggle.textContent = editorModeLabel(mode);
+    editorModeToggle.setAttribute("aria-pressed", String(mode !== "wysiwyg"));
   }
 
   editorModeToggle.addEventListener("click", () => {
-    setEditorMode(currentEditorMode === "wysiwyg" ? "markdown" : "wysiwyg");
+    const extraModes = Boolean(selectedPath) && selectedFileType === "markdown" && selectedEditable;
+    let next;
+    if (currentEditorMode === "wysiwyg") next = "markdown";
+    else if (currentEditorMode === "markdown") next = extraModes ? "kanban" : "wysiwyg";
+    else if (currentEditorMode === "kanban") next = extraModes ? "code" : "wysiwyg";
+    else next = "wysiwyg";
+    setEditorMode(next);
   });
 
   function clampFontSize(value) {
@@ -1985,6 +2041,11 @@ if (shell) {
       kanban_parent_locked: "Karta ma podzadania — najpierw przenieś je do innej kolumny.",
       kanban_new_card_placeholder: "Treść karty…",
       kanban_new_column_placeholder: "Nazwa kolumny…",
+      kanban_mode: "Kanban",
+      plain_mode: "Tekst",
+      kanban_col_todo: "Do zrobienia",
+      kanban_col_doing: "W toku",
+      kanban_col_done: "Gotowe",
       st_file_reloaded: "Plik przeładowany z dysku.",
       refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
       toolbar_undo: "Cofnij", toolbar_redo: "Ponów",
@@ -2157,6 +2218,11 @@ if (shell) {
       kanban_parent_locked: "This card has subtasks — move them to another column first.",
       kanban_new_card_placeholder: "Card text…",
       kanban_new_column_placeholder: "Column name…",
+      kanban_mode: "Kanban",
+      plain_mode: "Text",
+      kanban_col_todo: "To do",
+      kanban_col_doing: "In progress",
+      kanban_col_done: "Done",
       st_file_reloaded: "File reloaded from disk.",
       refresh_file_title: "Reload file (it may have changed in the background)",
       toolbar_undo: "Undo", toolbar_redo: "Redo",
@@ -2329,6 +2395,11 @@ if (shell) {
       kanban_parent_locked: "Esta tarjeta tiene subtareas — muévelas primero a otra columna.",
       kanban_new_card_placeholder: "Texto de la tarjeta…",
       kanban_new_column_placeholder: "Nombre de la columna…",
+      kanban_mode: "Kanban",
+      plain_mode: "Texto",
+      kanban_col_todo: "Por hacer",
+      kanban_col_doing: "En curso",
+      kanban_col_done: "Hecho",
       st_file_reloaded: "Archivo recargado desde el disco.",
       refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
       toolbar_undo: "Deshacer", toolbar_redo: "Rehacer",
@@ -2501,6 +2572,11 @@ if (shell) {
       kanban_parent_locked: "Diese Karte hat Teilaufgaben — verschiebe sie zuerst in eine andere Spalte.",
       kanban_new_card_placeholder: "Kartentext…",
       kanban_new_column_placeholder: "Spaltenname…",
+      kanban_mode: "Kanban",
+      plain_mode: "Text",
+      kanban_col_todo: "Zu erledigen",
+      kanban_col_doing: "In Arbeit",
+      kanban_col_done: "Erledigt",
       st_file_reloaded: "Datei von der Festplatte neu geladen.",
       refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
       toolbar_undo: "Rückgängig", toolbar_redo: "Wiederholen",
@@ -2673,6 +2749,11 @@ if (shell) {
       kanban_parent_locked: "У карточки есть подзадачи — сначала перенесите их в другую колонку.",
       kanban_new_card_placeholder: "Текст карточки…",
       kanban_new_column_placeholder: "Название колонки…",
+      kanban_mode: "Kanban",
+      plain_mode: "Текст",
+      kanban_col_todo: "Сделать",
+      kanban_col_doing: "В работе",
+      kanban_col_done: "Готово",
       st_file_reloaded: "Файл перезагружен с диска.",
       refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
       toolbar_undo: "Отменить", toolbar_redo: "Повторить",
@@ -2748,10 +2829,8 @@ if (shell) {
       currentFilePath.textContent = t.no_file_path;
     }
     if (editorModeToggle) {
-      const modeKey = currentEditorMode === "wysiwyg" ? "wysiwyg_mode" : "markdown_mode";
-      editorModeToggle.textContent = t[modeKey] || editorModeToggle.textContent;
+      editorModeToggle.textContent = editorModeLabel(currentEditorMode);
     }
-    updateKanbanToggleLabel();
     if (kanbanViewActive && kanbanBoard) renderKanbanBoard();
   }
 
@@ -3118,7 +3197,6 @@ if (shell) {
     editorContainer.classList.add("hidden");
     hideKanbanMode();
     kanbanViewActive = false;
-    if (kanbanModeToggle) kanbanModeToggle.classList.add("hidden");
     hidePreview();
     uploadStage.classList.remove("hidden");
     saveButton.disabled = true;
@@ -5364,7 +5442,6 @@ if (shell) {
       kanbanViewActive = false;
       kanbanBoard = null;
       kanbanPendingInput = null;
-      if (kanbanModeToggle) kanbanModeToggle.classList.add("hidden");
       if (selectedFileType === "text") {
         // All non-md/non-json text content goes through CodeMirror so we never
         // accidentally render markdown preview for plain config / code files.
@@ -5415,7 +5492,9 @@ if (shell) {
         // Markdown files: restore persisted mode, default to wysiwyg
         showEditorMode();
         if (editorModeToggle) editorModeToggle.classList.remove("hidden");
-        const savedMode = localStorage.getItem("markdown-editor-mode") || "wysiwyg";
+        // Only wysiwyg/markdown are ever persisted; guard against any
+        // stray stored value so a fresh file never opens in kanban/text.
+        const savedMode = localStorage.getItem("markdown-editor-mode") === "markdown" ? "markdown" : "wysiwyg";
         setEditorMode(savedMode, { persist: false });
         editor.setMarkdown(file.content || "", false);
         // Toast UI keeps the previous cursor position after setMarkdown, which
@@ -5468,6 +5547,10 @@ if (shell) {
   function getCurrentEditorContent() {
     if (kanbanViewActive && kanbanBoard) {
       return serializeKanban(kanbanBoard);
+    }
+    // Markdown file viewed as plain text (mode toggle → "Text")
+    if (selectedFileType === "markdown" && currentEditorMode === "code" && codeEditor) {
+      return codeEditor.getValue();
     }
     if (selectedFileType === "json") {
       try {

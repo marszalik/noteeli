@@ -100,9 +100,12 @@ Markdown files open in a **WYSIWYG editor** — headings, lists, tables, task
 lists, links and images render as you type, with a toolbar for formatting and
 undo/redo buttons.
 
-Prefer raw Markdown? The **mode toggle** in the topbar switches to a source
-view; your choice is remembered per browser. Both modes edit the same plain
-`.md` file — there is no proprietary format underneath.
+Prefer raw Markdown? The **mode button** in the topbar cycles through four
+views of the same note: **WYSIWYG → Markdown** (source view) **→ Kanban**
+(board, see below) **→ Text** (plain-text editor). Your WYSIWYG/Markdown
+choice is remembered per browser; Kanban and Text are picked per file. All
+views edit the same plain `.md` file — there is no proprietary format
+underneath.
 
 The editor font size can be adjusted from the topbar (12–28 px) and is
 remembered. Task-list checkboxes, tables and code blocks all follow the
@@ -141,12 +144,16 @@ kanban-plugin: board
 ## Done
 ```
 
-Any `.md` file whose frontmatter contains `kanban-plugin:` opens as a board:
-`## ` headings become columns, list items become cards. There is no special
-"board" file type — create a regular new file and paste the frontmatter
-above (or open a board made in Obsidian). While a board file is open, the
-topbar mode button reads **Board / Markdown** instead of WYSIWYG/Markdown
-and switches between the two views at any time.
+Any `.md` file whose frontmatter contains `kanban-plugin:` opens straight
+onto the board: `## ` headings become columns, list items become cards.
+
+**Creating a board** is just switching the view: make a regular new file
+(or open any note) and click the topbar mode button until it reads
+**Kanban**. Existing `## ` headings turn into columns immediately; an empty
+note gets three default columns. Merely switching views changes nothing on
+disk — the `kanban-plugin` frontmatter is written together with your first
+real board edit, and from then on the file opens as a board by itself.
+Boards made in Obsidian work as-is.
 
 **Subtasks are cards too.** A nested list item renders as its own card,
 indented under its parent with a connecting line — nest as deep as you like.

@@ -232,15 +232,8 @@
             class="button button-secondary button-sm editor-mode-toggle"
             type="button"
             aria-label="Toggle edit mode"
-            title="Toggle mode: WYSIWYG <-> Markdown"
+            title="Toggle mode: WYSIWYG -> Markdown -> Kanban"
           >WYSIWYG</button>
-          <button
-            id="kanban-mode-toggle"
-            class="button button-secondary button-sm editor-mode-toggle hidden"
-            type="button"
-            aria-label="Toggle board view"
-            title="Toggle view: Board <-> Markdown"
-          >Board</button>
 
           <div class="user-menu">
             <button id="user-menu-toggle" class="icon-button" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown" title="Account">

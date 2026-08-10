@@ -20,11 +20,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   their parent with a progress chip; a parent card cannot leave its column
   until its subtasks are moved away, and a subtask dragged to another
   column becomes a standalone card. Cards, subtasks and columns can be
-  added, edited and deleted on the board; a topbar toggle switches to the
-  raw Markdown editor. Unrecognised file content (frontmatter, prose,
-  card descriptions, `%% kanban:settings`) round-trips untouched.
-  Detection is purely content-based — there is no separate board file
-  type; a regular note becomes a board by adding the frontmatter.
+  added, edited and deleted on the board. Unrecognised file content
+  (frontmatter, prose, card descriptions, `%% kanban:settings`)
+  round-trips untouched. Detection is purely content-based — there is no
+  separate board file type.
+- **Four-way editor mode button.** The topbar toggle now cycles
+  WYSIWYG → Markdown → Kanban → Text (plain-text CodeMirror view) for
+  markdown files. Picking Kanban on a regular note converts it in place:
+  `## ` headings become columns (an empty note gets three default ones)
+  and the `kanban-plugin` frontmatter is written together with the first
+  real board edit — merely switching views never touches the file.
 
 ### Fixed
 
