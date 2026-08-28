@@ -36,12 +36,20 @@ class PublishedItemsRepository:
                 ON published_items(path)
                 """
             )
+            # Migration: older DBs have no user_key. Existing rows land in
+            # the shared/legacy bucket ('') — the public page then falls
+            # back to the global preferences, i.e. the previous behaviour.
+            cols = [r[1] for r in connection.execute("PRAGMA table_info(published_items)")]
+            if cols and "user_key" not in cols:
+                connection.execute(
+                    "ALTER TABLE published_items ADD COLUMN user_key TEXT NOT NULL DEFAULT ''"
+                )
 
     def list_all(self) -> list[sqlite3.Row]:
         with self._connect() as connection:
             return list(
                 connection.execute(
-                    "SELECT id, kind, path, slug, created_at "
+                    "SELECT id, kind, path, slug, created_at, user_key "
                     "FROM published_items ORDER BY created_at DESC"
                 ).fetchall()
             )
@@ -49,7 +57,7 @@ class PublishedItemsRepository:
     def find_by_id(self, item_id: int) -> sqlite3.Row | None:
         with self._connect() as connection:
             return connection.execute(
-                "SELECT id, kind, path, slug, created_at "
+                "SELECT id, kind, path, slug, created_at, user_key "
                 "FROM published_items WHERE id = ?",
                 (item_id,),
             ).fetchone()
@@ -57,16 +65,17 @@ class PublishedItemsRepository:
     def find_by_path(self, path: str) -> sqlite3.Row | None:
         with self._connect() as connection:
             return connection.execute(
-                "SELECT id, kind, path, slug, created_at "
+                "SELECT id, kind, path, slug, created_at, user_key "
                 "FROM published_items WHERE path = ?",
                 (path,),
             ).fetchone()
 
-    def insert(self, kind: str, path: str, slug: str) -> int:
+    def insert(self, kind: str, path: str, slug: str, user_key: str = "") -> int:
         with self._connect() as connection:
             cursor = connection.execute(
-                "INSERT INTO published_items(kind, path, slug) VALUES(?, ?, ?)",
-                (kind, path, slug),
+                "INSERT INTO published_items(kind, path, slug, user_key) "
+                "VALUES(?, ?, ?, ?)",
+                (kind, path, slug, user_key),
             )
             return int(cursor.lastrowid)
 

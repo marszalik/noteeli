@@ -11,6 +11,22 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A published page now renders with the publisher's own theme, font
+  size and language.** These are personal preferences: the Settings UI
+  writes them to `user_settings` under the caller's key, while the public
+  page read preferences with no user key and so always got the untouched
+  global `app_settings` row — the factory `webnote` look. On a
+  single-user instance the shared page still didn't match what the owner
+  saw, and nothing the owner could change in Settings affected it.
+
+  `published_items` gains a `user_key` column (added in place by a
+  migration) recording who published each item. Rows predating the column
+  keep the previous global-defaults behaviour rather than guessing an
+  owner. The key is never exposed to visitors — the public sidebar uses
+  `PublicNavItem`, which carries no identity.
+
 ### Fixed
 
 - **Images, PDFs and Office files now render on a published page.**

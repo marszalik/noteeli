@@ -39,6 +39,13 @@ class AuthService:
     def is_local_request(self, request: Request) -> bool:
         return self._request_host(request) in LOCAL_HOSTS
 
+    def user_key(self, request: Request) -> str:
+        """Stable per-user key (lowercased email) used to scope personal
+        preferences, saved profiles and published items. Empty string when
+        there's no identity — the global/legacy bucket."""
+        user = self.get_current_user(request) or {}
+        return (user.get("email") or "").strip().lower()
+
     def get_current_user(self, request: Request) -> dict | None:
         # Demo mode: every request gets a synthetic guest user, no login
         # page, no session lookup. Combined with the service-layer write

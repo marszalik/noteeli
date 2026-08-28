@@ -49,11 +49,7 @@ workspace_service = WorkspaceService(settings)
 
 
 def _user_key(request: Request) -> str:
-    """Stable per-user key (lowercased email) used to scope personal
-    preferences + saved profiles. Empty string when there's no identity
-    (treated as the global/default bucket)."""
-    user = auth_service.get_current_user(request) or {}
-    return (user.get("email") or "").strip().lower()
+    return auth_service.user_key(request)
 
 
 @router.get("/", name="workspace_page")
