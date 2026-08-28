@@ -11,6 +11,47 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A published page now renders with the publisher's own theme, font
+  size and language.** These are personal preferences: the Settings UI
+  writes them to `user_settings` under the caller's key, while the public
+  page read preferences with no user key and so always got the untouched
+  global `app_settings` row — the factory `webnote` look. On a
+  single-user instance the shared page still didn't match what the owner
+  saw, and nothing the owner could change in Settings affected it.
+
+  `published_items` gains a `user_key` column (added in place by a
+  migration) recording who published each item. Rows predating the column
+  keep the previous global-defaults behaviour rather than guessing an
+  owner. The key is never exposed to visitors — the public sidebar uses
+  `PublicNavItem`, which carries no identity.
+
+### Fixed
+
+- **Images, PDFs and Office files now render on a published page.**
+  `renderPublicFile` built the preview URL with `&path=` instead of
+  `?path=`, so the parameter became part of the path
+  (`/api/public/2/file/preview&path=…`) and every non-Markdown preview
+  404'd. Only the public view was affected — the workspace view uses the
+  same helper correctly.
+
+### Security
+
+- **`X-Forwarded-Host` no longer grants local access by default.**
+  `AuthService._request_host` read the header unconditionally, so on any
+  instance reachable over the network a client could send
+  `X-Forwarded-Host: localhost` and be treated as local access — the full
+  workspace, no login. Honouring the header is now opt-in via
+  `NOTEELI_TRUST_FORWARDED_HOST=1`, which is only safe behind a reverse
+  proxy that overwrites the header it receives.
+
+  **Deploy note for `app.noteeli.com`:** set
+  `NOTEELI_TRUST_FORWARDED_HOST=1` in the server's `.env` *before*
+  restarting, unless nginx already forwards the real public `Host`. If the
+  proxy passes `Host: 127.0.0.1`, leaving this unset flips the failure the
+  other way — every anonymous visitor would be auto-logged-in as local.
+
 ## [1.7.0] - 2026-08-10
 
 ### Added

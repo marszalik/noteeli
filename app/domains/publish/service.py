@@ -93,7 +93,7 @@ class PublishService:
 
     # ── Mutations ────────────────────────────────────────────────
 
-    def publish(self, kind: str, path: str) -> PublishedItem:
+    def publish(self, kind: str, path: str, user_key: str = "") -> PublishedItem:
         existing = self.repository.find_by_path(path)
         if existing is not None:
             raise PublishedItemAlreadyExistsError(
@@ -107,7 +107,7 @@ class PublishService:
         # the id, the slug is purely cosmetic.
         basename = Path(path).name or "item"
         slug = self.slugify(basename)
-        item_id = self.repository.insert(kind, path, slug)
+        item_id = self.repository.insert(kind, path, slug, user_key)
         return PublishedItem(
             id=item_id,
             kind=kind,
@@ -115,6 +115,7 @@ class PublishService:
             slug=slug,
             created_at="",  # populated by the row read on next list
             public_url=self._public_url(item_id, slug),
+            user_key=user_key,
         )
 
     def unpublish(self, item_id: int) -> None:
@@ -158,6 +159,7 @@ class PublishService:
             slug=slug,
             created_at=row["created_at"],
             public_url=self._public_url(row["id"], slug),
+            user_key=row["user_key"],
         )
 
     def _public_url(self, item_id: int, slug: str) -> str:

@@ -16,6 +16,11 @@ class PublishedItem(BaseModel):
     slug: str
     created_at: str
     public_url: str  # absolute path on this instance, e.g. "/12/my-notes"
+    # Who published it, so the public page can render with that person's
+    # theme/font/language. Empty for rows predating the column — those
+    # fall back to the global preferences. Never sent to public visitors:
+    # the public sidebar uses PublicNavItem, which carries no identity.
+    user_key: str = ""
 
 
 class PublishedItemsResponse(BaseModel):

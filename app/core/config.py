@@ -90,6 +90,11 @@ class Settings(BaseSettings):
     session_cookie_domain: str = ""
     # Public URL of the portal (noteeli.com) — used for redirect-to-login.
     portal_url: str = "https://noteeli.com"
+    # Honour X-Forwarded-Host when deciding whether a request is "local".
+    # OFF by default: without a reverse proxy stripping it, any client on
+    # the network can send X-Forwarded-Host: localhost and take the
+    # local-access auto-login path. Enable ONLY behind a trusted proxy.
+    trust_forwarded_host: bool = False
 
     model_config = SettingsConfigDict(
         env_prefix="NOTEELI_",

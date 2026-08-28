@@ -100,7 +100,9 @@ async def publish_create_api(request: Request, payload: PublishRequest):
     kind = "directory" if is_dir else "file"
 
     try:
-        return _publish_service().publish(kind=kind, path=rel)
+        return _publish_service().publish(
+            kind=kind, path=rel, user_key=_auth_service().user_key(request)
+        )
     except PublishedItemAlreadyExistsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -190,7 +192,13 @@ async def publish_view_page(request: Request, item_id: int, slug: str):
         "isPublic": True,
     }
 
-    preferences = _workspace_service().get_preferences()
+    # Render with the publisher's own personal preferences (theme, font,
+    # language) rather than the instance defaults — a shared page should
+    # look the way its author sees it. Personal keys live in
+    # user_settings; passing no key would read only the global row,
+    # which no UI path ever writes. Legacy rows have no user_key and
+    # keep the old global-defaults behaviour.
+    preferences = _workspace_service().get_preferences(item.user_key or None)
     return render_template(
         "domains/workspace/views/index.mako",
         request,

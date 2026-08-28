@@ -30,13 +30,21 @@ class AuthService:
         self.settings = settings or get_settings()
 
     def _request_host(self, request: Request) -> str:
-        forwarded_host = request.headers.get("x-forwarded-host")
-        if forwarded_host:
-            return forwarded_host.split(",")[0].strip().split(":")[0]
+        if self.settings.trust_forwarded_host:
+            forwarded_host = request.headers.get("x-forwarded-host")
+            if forwarded_host:
+                return forwarded_host.split(",")[0].strip().split(":")[0]
         return request.url.hostname or ""
 
     def is_local_request(self, request: Request) -> bool:
         return self._request_host(request) in LOCAL_HOSTS
+
+    def user_key(self, request: Request) -> str:
+        """Stable per-user key (lowercased email) used to scope personal
+        preferences, saved profiles and published items. Empty string when
+        there's no identity — the global/legacy bucket."""
+        user = self.get_current_user(request) or {}
+        return (user.get("email") or "").strip().lower()
 
     def get_current_user(self, request: Request) -> dict | None:
         # Demo mode: every request gets a synthetic guest user, no login

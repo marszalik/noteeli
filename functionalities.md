@@ -70,6 +70,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Session middleware (signed cookie) | ❌ | configured in `app/main.py` |
 | `require_api_access` guard on every workspace API endpoint | ✅ `tests/test_auth_guard.py` (10 tests covering tree, file, save, create, delete, rename, upload, preferences, profiles) | implicit dependency |
 | Local-host bypass (`127.0.0.1`, `localhost`) | ✅ `test_local_host_bypass_allows_unauthenticated_access` | |
+| `X-Forwarded-Host` spoofing cannot reach the local-host bypass (opt-in via `NOTEELI_TRUST_FORWARDED_HOST`) | ✅ `test_forwarded_host_does_not_grant_local_access`, `test_forwarded_host_honoured_when_explicitly_trusted` | `auth/service.py` — `_request_host` |
 | Workspace HTML root redirects to login | ✅ `test_workspace_root_redirects_to_login` | 303 to `/login` |
 | Google Drive OAuth (separate consent for Drive scope) | ❌ | `auth_gdrive_start`, `auth_gdrive_callback` |
 | "Local mode" chip when running without Google auth | 🌐 | template branch on `user.is_local` |
@@ -334,6 +335,8 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Public viewer page works without auth (`GET /{id}/{slug}`) | ✅ `test_published_view_works_without_auth` | renders read-only `index.mako` |
 | Public scoped tree/file APIs work without auth | ✅ `test_published_view_works_without_auth` | `/api/public/tree`, `/api/public/file` |
 | Public APIs reject path-traversal beyond the published item | ✅ `test_public_routes_block_path_traversal` | 403 on out-of-scope `path` |
+| Image / PDF / Office preview on a published page | ✅ `tests/test_public_preview_url.py` (3 tests: `?` separator guard on `app.js`, endpoint serves via query string, path-segment form stays 404) | `renderPublicFile` → `publish_public_file_preview_api` |
+| Published page inherits the publisher's theme / font / language | ✅ `tests/test_public_page_theme.py` (4 tests: publisher recorded, personal theme rendered, legacy rows fall back, in-place migration) | `published_items.user_key` → `get_preferences(user_key)` |
 | Public viewer redirects to canonical slug on mismatch | ✅ `test_public_view_redirects_wrong_slug` | 301 |
 | Public viewer 404 for unknown/dead id is a human HTML page (not raw JSON) | ✅ `test_public_view_404_for_unknown_id_is_a_human_page`, `test_public_link_shows_gone_page_after_unpublish` | `_gone_page()` in publish router; PL+EN copy, theme-aware |
 | Frontend: globe badge on published tree rows | 🌐 | `appendPublishBadge` |
