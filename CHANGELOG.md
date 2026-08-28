@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-28
+
 ### Changed
 
 - **A published page now renders with the publisher's own theme, font
