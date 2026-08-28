@@ -5712,7 +5712,7 @@ if (shell) {
       } catch {}
       setStatus(t("st_file_ready"));
     } else if (file.previewable) {
-      const url = `${config.previewUrl}&path=${encodeURIComponent(file.path)}`;
+      const url = `${config.previewUrl}?path=${encodeURIComponent(file.path)}`;
       const tag = file.preview_kind === "image"
         ? `<img src="${url}" alt="${file.name}" class="public-image" />`
         : file.preview_kind === "pdf"

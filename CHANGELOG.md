@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Images, PDFs and Office files now render on a published page.**
+  `renderPublicFile` built the preview URL with `&path=` instead of
+  `?path=`, so the parameter became part of the path
+  (`/api/public/2/file/preview&path=…`) and every non-Markdown preview
+  404'd. Only the public view was affected — the workspace view uses the
+  same helper correctly.
+
 ### Security
 
 - **`X-Forwarded-Host` no longer grants local access by default.**

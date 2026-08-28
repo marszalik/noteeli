@@ -335,6 +335,7 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Public viewer page works without auth (`GET /{id}/{slug}`) | ✅ `test_published_view_works_without_auth` | renders read-only `index.mako` |
 | Public scoped tree/file APIs work without auth | ✅ `test_published_view_works_without_auth` | `/api/public/tree`, `/api/public/file` |
 | Public APIs reject path-traversal beyond the published item | ✅ `test_public_routes_block_path_traversal` | 403 on out-of-scope `path` |
+| Image / PDF / Office preview on a published page | ✅ `tests/test_public_preview_url.py` (3 tests: `?` separator guard on `app.js`, endpoint serves via query string, path-segment form stays 404) | `renderPublicFile` → `publish_public_file_preview_api` |
 | Public viewer redirects to canonical slug on mismatch | ✅ `test_public_view_redirects_wrong_slug` | 301 |
 | Public viewer 404 for unknown/dead id is a human HTML page (not raw JSON) | ✅ `test_public_view_404_for_unknown_id_is_a_human_page`, `test_public_link_shows_gone_page_after_unpublish` | `_gone_page()` in publish router; PL+EN copy, theme-aware |
 | Frontend: globe badge on published tree rows | 🌐 | `appendPublishBadge` |
