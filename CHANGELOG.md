@@ -11,6 +11,22 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **`X-Forwarded-Host` no longer grants local access by default.**
+  `AuthService._request_host` read the header unconditionally, so on any
+  instance reachable over the network a client could send
+  `X-Forwarded-Host: localhost` and be treated as local access — the full
+  workspace, no login. Honouring the header is now opt-in via
+  `NOTEELI_TRUST_FORWARDED_HOST=1`, which is only safe behind a reverse
+  proxy that overwrites the header it receives.
+
+  **Deploy note for `app.noteeli.com`:** set
+  `NOTEELI_TRUST_FORWARDED_HOST=1` in the server's `.env` *before*
+  restarting, unless nginx already forwards the real public `Host`. If the
+  proxy passes `Host: 127.0.0.1`, leaving this unset flips the failure the
+  other way — every anonymous visitor would be auto-logged-in as local.
+
 ## [1.7.0] - 2026-08-10
 
 ### Added

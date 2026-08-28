@@ -70,6 +70,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Session middleware (signed cookie) | ❌ | configured in `app/main.py` |
 | `require_api_access` guard on every workspace API endpoint | ✅ `tests/test_auth_guard.py` (10 tests covering tree, file, save, create, delete, rename, upload, preferences, profiles) | implicit dependency |
 | Local-host bypass (`127.0.0.1`, `localhost`) | ✅ `test_local_host_bypass_allows_unauthenticated_access` | |
+| `X-Forwarded-Host` spoofing cannot reach the local-host bypass (opt-in via `NOTEELI_TRUST_FORWARDED_HOST`) | ✅ `test_forwarded_host_does_not_grant_local_access`, `test_forwarded_host_honoured_when_explicitly_trusted` | `auth/service.py` — `_request_host` |
 | Workspace HTML root redirects to login | ✅ `test_workspace_root_redirects_to_login` | 303 to `/login` |
 | Google Drive OAuth (separate consent for Drive scope) | ❌ | `auth_gdrive_start`, `auth_gdrive_callback` |
 | "Local mode" chip when running without Google auth | 🌐 | template branch on `user.is_local` |

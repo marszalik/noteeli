@@ -181,3 +181,49 @@ def test_admin_emails_accept_space_separation(tmp_path):
         assert auth.is_admin("eli.zadie@gmail.com"), raw
         # non-admins stay out
         assert not auth.is_admin("intruder@gmail.com"), raw
+
+
+def test_forwarded_host_does_not_grant_local_access(client: TestClient):
+    """X-Forwarded-Host must NOT be trusted by default.
+
+    Regression: `_request_host` read the header unconditionally, so any
+    client on the network could send `X-Forwarded-Host: localhost` and
+    take the local-access auto-login path — full workspace, no password.
+    Trusting it is only safe behind a proxy that overwrites the header,
+    so it is now gated behind NOTEELI_TRUST_FORWARDED_HOST."""
+    response = client.get("/api/tree", headers={"X-Forwarded-Host": "localhost"})
+    assert response.status_code == 401
+
+
+def test_forwarded_host_honoured_when_explicitly_trusted():
+    """With the opt-in set, the header is honoured again — this is the
+    reverse-proxy deployment (nginx in front of app.noteeli.com).
+
+    Asserted at the service level: `auth.router` builds its AuthService at
+    import time, so a TestClient in the same process can't be given
+    different settings."""
+    from starlette.requests import Request
+
+    from app.domains.auth.service import AuthService
+
+    def _request(headers: dict[str, str]) -> Request:
+        return Request({
+            "type": "http",
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "http",
+            "path": "/",
+            "raw_path": b"/",
+            "query_string": b"",
+            "root_path": "",
+            "server": ("192.168.1.10", 8000),
+            "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
+        })
+
+    spoofed = {"host": "192.168.1.10:8000", "x-forwarded-host": "localhost"}
+
+    untrusting = AuthService(Settings(trust_forwarded_host=False))
+    assert untrusting.is_local_request(_request(spoofed)) is False
+
+    trusting = AuthService(Settings(trust_forwarded_host=True))
+    assert trusting.is_local_request(_request(spoofed)) is True

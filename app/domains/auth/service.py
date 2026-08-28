@@ -30,9 +30,10 @@ class AuthService:
         self.settings = settings or get_settings()
 
     def _request_host(self, request: Request) -> str:
-        forwarded_host = request.headers.get("x-forwarded-host")
-        if forwarded_host:
-            return forwarded_host.split(",")[0].strip().split(":")[0]
+        if self.settings.trust_forwarded_host:
+            forwarded_host = request.headers.get("x-forwarded-host")
+            if forwarded_host:
+                return forwarded_host.split(",")[0].strip().split(":")[0]
         return request.url.hostname or ""
 
     def is_local_request(self, request: Request) -> bool:
