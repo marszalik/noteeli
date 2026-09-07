@@ -60,7 +60,6 @@
     data-theme-mode="${preferences.theme_mode}"
     data-editor-font-size="${preferences.editor_font_size}"
     data-language="${preferences.language}"
-    data-compact-chrome="${'1' if preferences.compact_chrome else '0'}"
     ${'data-demo="1"' if demo_mode else '' | n}
     ${'data-public="1"' if is_public else '' | n}
   >
@@ -446,13 +445,6 @@
               value="${preferences.editor_font_size}"
             />
 
-            <label class="settings-toggle">
-              <input id="compact-chrome-input" type="checkbox" ${'checked' if preferences.compact_chrome else ''} />
-              <span>
-                <strong data-i18n="label_compact_chrome">Kompaktowy układ (bez ramek)</strong>
-                <small class="muted" data-i18n="compact_chrome_hint">Usuwa zaokrąglone obramowania paneli i zewnętrzny margines, żeby zyskać miejsce na treść.</small>
-              </span>
-            </label>
           </section>
 
           <section class="settings-tab-panel hidden" data-panel="editor" role="tabpanel">

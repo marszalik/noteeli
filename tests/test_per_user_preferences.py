@@ -36,7 +36,7 @@ def test_personal_prefs_are_per_user_but_storage_is_shared(tmp_path, monkeypatch
     r = client.put("/api/preferences", json={
         "content_root": str(tmp_path / "notes"), "sort_mode": "alphabetical",
         "theme_mode": "dark", "editor_font_size": 20, "source_type": "local",
-        "language": "en", "compact_chrome": False,
+        "language": "en",
     })
     assert r.status_code == 200, r.text
     assert r.json()["theme_mode"] == "dark"
@@ -52,7 +52,7 @@ def test_personal_prefs_are_per_user_but_storage_is_shared(tmp_path, monkeypatch
     client.put("/api/preferences", json={
         "content_root": str(tmp_path / "notes"), "sort_mode": "alphabetical",
         "theme_mode": "obsidian", "editor_font_size": 14, "source_type": "local",
-        "language": "pl", "compact_chrome": True,
+        "language": "pl",
     })
 
     # Alice still has dark — isolation holds
@@ -74,7 +74,7 @@ def test_saved_profiles_are_per_user(tmp_path, monkeypatch):
     base = {
         "content_root": str(tmp_path / "notes"), "sort_mode": "alphabetical",
         "theme_mode": "dark", "editor_font_size": 16, "source_type": "local",
-        "language": "en", "compact_chrome": False, "gdrive_credentials": "",
+        "language": "en", "gdrive_credentials": "",
     }
 
     monkeypatch.setattr(wrouter.auth_service, "get_current_user", lambda req: make_user("alice@x.com"))

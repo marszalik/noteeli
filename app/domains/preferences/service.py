@@ -57,7 +57,6 @@ class PreferencesService:
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
         language: Language = "pl",
-        compact_chrome: bool = False,
         user_key: str | None = None,
     ) -> AppPreferences:
         if source_type == "local":
@@ -82,7 +81,6 @@ class PreferencesService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
 
     def list_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:
@@ -109,7 +107,6 @@ class PreferencesService:
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
         language: Language = "pl",
-        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         profile_preferences = self._build_profile_preferences(
             content_root=content_root,
@@ -128,7 +125,6 @@ class PreferencesService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
         try:
             return self.repository.create_profile(name.strip(), profile_preferences, user_key)
@@ -157,7 +153,6 @@ class PreferencesService:
         image_upload_mode: ImageUploadMode = "same_dir",
         image_upload_subdir: str = "assets",
         language: Language = "pl",
-        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         profile_preferences = self._build_profile_preferences(
             content_root=content_root,
@@ -176,7 +171,6 @@ class PreferencesService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
         try:
             profile = self.repository.update_profile(profile_id, name.strip(), profile_preferences, user_key)
@@ -224,7 +218,6 @@ class PreferencesService:
             image_upload_mode=profile_preferences.image_upload_mode,
             image_upload_subdir=profile_preferences.image_upload_subdir,
             language=profile_preferences.language,
-            compact_chrome=profile_preferences.compact_chrome,
         )
 
     def _ensure_local_content_root(self, value: str | Path) -> Path:
@@ -251,7 +244,6 @@ class PreferencesService:
         image_upload_mode: ImageUploadMode,
         image_upload_subdir: str,
         language: Language = "pl",
-        compact_chrome: bool = False,
     ) -> AppPreferences:
         normalized_content_root = content_root
         if source_type == "local":
@@ -274,5 +266,4 @@ class PreferencesService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )

@@ -11,6 +11,27 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-07
+
+### Removed
+
+- **The "Compact layout (no frames)" setting.** Frameless is now the
+  only layout — panels always fill the viewport edge-to-edge, with no
+  rounded panel borders, shadows or outer padding. The toggle carried
+  no real value and doubled the CSS surface (the framed variant kept
+  regressing, e.g. the full-bleed drawer covering the mobile topbar).
+  A legacy `compact_chrome` value stored in SQLite is simply ignored.
+
+### Fixed
+
+- **Stray sliver down the left screen edge.** Two causes, both fixed:
+  a stored sidebar width below the 200 px minimum (written by older
+  versions) rendered a docked sidebar as an unusable few-pixel strip —
+  the width is now clamped on read, not just on write; and the
+  sidebar resize handle could stay lit after a tap on touch screens
+  (iOS sticky hover) — it is now hover-revealed only on mouse-like
+  pointers and hidden entirely on touch devices.
+
 ## [1.10.0] - 2026-09-07
 
 ### Added

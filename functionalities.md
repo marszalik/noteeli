@@ -275,7 +275,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Collapsible sidebar (hamburger, pin) | 🌐 | `setSidebarMode("collapsed" / "overlay" / "docked")` |
 | Drag-resize sidebar width, persisted | 🌐 | `setSidebarWidth` |
 | Mobile overlay mode with backdrop | 🌐 | `.app-shell.sidebar-overlay::before` |
-| Mobile: drawer sits below the topbar (hamburger/Save stay tappable), first visit defaults to overlay | ✅ `test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap` (e2e) | `--topbar-h` via ResizeObserver; compact-chrome override in the 768px block |
+| Mobile: drawer sits below the topbar (hamburger/Save stay tappable), first visit defaults to overlay | ✅ `test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap` (e2e) | `--topbar-h` via ResizeObserver |
 | Mobile: expanding a folder keeps the drawer open (composedPath, not contains) | ✅ same e2e | backdrop-close handler in `initSidebar` |
 | Mobile: picking a file closes the overlay drawer | ✅ same e2e | end of `loadFile` |
 | Refresh tree button | 🌐 | `refreshButton` |
@@ -396,7 +396,7 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Personal settings per logged-in user (theme/font/sort/autosave/language/compact/active profile) | ✅ `test_personal_prefs_are_per_user_but_storage_is_shared` | `user_settings` overlay keyed by email; `_PERSONAL_KEYS` |
+| Personal settings per logged-in user (theme/font/sort/autosave/language/active profile) | ✅ `test_personal_prefs_are_per_user_but_storage_is_shared` | `user_settings` overlay keyed by email; `_PERSONAL_KEYS` |
 | Storage (source/content root/SFTP/Drive) stays shared instance-wide | ✅ same test | only personal keys overlay per user |
 | Saved profiles per user; names unique per user | ✅ `test_saved_profiles_are_per_user` | `preference_profiles.user_key`, `UNIQUE(user_key,name)` |
 | Migration from old global schema (legacy profiles preserved) | ✅ `test_migration_from_old_global_schema` | rebuild table, existing rows → `user_key=''` |

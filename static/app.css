@@ -808,40 +808,31 @@ body:has(.demo-banner) .app-shell {
   height: 100dvh;
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-  gap: 1.2rem;
-  padding: 1.2rem;
+  gap: 0;
+  padding: 0;
   overflow: hidden;
-  /* gap animates when collapsing/docking */
-  transition: gap 0.25s ease;
 }
 
 /* ── Sidebar states ─────────────────────────────────────────── */
 /* Grid width (--sidebar-w) and opacity are now controlled directly by JS.
    CSS classes only carry non-grid layout concerns.                        */
 
-/* collapsed: sidebar invisible, no grid space (JS sets --sidebar-w: 0)   */
-.app-shell.sidebar-collapsed {
-  gap: 0 1.2rem;
-}
 /* opacity/pointer-events also set by JS as belt-and-suspenders */
 .app-shell.sidebar-collapsed .sidebar {
   opacity: 0;
   pointer-events: none;
 }
 
-/* overlay: sidebar floats as a fixed drawer (JS sets --sidebar-w: 0)     */
-.app-shell.sidebar-overlay {
-  gap: 0 1.2rem;
-}
+/* overlay: sidebar floats as a fixed full-height drawer on the left
+   (JS sets --sidebar-w: 0) */
 .app-shell.sidebar-overlay .sidebar {
   position: fixed;
-  left: 1.2rem;
-  top: 1.2rem;
-  bottom: 1.2rem;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: var(--sidebar-open-w);
   z-index: 200;
   transform: translateX(0);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -862,37 +853,49 @@ body:has(.demo-banner) .app-shell {
 /* ── Resize handle ──────────────────────────────────────────── */
 .sidebar-resize-handle {
   position: absolute;
-  top: 1.2rem;
-  bottom: 1.2rem;
-  /* sits in the gap between sidebar and main */
-  left: calc(1.2rem + var(--sidebar-w) - 3px);
+  top: 0;
+  bottom: 0;
+  /* straddles the sidebar/main boundary */
+  left: calc(var(--sidebar-w) - 3px);
   width: 6px;
   z-index: 30; /* must beat ProseMirror's z-index: 20 */
   cursor: col-resize;
-  border-radius: 3px;
   transition: background 0.15s, opacity 0.15s;
   opacity: 0;
 }
-.sidebar-resize-handle:hover,
 .sidebar-resize-handle.is-dragging {
   opacity: 1;
   background: var(--accent-soft);
 }
-.app-shell:hover .sidebar-resize-handle {
-  opacity: 0.5;
+/* Only reveal on devices that can actually hover — on touch screens
+   iOS "sticky hover" left a phantom accent strip down the screen edge
+   after a tap, and drag-resize is a mouse affordance anyway. */
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-resize-handle:hover {
+    opacity: 1;
+    background: var(--accent-soft);
+  }
+  .app-shell:hover .sidebar-resize-handle {
+    opacity: 0.5;
+  }
 }
 .app-shell.sidebar-collapsed .sidebar-resize-handle,
 .app-shell.sidebar-overlay .sidebar-resize-handle {
   display: none;
 }
+@media (pointer: coarse) {
+  .sidebar-resize-handle {
+    display: none;
+  }
+}
 
+/* Panels are frameless: no radius, border or shadow — content fills
+   the viewport edge-to-edge. (This used to be the "compact chrome"
+   preference; it's now the only layout.) Themes keep their colours. */
 .sidebar,
 .workspace-panel {
-  border-radius: var(--radius);
   background: var(--panel);
-  box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 body[data-theme="dark"] .sidebar,
@@ -901,39 +904,6 @@ body[data-theme="noteeli"] .sidebar,
 body[data-theme="noteeli"] .workspace-panel {
   background:
     linear-gradient(180deg, rgba(17, 28, 47, 0.96), rgba(15, 28, 52, 0.92));
-  border-color: var(--line-strong);
-  box-shadow:
-    var(--shadow),
-    inset 0 1px 0 rgba(191, 219, 254, 0.05);
-}
-
-/* ── Compact chrome (no frames) ──────────────────────────────
-   Settings → Appearance → "Compact layout". Strips the outer padding,
-   inter-panel gap, panel border-radius/border/shadow so content fills
-   the viewport edge-to-edge. The sidebar resize handle anchors to the
-   left edge (no padding to offset). Themes keep their colours; only
-   the framing geometry is flattened. */
-body[data-compact-chrome="1"] .app-shell {
-  padding: 0;
-  gap: 0;
-}
-body[data-compact-chrome="1"] .sidebar,
-body[data-compact-chrome="1"] .workspace-panel {
-  border-radius: 0;
-  border: 0;
-  box-shadow: none;
-}
-body[data-compact-chrome="1"] .sidebar-resize-handle {
-  top: 0;
-  bottom: 0;
-  left: calc(var(--sidebar-w) - 3px);
-  border-radius: 0;
-}
-body[data-compact-chrome="1"] .app-shell.sidebar-overlay .sidebar {
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 0;
 }
 
 .sidebar {
@@ -3862,6 +3832,7 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
     transform: translateX(calc(-100% - 2rem));
     transition: transform 0.25s ease;
     border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
 
   .app-shell.sidebar-overlay::before {
@@ -3879,23 +3850,8 @@ body[data-theme="obsidian"] .directory-browser-item-icon {
     left: 0.6rem;
   }
 
-  /* Compact chrome (the default) makes the overlay drawer full-bleed on
-     desktop — its selector out-specifies everything above, so restate
-     the mobile geometry at the same specificity. On a phone the drawer
-     must never cover the topbar: the hamburger is the way out. */
-  body[data-compact-chrome="1"] .app-shell.sidebar-overlay .sidebar,
-  body[data-compact-chrome="1"] .app-shell.sidebar-docked .sidebar {
-    top: calc(var(--topbar-h, 3.5rem) + 0.4rem);
-    bottom: 0.6rem;
-    left: 0.6rem;
-    border-radius: var(--radius);
-  }
-
-  /* workspace goes edge-to-edge on mobile — no card styling */
+  /* skip the blur on mobile — costly, and the panel is edge-to-edge */
   .workspace-panel {
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
     backdrop-filter: none;
   }
 

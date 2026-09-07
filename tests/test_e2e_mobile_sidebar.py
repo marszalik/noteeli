@@ -92,7 +92,12 @@ def test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap(tmp_path):
                 expect(page.locator("#current-file-label")).to_have_text(
                     "plan.md", timeout=15_000
                 )
-                assert "sidebar-collapsed" in _shell_mode(page)
+                # The drawer closes at the END of loadFile (the label above
+                # updates mid-load), so poll rather than assert instantly.
+                page.wait_for_function(
+                    "() => document.querySelector('.app-shell').classList.contains('sidebar-collapsed')",
+                    timeout=15_000,
+                )
 
                 # No horizontal overflow: the page must not be wider than
                 # the phone.

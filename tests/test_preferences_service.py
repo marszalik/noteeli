@@ -115,38 +115,13 @@ def test_update_preferences_normalises_local_content_root(tmp_path: Path):
     assert new_root.is_dir()
 
 
-def test_compact_chrome_round_trips(tmp_path):
-    """The Appearance → Compact layout toggle persists and reads back."""
-    from app.core.config import Settings
-    from app.domains.preferences.repository import PreferencesRepository
-    from app.domains.preferences.service import PreferencesService
+def test_compact_chrome_is_gone(tmp_path):
+    """The frameless layout is the only layout now — the old
+    compact_chrome preference must not resurface in the API model
+    (a stored legacy value in SQLite is simply ignored)."""
+    from app.domains.preferences.schemas import AppPreferences
 
-    settings = Settings(
-        content_root=tmp_path / "notes",
-        data_dir=tmp_path / ".noteeli",
-        session_secret="test",
-        google_client_id="",
-        google_client_secret="",
-    )
-    repo = PreferencesRepository(settings)
-    service = PreferencesService(settings, repo)
-
-    # Default is on (frameless layout ships as the default look).
-    assert service.get_preferences().compact_chrome is True
-
-    # Toggle off, persist
-    updated = service.update_preferences(
-        content_root=str(tmp_path / "notes"),
-        sort_mode="alphabetical",
-        theme_mode="webnote",
-        editor_font_size=14,
-        compact_chrome=False,
-    )
-    assert updated.compact_chrome is False
-
-    # Survives a fresh repo (i.e. it's in SQLite, not just memory)
-    reloaded = PreferencesService(settings, PreferencesRepository(settings)).get_preferences()
-    assert reloaded.compact_chrome is False
+    assert "compact_chrome" not in AppPreferences.model_fields
 
 
 def test_content_root_display_is_relative_to_env_root(tmp_path):

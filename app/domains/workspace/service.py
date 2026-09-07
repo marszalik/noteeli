@@ -154,7 +154,6 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
-        compact_chrome: bool = False,
         user_key: str | None = None,
     ) -> AppPreferences:
         self._block_if_demo()
@@ -199,7 +198,6 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
         return updated.model_copy(
             update={"content_root_display": self.relativize_local_root(updated.content_root)}
@@ -229,7 +227,6 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
-        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         self._block_if_demo()
         return self.preferences_service.create_profile(
@@ -251,7 +248,6 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
 
     def update_preference_profile(
@@ -276,7 +272,6 @@ class WorkspaceService:
         image_upload_mode: str = "same_dir",
         image_upload_subdir: str = "assets",
         language: str = "pl",
-        compact_chrome: bool = False,
     ) -> SavedPreferencesProfile:
         self._block_if_demo()
         return self.preferences_service.update_profile(
@@ -299,7 +294,6 @@ class WorkspaceService:
             image_upload_mode=image_upload_mode,
             image_upload_subdir=image_upload_subdir,
             language=language,
-            compact_chrome=compact_chrome,
         )
 
     def delete_preference_profile(self, profile_id: int, user_key: str | None = None) -> None:

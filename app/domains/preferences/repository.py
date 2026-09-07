@@ -18,7 +18,6 @@ _PERSONAL_KEYS = frozenset({
     "image_upload_mode",
     "image_upload_subdir",
     "language",
-    "compact_chrome",
     "active_profile_id",
 })
 
@@ -57,7 +56,6 @@ class PreferencesRepository:
             ("image_upload_mode", "same_dir"),
             ("image_upload_subdir", "assets"),
             ("language", "pl"),
-            ("compact_chrome", "true"),
             ("active_profile_id", ""),
         )
         with self._connect() as connection:
@@ -180,7 +178,6 @@ class PreferencesRepository:
         image_upload_mode: ImageUploadMode | None = None,
         image_upload_subdir: str | None = None,
         language: Language | None = None,
-        compact_chrome: bool | None = None,
     ) -> AppPreferences:
         from app.core.crypto import encrypt_secret
         updates: list[tuple[str, str]] = []
@@ -219,8 +216,6 @@ class PreferencesRepository:
             updates.append(("image_upload_subdir", image_upload_subdir))
         if language is not None:
             updates.append(("language", language))
-        if compact_chrome is not None:
-            updates.append(("compact_chrome", "true" if compact_chrome else "false"))
 
         # Split: when acting for a specific user, personal settings go to
         # that user's overlay; storage settings stay global. With no
@@ -428,7 +423,6 @@ class PreferencesRepository:
             image_upload_mode=values.get("image_upload_mode", "same_dir"),
             image_upload_subdir=values.get("image_upload_subdir", "assets"),
             language=values.get("language", "pl"),
-            compact_chrome=self._coerce_bool(values.get("compact_chrome", True)),
             active_profile_id=self._parse_active_profile_id(values.get("active_profile_id", "")),
         )
 
