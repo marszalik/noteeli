@@ -187,7 +187,12 @@ if (shell) {
   // Persisted state
   let sidebarWidth = parseInt(localStorage.getItem("sidebar-width") || SIDEBAR_DEFAULT_WIDTH, 10);
   // "docked" | "collapsed" | "overlay"
-  let sidebarMode = localStorage.getItem("sidebar-mode") || "docked";
+  // First visit on a phone gets "overlay", not "docked": overlay is the
+  // only mode that closes itself (backdrop tap, file open), so a
+  // first-time mobile user is never trapped behind a full-screen drawer
+  // they never asked to pin.
+  let sidebarMode = localStorage.getItem("sidebar-mode")
+    || (window.innerWidth <= 768 ? "overlay" : "docked");
 
   function isMobile() {
     return window.innerWidth <= MOBILE_BREAKPOINT;
@@ -298,6 +303,23 @@ if (shell) {
     // applyBodySidebarMode sets --sidebar-w, --sidebar-open-w, classes, and aria
     applyBodySidebarMode(sidebarMode);
 
+    // --topbar-h: measured topbar height, used by the mobile CSS to
+    // position the drawer *below* the topbar. Keeps the hamburger and
+    // Save button visible and tappable while the drawer is open — the
+    // full-height drawer used to cover them, leaving no way to close
+    // it from the toolbar.
+    const topbarEl = document.querySelector(".workspace-topbar");
+    if (topbarEl) {
+      const syncTopbarHeight = () => {
+        shell.style.setProperty("--topbar-h", `${topbarEl.offsetHeight}px`);
+      };
+      syncTopbarHeight();
+      // ResizeObserver, not window resize: the topbar's height also
+      // changes with its content (a long file name wrapping, buttons
+      // appearing once a file is open).
+      new ResizeObserver(syncTopbarHeight).observe(topbarEl);
+    }
+
     // Hamburger toggle
     if (sidebarToggleBtn) {
       sidebarToggleBtn.addEventListener("click", toggleSidebar);
@@ -308,13 +330,20 @@ if (shell) {
       sidebarPinBtn.addEventListener("click", pinSidebar);
     }
 
-    // Click on backdrop closes overlay
+    // Click on backdrop closes overlay. Membership is checked via
+    // composedPath(), captured at dispatch time — NOT contains(): a tap
+    // on a tree row triggers renderTree(), which wipes treeRoot's
+    // innerHTML before the click bubbles up here, so by the time the
+    // event arrives e.target is detached and contains() would treat an
+    // in-sidebar tap as a backdrop tap (the drawer used to close every
+    // time a folder was expanded on mobile).
     shell.addEventListener("click", (e) => {
       if (sidebarMode !== "overlay") return;
+      const path = e.composedPath();
       if (
         sidebarEl &&
-        !sidebarEl.contains(e.target) &&
-        !(sidebarToggleBtn && sidebarToggleBtn.contains(e.target))
+        !path.includes(sidebarEl) &&
+        !(sidebarToggleBtn && path.includes(sidebarToggleBtn))
       ) {
         closeSidebarOverlay();
       }
@@ -2326,6 +2355,8 @@ if (shell) {
       st_back_full_tree: "Wróćono do pełnego drzewa.",
       st_refreshing_tree: "Odświeżam drzewo plików...",
       st_tree_ready: "Drzewo plików gotowe.",
+      update_available: "Jest nowa wersja Noteeli.",
+      update_refresh: "Odśwież",
       st_loading_file: "Wczytuję plik...",
       st_file_ready: "Plik gotowy do edycji.",
       kanban_view_board: "Tablica",
@@ -2504,6 +2535,8 @@ if (shell) {
       st_back_full_tree: "Returned to full tree.",
       st_refreshing_tree: "Refreshing file tree...",
       st_tree_ready: "File tree ready.",
+      update_available: "A new version of Noteeli is ready.",
+      update_refresh: "Refresh",
       st_loading_file: "Loading file...",
       st_file_ready: "File ready to edit.",
       kanban_view_board: "Board",
@@ -2682,6 +2715,8 @@ if (shell) {
       st_back_full_tree: "Vuelto al árbol completo.",
       st_refreshing_tree: "Actualizando árbol de archivos...",
       st_tree_ready: "Árbol de archivos listo.",
+      update_available: "Hay una nueva versión de Noteeli.",
+      update_refresh: "Actualizar",
       st_loading_file: "Cargando archivo...",
       st_file_ready: "Archivo listo para editar.",
       kanban_view_board: "Tablero",
@@ -2860,6 +2895,8 @@ if (shell) {
       st_back_full_tree: "Zurück zum vollständigen Baum.",
       st_refreshing_tree: "Dateibaum wird aktualisiert...",
       st_tree_ready: "Dateibaum bereit.",
+      update_available: "Eine neue Version von Noteeli ist verfügbar.",
+      update_refresh: "Aktualisieren",
       st_loading_file: "Datei wird geladen...",
       st_file_ready: "Datei bereit zur Bearbeitung.",
       kanban_view_board: "Board",
@@ -3038,6 +3075,8 @@ if (shell) {
       st_back_full_tree: "Возврат к полному дереву.",
       st_refreshing_tree: "Обновление дерева файлов...",
       st_tree_ready: "Дерево файлов готово.",
+      update_available: "Доступна новая версия Noteeli.",
+      update_refresh: "Обновить",
       st_loading_file: "Загрузка файла...",
       st_file_ready: "Файл готов к редактированию.",
       kanban_view_board: "Доска",
@@ -5987,6 +6026,10 @@ if (shell) {
       clearAutosaveTimer();
       isApplyingDocument = false;
       renderTree(treeData);
+      // On a phone the overlay drawer covers the editor — close it once
+      // the picked file is loaded so the user actually sees the note.
+      // Docked (pinned) stays open: that's an explicit choice.
+      if (isMobile()) closeSidebarOverlay();
     } catch (error) {
       isApplyingDocument = false;
       setStatus(error.message, true);
@@ -6755,6 +6798,77 @@ if (shell) {
       })
       .catch((error) => setStatus(error.message, true));
   }
+
+// ---------------------------------------------------------------------------
+// Update detection (voiceeli-style, minus the service worker)
+// ---------------------------------------------------------------------------
+
+// The page knows which version rendered it (meta[name="app-version"]).
+// Whenever the tab comes back to the foreground — and on a slow interval
+// while it stays open — we ask the server which version is running now.
+// A mismatch means a deploy happened under this tab: show a one-tap
+// "Refresh" bar instead of letting the user ride a stale bundle. The
+// refresh nukes any leftover service workers and caches, then reloads
+// with a cache-buster, so it also unsticks clients pinned by the old PWA.
+(() => {
+  const pageVersion = document.querySelector('meta[name="app-version"]')?.content || "";
+  if (!pageVersion) return;
+
+  const forceRefresh = async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        for (const reg of await navigator.serviceWorker.getRegistrations()) {
+          await reg.unregister();
+        }
+      }
+      if (window.caches && caches.keys) {
+        for (const key of await caches.keys()) await caches.delete(key);
+      }
+    } catch {
+      // best effort — the cache-busted reload below still helps
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("r", Date.now());
+    window.location.replace(url.toString());
+  };
+
+  const showUpdateBar = () => {
+    if (document.getElementById("update-bar")) return;
+    const bar = document.createElement("div");
+    bar.id = "update-bar";
+    bar.className = "update-bar";
+    const text = document.createElement("span");
+    text.textContent = t("update_available");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button button-primary button-sm";
+    button.textContent = t("update_refresh");
+    button.addEventListener("click", forceRefresh);
+    bar.append(text, button);
+    document.body.appendChild(bar);
+  };
+
+  let lastCheck = 0;
+  const checkForUpdate = async () => {
+    const now = Date.now();
+    if (now - lastCheck < 60_000) return; // at most once a minute
+    lastCheck = now;
+    try {
+      const resp = await fetch("/api/version", { cache: "no-store" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data.version && data.version !== pageVersion) showUpdateBar();
+    } catch {
+      // offline / server restarting — try again on the next trigger
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+  window.addEventListener("focus", checkForUpdate);
+  setInterval(checkForUpdate, 15 * 60 * 1000);
+})();
 }
 
 // ---------------------------------------------------------------------------

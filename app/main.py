@@ -154,6 +154,20 @@ def create_app() -> FastAPI:
             content={"detail": str(exc), "needs_storage_setup": True},
         )
 
+    # Update detection for open tabs / installed home-screen apps: the
+    # page compares this against the version baked into its own HTML
+    # (meta[name="app-version"]) and offers a refresh when they differ.
+    # Unauthenticated on purpose — it leaks nothing but the version
+    # string, and the check must work from a stale logged-out tab too.
+    @app.get("/api/version", include_in_schema=False)
+    async def api_version():
+        from app import __version__
+
+        return JSONResponse(
+            content={"version": __version__},
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
+
     # The PWA is gone, but we keep serving service-worker.js as a
     # kill-switch (see static/service-worker.js): browsers still running
     # the old Noteeli SW re-fetch this script, which unregisters itself and

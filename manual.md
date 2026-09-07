@@ -53,8 +53,14 @@ Click a Markdown file to start editing. That's it — there is no import step.
   "Autosaved.", error messages).
 
 The sidebar can be collapsed (hamburger), pinned, and resized by dragging its
-edge; on phones it becomes an overlay. Noteeli remembers your sidebar width,
-the last file you had open, and reopens it on the next visit.
+edge; on phones it becomes an overlay drawer that opens below the topbar,
+stays open while you browse folders, and closes itself once you pick a file
+(or when you tap outside it or on the hamburger). Noteeli remembers your
+sidebar width, the last file you had open, and reopens it on the next visit.
+
+When a new Noteeli version is deployed while you have a tab open, a small
+**"A new version is ready" bar** appears with a Refresh button — one tap
+loads the new version, clearing any stale caches along the way.
 
 ## 3. Files and folders
 

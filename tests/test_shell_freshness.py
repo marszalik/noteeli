@@ -97,3 +97,21 @@ def test_manifest_route_serves_versioned_icons(client: TestClient):
     assert data["name"] == "Noteeli"
     assert data["icons"], "manifest must list icons"
     assert all("?v=" in icon["src"] for icon in data["icons"])
+
+
+def test_version_endpoint_reports_running_version(client: TestClient):
+    from app import __version__
+
+    response = client.get("/api/version")
+    assert response.status_code == 200
+    assert response.headers.get("cache-control") == "no-store, max-age=0"
+    assert response.json() == {"version": __version__}
+
+
+def test_shell_carries_app_version_meta(client: TestClient):
+    """The update bar compares meta[name=app-version] against /api/version —
+    without the meta the client can never detect a deploy."""
+    from app import __version__
+
+    body = client.get("/").text
+    assert f'name="app-version" content="{__version__}"' in body

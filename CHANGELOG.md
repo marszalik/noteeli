@@ -11,6 +11,35 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-09-07
+
+### Added
+
+- **"A new version is ready" bar.** An open tab (or installed
+  home-screen app) now notices when a new Noteeli version is deployed
+  under it: whenever the tab returns to the foreground (and on a slow
+  interval) it compares its own baked-in version against the new
+  `GET /api/version` endpoint, and a mismatch shows a one-tap Refresh
+  bar. The refresh clears any leftover service workers and caches and
+  reloads with a cache-buster — the voiceeli update flow, without
+  reintroducing a service worker.
+
+### Fixed
+
+- **Mobile: expanding a folder no longer closes the drawer.** Tapping a
+  tree row re-renders the tree, which detached the tapped element
+  before the click reached the backdrop-close handler — the handler's
+  `contains()` check then mistook every in-drawer tap for an outside
+  tap. Membership is now checked against the event's `composedPath()`.
+- **Mobile: picking a file closes the drawer.** The note used to load
+  invisibly behind the still-open drawer.
+- **Mobile: the drawer no longer covers the topbar.** It now starts
+  below it (live-measured `--topbar-h`, compact chrome included), so
+  the hamburger and Save stay visible and tappable while the drawer is
+  open — previously the full-height drawer left no way to close it
+  from the toolbar. First mobile visit also defaults to the
+  self-closing overlay mode instead of a pinned full-screen drawer.
+
 ## [1.9.0] - 2026-09-07
 
 ### Changed

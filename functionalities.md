@@ -275,6 +275,9 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Collapsible sidebar (hamburger, pin) | 🌐 | `setSidebarMode("collapsed" / "overlay" / "docked")` |
 | Drag-resize sidebar width, persisted | 🌐 | `setSidebarWidth` |
 | Mobile overlay mode with backdrop | 🌐 | `.app-shell.sidebar-overlay::before` |
+| Mobile: drawer sits below the topbar (hamburger/Save stay tappable), first visit defaults to overlay | ✅ `test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap` (e2e) | `--topbar-h` via ResizeObserver; compact-chrome override in the 768px block |
+| Mobile: expanding a folder keeps the drawer open (composedPath, not contains) | ✅ same e2e | backdrop-close handler in `initSidebar` |
+| Mobile: picking a file closes the overlay drawer | ✅ same e2e | end of `loadFile` |
 | Refresh tree button | 🌐 | `refreshButton` |
 | Reload open file from disk (topbar) — confirms if there are unsaved edits | 🌐 | `refreshFileButton` → `loadFile(selectedPath)` |
 | Account menu (user icon) — email/local label + Settings + Logout dropdown | 🌐 | `userMenuToggle`, `#user-menu-dropdown` |
@@ -309,6 +312,8 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 | Manifest link + apple-touch-icon + theme-color metas in head (no SW registration) | ✅ `test_shell_links_manifest_and_icons` | `app/views/base.mako` |
 | `/manifest.webmanifest` route with `?v=` cache-busted icons, `no-store` | ✅ `test_manifest_route_serves_versioned_icons` | `app/main.py` |
 | `theme-color` meta follows the active theme (status-bar tint per theme) | 🌐 | `syncThemeColorMeta()` in `app.js`, called from `applyTheme` |
+| `GET /api/version` + `meta[name=app-version]` for deploy detection | ✅ `test_version_endpoint_reports_running_version`, `test_shell_carries_app_version_meta` | `no-store`, unauthenticated by design |
+| Update bar when a new version is deployed under an open tab (focus/visibility + 15-min poll, one-tap cache-busted refresh) | ✅ `test_update_bar_appears_when_server_version_changes` (e2e) | update-detection block in `app.js`; strings in all 5 i18n dicts |
 
 ## 18. Demo mode (public showcase)
 
