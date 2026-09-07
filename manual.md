@@ -93,6 +93,13 @@ the tree scopes itself to that subtree (a bar appears to exit the scope).
 **Hidden files.** Dotfiles (`.git/`, `.megaignore`, …) are hidden by default;
 a toggle in the sidebar shows them when you need them.
 
+**Ignored folders.** Dependency and cache directories — `node_modules`,
+`__pycache__`, `.venv`, `venv` and friends — never appear in the tree and are
+never scanned, so a code project living next to your notes doesn't slow
+anything down. Administrators can change the list with
+`NOTEELI_TREE_IGNORE_NAMES` (comma-separated names; set it empty to show
+everything).
+
 **Uploading.** Right-click a folder → *Upload*, or use the upload panel: drop
 several files at once. Files that already exist at the target are skipped and
 reported, never silently overwritten.
@@ -379,6 +386,7 @@ Deployment, the installer and env-file basics are in the
 | `NOTEELI_LOCK_WORKSPACE=1` | Pin storage source + root (shared instances) |
 | `NOTEELI_GIT_AUTOCOMMIT=1` | Silent checkpoint commits (see [§10](#10-git-history-sync-and-team-checkpoints)) |
 | `NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS` | Idle window before a checkpoint (default 300) |
+| `NOTEELI_TREE_IGNORE_NAMES` | Directory names excluded from the notes tree (default: `node_modules`, `__pycache__`, `.venv`, `venv`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `.tox`, `.nox`, `.terraform`) |
 | `NOTEELI_DEMO_MODE=1` | Read-only public demo |
 | `NOTEELI_LOG_RETENTION_DAYS` | Rotating file logs retention (default 14) |
 

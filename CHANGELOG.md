@@ -11,6 +11,31 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-07
+
+### Changed
+
+- **The sidebar no longer re-downloads the whole tree after every
+  action.** Save, create, rename, duplicate, delete, move, upload and
+  drag-reorder now patch the in-memory tree and re-render locally, with
+  a full reload as a safety fallback when a patch can't apply (e.g. a
+  freshly created parent folder). Previously each of those actions
+  triggered a full recursive re-scan of the workspace server-side plus
+  two complete re-renders — the main reason big workspaces felt slow.
+  Changes made by others on a shared instance now show up on the next
+  refresh (⟳ button) instead of piggybacking on every save.
+- **Dependency and cache directories are ignored server-side.**
+  `node_modules`, `__pycache__`, `.venv`, `venv`, `.mypy_cache`,
+  `.pytest_cache`, `.ruff_cache`, `.tox`, `.nox` and `.terraform` never
+  appear in the tree and are never scanned or serialized. Override the
+  list with `NOTEELI_TREE_IGNORE_NAMES` (comma-separated directory
+  names; set empty to disable). Files sharing those names are
+  unaffected.
+- **Faster tree builds in manual sort mode.** One bulk query now reads
+  the whole ordering table per build instead of opening a SQLite
+  connection per directory. The git-status refresh also skips its full
+  tree re-render when no file's status actually changed.
+
 ## [1.8.0] - 2026-08-28
 
 ### Changed

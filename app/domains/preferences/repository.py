@@ -372,6 +372,23 @@ class PreferencesRepository:
 
         return {row["path"]: row["manual_order"] for row in rows}
 
+    def get_all_manual_orders(self) -> dict[str, dict[str, int]]:
+        """The whole item_preferences table grouped by parent dir — one
+        query for a full tree build instead of a connect-per-directory."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT path, parent_path, manual_order
+                FROM item_preferences
+                ORDER BY parent_path ASC, manual_order ASC
+                """
+            ).fetchall()
+
+        orders: dict[str, dict[str, int]] = {}
+        for row in rows:
+            orders.setdefault(row["parent_path"], {})[row["path"]] = row["manual_order"]
+        return orders
+
     def set_manual_order(self, parent_path: str, ordered_paths: list[str]) -> None:
         with self._connect() as connection:
             connection.execute(

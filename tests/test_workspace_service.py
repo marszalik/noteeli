@@ -171,6 +171,82 @@ def test_manual_order_is_persisted_in_sqlite(tmp_path: Path):
     assert [child.name for child in tree.children] == ["a.md", "c.md", "b.md"]
 
 
+def test_manual_sort_tree_build_uses_one_bulk_order_query(tmp_path: Path):
+    """A full tree build in manual mode must read the whole order table
+    once (get_all_manual_orders), not open a SQLite connection per
+    directory — that per-dir query was a real hotspot on big trees."""
+    notes = tmp_path / "vault"
+    sub = notes / "projekty"
+    sub.mkdir(parents=True)
+    (notes / "b.md").write_text("b", encoding="utf-8")
+    (notes / "a.md").write_text("a", encoding="utf-8")
+    (sub / "y.md").write_text("y", encoding="utf-8")
+    (sub / "x.md").write_text("x", encoding="utf-8")
+
+    service = build_service(notes)
+    service.update_preferences(str(notes), "manual", "dark", 16)
+    service.reorder_items("", ["b.md", "projekty", "a.md"])
+    service.reorder_items("projekty", ["projekty/y.md", "projekty/x.md"])
+
+    def _no_per_dir_query(parent_path: str):
+        raise AssertionError(
+            f"build_tree queried manual order per directory ({parent_path!r})"
+        )
+
+    service.preferences_repository.get_manual_order = _no_per_dir_query
+    tree = service.build_tree()
+
+    assert [child.name for child in tree.children] == ["b.md", "projekty", "a.md"]
+    projekty = tree.children[1]
+    assert [child.name for child in projekty.children] == ["y.md", "x.md"]
+
+
+def test_build_tree_skips_dependency_directories(tmp_path: Path):
+    """node_modules & friends never show up in the tree and are never
+    descended into; a *file* that happens to share the name still does."""
+    notes = tmp_path / "vault"
+    lodash = notes / "projekt" / "node_modules" / "lodash"
+    lodash.mkdir(parents=True)
+    (lodash / "index.js").write_text("module.exports = {}\n", encoding="utf-8")
+    (notes / "projekt" / "app.md").write_text("# app\n", encoding="utf-8")
+    (notes / "__pycache__").mkdir()
+    (notes / "node_modules").write_text("plik, nie katalog", encoding="utf-8")
+    (notes / "notatka.md").write_text("# n\n", encoding="utf-8")
+
+    service = build_service(notes)
+    tree = service.build_tree()
+
+    assert [child.name for child in tree.children] == [
+        "projekt",
+        "node_modules",
+        "notatka.md",
+    ]
+    projekt = tree.children[0]
+    assert [child.name for child in projekt.children] == ["app.md"]
+
+
+def test_tree_ignore_names_is_configurable(tmp_path: Path):
+    """NOTEELI_TREE_IGNORE_NAMES replaces the default list outright."""
+    notes = tmp_path / "vault"
+    (notes / "tajne").mkdir(parents=True)
+    (notes / "node_modules").mkdir()
+    (notes / "plik.md").write_text("", encoding="utf-8")
+
+    settings = Settings(
+        content_root=notes,
+        data_dir=notes.parent / ".noteeli",
+        session_secret="test-secret",
+        tree_ignore_names="tajne",
+    )
+    service = WorkspaceService(settings)
+    tree = service.build_tree()
+
+    names = [child.name for child in tree.children]
+    assert "tajne" not in names
+    assert "node_modules" in names
+    assert "plik.md" in names
+
+
 def test_browse_directories_returns_sorted_subdirectories(tmp_path: Path):
     notes = tmp_path / "vault"
     notes.mkdir()

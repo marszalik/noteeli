@@ -320,8 +320,21 @@ class WorkspaceService:
         backend = self._get_backend()  # routes through hosted-mode security check
         display = backend.root_display
         root_name = display.rstrip("/").rsplit("/", 1)[-1] or display
+        # Manual order lives in SQLite keyed by parent dir. Fetch the whole
+        # table once here instead of one connect+query per directory during
+        # the recursive walk — on big trees that's thousands of connections.
+        manual_orders = (
+            self.preferences_repository.get_all_manual_orders()
+            if prefs.sort_mode == "manual"
+            else None
+        )
         return self._build_directory_node(
-            "", root_name, prefs.sort_mode, backend, self.runtime_skip_relpaths()
+            "",
+            root_name,
+            prefs.sort_mode,
+            backend,
+            self.runtime_skip_relpaths(),
+            manual_orders=manual_orders,
         )
 
     def runtime_skip_relpaths(self) -> set[str]:
@@ -1065,17 +1078,22 @@ class WorkspaceService:
         sort_mode: SortMode,
         backend: StorageBackend,
         skip: set[str] | None = None,
+        manual_orders: dict[str, dict[str, int]] | None = None,
     ) -> TreeNode:
         skip = skip or set()
+        ignore_names = self.settings.tree_ignore_name_set
         children: list[TreeNode] = []
         entries = backend.list_children(relative_path)
-        sorted_entries = self._sort_entries(entries, relative_path, sort_mode)
+        sorted_entries = self._sort_entries(entries, relative_path, sort_mode, manual_orders)
 
         for entry in sorted_entries:
             # Never surface the .git directory in the notes tree — it's
             # internal VCS plumbing, not content, and auto-open/"show
-            # hidden" would otherwise wander into it.
-            if entry.is_dir and entry.name == ".git":
+            # hidden" would otherwise wander into it. The same goes for
+            # dependency/cache dirs (node_modules & friends, see
+            # NOTEELI_TREE_IGNORE_NAMES) — not descending into them is
+            # what keeps tree builds fast on real-world workspaces.
+            if entry.is_dir and (entry.name == ".git" or entry.name in ignore_names):
                 continue
             # Hide Noteeli's own runtime data (SQLite DB + sidecars, the
             # data_dir) when it happens to live inside the notes folder.
@@ -1083,7 +1101,9 @@ class WorkspaceService:
                 continue
             if entry.is_dir and not entry.is_symlink:
                 children.append(
-                    self._build_directory_node(entry.relative_path, entry.name, sort_mode, backend, skip)
+                    self._build_directory_node(
+                        entry.relative_path, entry.name, sort_mode, backend, skip, manual_orders
+                    )
                 )
             else:
                 children.append(TreeNode(
@@ -1109,11 +1129,18 @@ class WorkspaceService:
         entries: list[StorageEntry],
         parent_rel: str,
         sort_mode: SortMode,
+        manual_orders: dict[str, dict[str, int]] | None = None,
     ) -> list[StorageEntry]:
         if sort_mode != "manual":
             return sorted(entries, key=lambda e: (0 if e.is_dir and not e.is_symlink else 1, e.name.lower()))
 
-        order_map = self.preferences_repository.get_manual_order(parent_rel)
+        # A tree build passes the whole pre-fetched order table; one-off
+        # callers (e.g. _refresh_manual_order) query the single directory.
+        order_map = (
+            manual_orders.get(parent_rel, {})
+            if manual_orders is not None
+            else self.preferences_repository.get_manual_order(parent_rel)
+        )
         unordered_offset = len(order_map) + 1000
         return sorted(
             entries,

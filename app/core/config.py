@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 
 from pydantic import field_validator, model_validator
@@ -22,6 +22,16 @@ class Settings(BaseSettings):
     content_root: Path = PROJECT_ROOT / "content"
     data_dir: Path = PROJECT_ROOT / ".noteeli"
     allowed_markdown_extensions: tuple[str, ...] = (".md", ".markdown")
+    # Directory names the notes tree never descends into — dependency and
+    # cache dirs that can hold tens of thousands of files (one node_modules
+    # can dwarf the entire notes tree and make every tree build crawl).
+    # Matched by name at any depth, directories only; a *file* with one of
+    # these names still shows up. Comma-separated, overridable via
+    # NOTEELI_TREE_IGNORE_NAMES (set it empty to disable ignoring).
+    tree_ignore_names: str = (
+        "node_modules,__pycache__,.venv,venv,"
+        ".mypy_cache,.pytest_cache,.ruff_cache,.tox,.nox,.terraform"
+    )
     # Demo mode — when on, the app refuses every mutation at the service
     # layer, skips authentication entirely, and points at a baked
     # read-only content root. Toggle via NOTEELI_DEMO_MODE=1 or the
@@ -152,6 +162,12 @@ class Settings(BaseSettings):
     @property
     def database_path(self) -> Path:
         return self.data_dir / "noteeli.sqlite3"
+
+    @cached_property
+    def tree_ignore_name_set(self) -> frozenset[str]:
+        return frozenset(
+            name.strip() for name in self.tree_ignore_names.split(",") if name.strip()
+        )
 
     def ensure_runtime_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)

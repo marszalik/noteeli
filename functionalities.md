@@ -102,6 +102,10 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Path normalisation (Windows backslashes, double slashes) | ✅ `test_path_sanitisation_handles_windows_style_separators` | |
 | Last-opened-file persistence across reloads | 🌐 | `localStorage["last-opened-file"]` |
 | Sidebar root label relative to `NOTEELI_CONTENT_ROOT` (no server-path leak) | ✅ `test_content_root_display_is_relative_to_env_root` | `WorkspaceService.relativize_local_root`, `AppPreferences.content_root_display` (read-only, computed) |
+| Dependency/cache dirs ignored server-side (`node_modules`, `__pycache__`, `.venv`, …) | ✅ `test_build_tree_skips_dependency_directories`, `test_tree_ignore_names_is_configurable` | configurable via `NOTEELI_TREE_IGNORE_NAMES`; dirs only, files with those names still show |
+| Manual sort reads the whole order table once per tree build (no per-dir SQLite connect) | ✅ `test_manual_sort_tree_build_uses_one_bulk_order_query` | `get_all_manual_orders` |
+| Tree mutations patch the sidebar locally instead of re-downloading `/api/tree` | ✅ `test_create_and_save_do_not_reload_the_tree` (e2e) | `applyTreeAdditions` / `applyTreeRemoval` / `applyTreePathChange` in app.js; falls back to `loadTree()` when a patch can't apply |
+| Git-status refresh skips the tree re-render when per-file status is unchanged | 🌐 | `gitTreeSignature` fingerprint in `refreshGitStatus` |
 
 ## 4. File CRUD
 

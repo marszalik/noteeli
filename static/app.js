@@ -139,6 +139,7 @@ if (shell) {
   let gitInfo = null;                  // { is_repo, branch, ahead, behind, ... } or null
   let gitStatusByPath = {};            // { "rel/path": "modified"|"added"|... }
   let gitDirtyDirs = new Set();        // ancestor dirs that contain a change
+  let gitTreeSignature = null;         // last status fingerprint painted into the tree
   let preferenceProfiles = [];
   let editingPreferenceProfileId = null;
   let profileFormGdriveCredentials = "";
@@ -596,7 +597,7 @@ if (shell) {
         const ref = computeInsertRef(selectedPath, created.path);
         insertCallback(getEmbeddedAssetUrl(selectedPath, ref), created.name);
         setStatus(`${t("st_image_added")}: ${created.name}`);
-        loadTree();
+        applyTreeAdditions([created]);
       });
 
     if (useSubdir) {
@@ -680,7 +681,7 @@ if (shell) {
             // re-rendering the editor (which would cause a visible flash).
             const finalRef = computeInsertRef(sourceMdPath, created.path);
             (pendingEmbedSwaps[sourceMdPath] ??= {})[immediateRef] = finalRef;
-            loadTree();
+            applyTreeAdditions([created]);
             setStatus(`${t("st_image_added")}: ${created.name}`);
           }
           // If upload was skipped (same name already exists at target) the
@@ -4164,7 +4165,7 @@ if (shell) {
         method: "POST",
         body: JSON.stringify({ path: node.path }),
       });
-      await loadTree();
+      await applyTreeAdditions([created]);
       // Select + open the freshly created copy.
       selectedTreePath = created.path;
       selectedTreeKind = "file";
@@ -4192,7 +4193,7 @@ if (shell) {
         selectedTreeKind = "directory";
         toggleOverlay({ empty: true });
       }
-      await loadTree();
+      await applyTreeRemoval(node.path);
       setStatus(`${t("st_deleted")}: ${node.name}.`);
     } catch {
       setStatus(t("st_delete_fail"), true);
@@ -4693,6 +4694,144 @@ if (shell) {
     renderTree(treeData);
   }
 
+  // ── Local tree patching ──────────────────────────────────────────
+  // Mutations (create / rename / delete / move / upload / reorder)
+  // patch the in-memory treeData instead of re-downloading the whole
+  // tree — a full /api/tree round-trip re-scans every directory
+  // server-side, which crawls on big workspaces. Every apply* helper
+  // falls back to a full loadTree() when the expected nodes can't be
+  // found locally (e.g. a freshly created parent directory), so the
+  // UI never ends up stale.
+
+  function findTreeNode(node, targetPath) {
+    if (node.path === targetPath) {
+      return node;
+    }
+    for (const child of node.children || []) {
+      const match = findTreeNode(child, targetPath);
+      if (match) {
+        return match;
+      }
+    }
+    return null;
+  }
+
+  function findParentDirectoryNode(path) {
+    const parentPath = getParentPath(path);
+    return parentPath ? findDirectoryNode(treeData, parentPath) : treeData;
+  }
+
+  function treeNodeFromCreatedItem(item) {
+    return {
+      name: item.name,
+      path: item.path,
+      kind: item.kind,
+      children: [],
+      editable: Boolean(item.editable),
+      symlink: false,
+    };
+  }
+
+  // Mirrors the server's _sort_entries: directories first, then
+  // case-insensitive by name; in manual mode new items land at the end
+  // (the server appends unordered items after the ordered ones).
+  function insertTreeChild(parentNode, node) {
+    const children = (parentNode.children || []).filter((c) => c.path !== node.path);
+    if (preferences?.sort_mode === "manual") {
+      children.push(node);
+    } else {
+      const rank = (n) => (n.kind === "directory" ? 0 : 1);
+      const index = children.findIndex(
+        (c) =>
+          rank(c) > rank(node) ||
+          (rank(c) === rank(node) && c.name.toLowerCase() > node.name.toLowerCase()),
+      );
+      children.splice(index === -1 ? children.length : index, 0, node);
+    }
+    parentNode.children = children;
+  }
+
+  function removeTreeChild(path) {
+    const parentNode = findParentDirectoryNode(path);
+    if (!parentNode || !parentNode.children) {
+      return false;
+    }
+    const nextChildren = parentNode.children.filter((c) => c.path !== path);
+    if (nextChildren.length === parentNode.children.length) {
+      return false;
+    }
+    parentNode.children = nextChildren;
+    return true;
+  }
+
+  // Rebase a subtree's paths after a rename/move, keeping the
+  // expanded-state of any directory that travels with it.
+  function rewriteSubtreePaths(node, oldBase, newBase) {
+    const walk = (n) => {
+      const oldPath = n.path;
+      n.path = newBase + oldPath.slice(oldBase.length);
+      if (n.kind === "directory") {
+        if (expandedDirectories.has(oldPath)) {
+          expandedDirectories.delete(oldPath);
+          expandedDirectories.add(n.path);
+        }
+        (n.children || []).forEach(walk);
+      }
+    };
+    walk(node);
+  }
+
+  async function applyTreeAdditions(items) {
+    let patched = true;
+    for (const item of items || []) {
+      const parentNode = findParentDirectoryNode(item.path);
+      if (!parentNode) {
+        patched = false;
+        break;
+      }
+      insertTreeChild(parentNode, treeNodeFromCreatedItem(item));
+    }
+    if (!patched) {
+      await loadTree();
+      return;
+    }
+    renderTree(treeData);
+    refreshGitStatus();
+  }
+
+  async function applyTreeRemoval(path) {
+    if (!removeTreeChild(path)) {
+      await loadTree();
+      return;
+    }
+    for (const dir of [...expandedDirectories]) {
+      if (dir === path || dir.startsWith(`${path}/`)) {
+        expandedDirectories.delete(dir);
+      }
+    }
+    renderTree(treeData);
+    refreshGitStatus();
+    refreshPublishedItems();
+  }
+
+  async function applyTreePathChange(oldPath, item) {
+    const movedNode = findTreeNode(treeData, oldPath);
+    const parentNode = findParentDirectoryNode(item.path);
+    if (!movedNode || !parentNode || !removeTreeChild(oldPath)) {
+      await loadTree();
+      return;
+    }
+    rewriteSubtreePaths(movedNode, oldPath, item.path);
+    movedNode.name = item.name;
+    if (item.kind === "file") {
+      movedNode.editable = Boolean(item.editable);
+    }
+    insertTreeChild(parentNode, movedNode);
+    renderTree(treeData);
+    refreshGitStatus();
+    refreshPublishedItems();
+  }
+
   function isHiddenNode(node) {
     return node.name.startsWith(".");
   }
@@ -5152,7 +5291,8 @@ if (shell) {
         gitDirtyDirs = new Set();
         gitMenu?.classList.add("hidden");
         updateFileHistoryButton();
-        if (rerender && treeData) renderTree(treeData);
+        if (rerender && treeData && gitTreeSignature !== "") renderTree(treeData);
+        gitTreeSignature = "";
         return;
       }
       gitInfo = data;
@@ -5162,7 +5302,15 @@ if (shell) {
       gitMenu?.classList.remove("hidden");
       renderGitMenu();
       updateFileHistoryButton();
-      if (rerender && treeData) renderTree(treeData);
+      // Only re-render the tree when the per-file status actually
+      // changed — refreshGitStatus fires after most mutations and
+      // would otherwise trigger a redundant second full re-render.
+      const signature = (data.files || [])
+        .map((f) => `${f.path}:${f.status}`)
+        .sort()
+        .join("|");
+      if (rerender && treeData && signature !== gitTreeSignature) renderTree(treeData);
+      gitTreeSignature = signature;
     } catch {
       // Non-fatal — treat as "no git" for this round.
       gitInfo = null;
@@ -5938,14 +6086,11 @@ if (shell) {
       }
       toggleOverlay({ empty: false, unsupported: false });
       setStatus(automatic ? t("st_autosaved") : t("st_saved"));
-      if (!automatic) {
-        await loadTree();
-      } else {
-        // Autosave skips the full tree reload, but the git badge / change
-        // list still needs to reflect the new dirty state. Fire-and-forget
-        // so a slow status call (SFTP) never delays the autosave loop.
-        refreshGitStatus();
-      }
+      // Saving never changes the tree structure, so no tree reload —
+      // only the git badge / change list needs to reflect the new dirty
+      // state. Fire-and-forget so a slow status call (SFTP) never
+      // delays the save or the autosave loop.
+      refreshGitStatus();
     } catch (error) {
       setStatus(error.message, true);
     } finally {
@@ -6005,7 +6150,7 @@ if (shell) {
         expandedDirectories.add(parentPath);
       }
       closeCreateModal();
-      await loadTree();
+      await applyTreeAdditions([created]);
       selectedTreePath = created.path;
       selectedTreeKind = created.kind;
       if (created.kind === "file") {
@@ -6040,7 +6185,7 @@ if (shell) {
         if (renamed.kind === "file") await loadFile(renamed.path);
       }
       closeCreateModal();
-      await loadTree();
+      await applyTreePathChange(node.path, renamed);
       setStatus(`${t("st_renamed")}: ${renamed.name}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -6082,8 +6227,7 @@ if (shell) {
       if (uploadTargetPath) {
         expandedDirectories.add(uploadTargetPath);
       }
-      await loadTree();
-      renderTree(treeData);
+      await applyTreeAdditions(result.created_items);
 
       const createdCount = result.created_items.length;
       const skippedCount = result.skipped_items.length;
@@ -6118,7 +6262,7 @@ if (shell) {
       if (moved.kind === "directory") {
         expandedDirectories.add(moved.path);
       }
-      await loadTree();
+      await applyTreePathChange(sourcePath, moved);
       selectedTreePath = moved.path;
       selectedTreeKind = moved.kind;
       if (moved.kind === "file") {
@@ -6157,7 +6301,10 @@ if (shell) {
           ordered_paths: orderedPaths,
         }),
       });
-      await loadTree();
+      // The new order is fully known client-side — no tree re-fetch.
+      const byPath = new Map(parentNode.children.map((child) => [child.path, child]));
+      parentNode.children = orderedPaths.map((path) => byPath.get(path)).filter(Boolean);
+      renderTree(treeData);
       setStatus(t("st_order_saved"));
     } catch (error) {
       setStatus(error.message, true);
