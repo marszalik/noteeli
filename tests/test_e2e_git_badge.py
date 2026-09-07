@@ -396,6 +396,10 @@ def test_two_users_editing_simultaneously_get_own_signed_checkpoints(tmp_path):
         "NOTEELI_GIT_AUTOCOMMIT": "1",
         "NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS": "2",
         "NOTEELI_SESSION_SECRET": secret,
+        # _login_context marks requests non-local via X-Forwarded-Host,
+        # which is ignored unless explicitly trusted (the 1.8.0 security
+        # fix) — trust it here like a proxied production deployment does.
+        "NOTEELI_TRUST_FORWARDED_HOST": "1",
     }
     users = [
         ("anna@example.com", "Anna", "note.md"),
@@ -462,6 +466,10 @@ def test_history_modal_shows_commits_diff_and_blame(tmp_path):
         "NOTEELI_GIT_AUTOCOMMIT": "1",
         "NOTEELI_GIT_AUTOCOMMIT_IDLE_SECONDS": "2",
         "NOTEELI_SESSION_SECRET": secret,
+        # _login_context marks requests non-local via X-Forwarded-Host,
+        # which is ignored unless explicitly trusted (the 1.8.0 security
+        # fix) — trust it here like a proxied production deployment does.
+        "NOTEELI_TRUST_FORWARDED_HOST": "1",
     }
     with _running_server(tmp_path, extra_env) as (base_url, content):
         with sync_playwright() as p:
