@@ -494,6 +494,9 @@ def test_parser_roundtrip_preserves_foreign_content(board_server):
         try:
             page = browser.new_page()
             page.goto(base_url, wait_until="networkidle")
+            # `networkidle` can fire while the (deferred) app.js is still
+            # queued behind the CDN editor bundles — wait for the hook itself.
+            page.wait_for_function("() => window.__noteeliKanban", timeout=15_000)
             result = page.evaluate(
                 """(md) => {
                     const k = window.__noteeliKanban;

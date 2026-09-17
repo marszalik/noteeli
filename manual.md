@@ -84,7 +84,9 @@ described in their own sections below.
   stray click never destroys a folder.
 - **Duplicate** creates `name_1.md`, `name_2.md`, … next to the original.
 - **Download** fetches a single file as-is; downloading a folder gives you a
-  ZIP of the whole subtree.
+  ZIP of the whole subtree. In the installed (home-screen) app on a phone
+  the file opens in a separate sheet with the system share/save controls —
+  close it with *Done* to get back to your notes.
 
 **Moving and ordering.** Drag rows in the tree to move files between folders.
 With *manual* sort mode (Settings → Appearance) you can also drag to reorder

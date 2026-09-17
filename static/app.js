@@ -4341,7 +4341,7 @@ if (shell) {
         node.kind === "directory" ? t("ctx_download_zip") : t("ctx_download"),
         CONTEXT_ICONS.download,
         async () => {
-          window.location.href = `${config.downloadUrl}?path=${encodeURIComponent(node.path)}`;
+          triggerDownload(`${config.downloadUrl}?path=${encodeURIComponent(node.path)}`);
           setStatus(node.kind === "directory" ? t("st_preparing_zip") : t("st_start_download"));
         },
       ),
@@ -4451,6 +4451,50 @@ if (shell) {
         true,
       ),
     );
+  }
+
+  /**
+   * Is the app running as an installed PWA (home-screen icon) rather
+   * than inside a browser tab? Chromium/Firefox report it via the
+   * display-mode media query; iOS Safari via navigator.standalone.
+   */
+  function isStandaloneDisplay() {
+    try {
+      if (window.navigator.standalone === true) return true;
+      return window.matchMedia(
+        "(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)",
+      ).matches;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Start a file download WITHOUT navigating the app window.
+   *
+   * The old `window.location.href = url` was fine in a browser tab
+   * (an attachment response never replaces the page), but in an
+   * installed PWA there is no browser chrome: iOS rendered the PDF /
+   * markdown full-screen inside the app's webview with no back button,
+   * leaving the user stuck. In standalone mode we therefore open the
+   * URL in a new window — iOS shows it in an in-app browser sheet with
+   * a "Done" button (and its own share/save controls), Android Chrome
+   * just downloads. In a normal tab a hidden `<a download>` click keeps
+   * the current page and the status message intact.
+   */
+  function triggerDownload(url) {
+    if (isStandaloneDisplay()) {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "";
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   function openTreeContextMenu(event, node) {

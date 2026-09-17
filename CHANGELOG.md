@@ -11,6 +11,19 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-09-17
+
+### Fixed
+
+- **Downloads trapped the installed mobile app.** "Download" navigated
+  the whole app window to the file. In a browser tab that's harmless,
+  but in the home-screen (standalone PWA) app there is no browser
+  chrome, so iOS rendered the PDF / markdown full-screen with no back
+  button — the only way out was killing the app. Downloads no longer
+  navigate the app: a browser tab uses a hidden `<a download>` click,
+  the standalone app opens the file in a new window (iOS shows it in a
+  dismissable in-app sheet with share/save; Android just downloads).
+
 ## [1.11.0] - 2026-09-07
 
 ### Removed

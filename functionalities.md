@@ -197,6 +197,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Upload-stage UI panel (drop zone, file list, target dir) | 🌐 | `showUploadMode`, `submitUpload` |
 | Single-file download (proxied through `/api/download`) | ✅ `test_prepare_download_returns_original_file_for_regular_file` | `prepare_download` |
 | Directory download as ZIP | ✅ `test_prepare_download_returns_zip_for_directory` | |
+| Download never navigates the app window (hidden `<a download>` in a tab; `window.open` in standalone PWA so iOS shows a dismissable sheet instead of a dead-end full-screen file) | ✅ `tests/test_e2e_download_no_navigation.py` (e2e) | `triggerDownload` / `isStandaloneDisplay` in app.js |
 
 ## 9. Directory browser modal
 
