@@ -227,3 +227,10 @@ def test_forwarded_host_honoured_when_explicitly_trusted():
 
     trusting = AuthService(Settings(trust_forwarded_host=True))
     assert trusting.is_local_request(_request(spoofed)) is True
+
+
+def test_comments_api_requires_auth(client: TestClient):
+    assert client.get("/api/comments", params={"path": "x.md"}).status_code == 401
+    assert client.post("/api/comments", json={"path": "x.md", "text": "hi"}).status_code == 401
+    assert client.patch("/api/comments/c_abcdef", json={"path": "x.md", "status": "resolved"}).status_code == 401
+    assert client.delete("/api/comments/c_abcdef", params={"path": "x.md"}).status_code == 401

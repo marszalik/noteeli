@@ -12,6 +12,7 @@ The most-used features, by everyday name. Each links to its detail row.
 
 - **WYSIWYG Markdown editor** → [§6 Editors](#6-editors)
 - **Kanban board view for markdown files (Obsidian Kanban compatible)** → [§6 Editors](#6-editors)
+- **Review comments on a passage (panel + sidecar `_comments.md`)** → [§23 Review comments](#23-review-comments)
 - **Auto-save (debounced)** → [§5 Reading & saving](#5-reading--saving-documents)
 - **Manual save (Ctrl+S / button)** → [§5 Reading & saving](#5-reading--saving-documents)
 - **Inserting / pasting / dragging an image** → [§7 Embedded assets & images](#7-embedded-assets--images)
@@ -417,6 +418,43 @@ give add-to-home-screen an icon and the browser a status-bar tint.
 
 ---
 
+## 23. Review comments
+
+Comments anchor to a passage of a Markdown note. The note stays a plain
+document: the range is fenced by `<!--comment:c_a7f3d2:start-->` …
+`<!--comment:c_a7f3d2:end-->` (invisible to every renderer), the bodies
+live in the sibling `<note>_comments.md` (frontmatter `document:`, then one
+`## c_…` section per comment with `status:` / `created:` and the text).
+Toast UI's WYSIWYG converter crashes on an inline HTML comment, so
+`app.js` maps the markers to `<span data-comment="…">` marks on the way in
+and back on the way out — see the "Review comments" section of `app.js`.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Sidecar naming `<stem>_comments.md` next to the note | ✅ `test_comments_path_is_a_sibling_with_suffix` | `comments_path_for` |
+| Sidecar format parse ⇄ serialize (frontmatter, metadata, multi-line body, tolerant of missing frontmatter / unknown keys) | ✅ `test_parse_reads_frontmatter_metadata_and_multiline_body`, `test_serialize_round_trips_and_matches_the_documented_layout`, `test_parse_is_tolerant_of_missing_frontmatter_and_stray_prose` | `parse_comments`, `serialize_comments` |
+| Add comment (client-supplied or generated stable id) creates the sidecar | ✅ `test_add_comment_creates_sidecar_next_to_the_note` | `CommentsService.add_comment` |
+| List comments without a sidecar → empty, not an error | ✅ `test_list_comments_without_sidecar_is_empty_not_an_error` | |
+| Edit text, resolve / reopen, delete; last delete removes the sidecar | ✅ `test_update_resolve_and_delete` | |
+| Errors: unknown id, duplicate id, non-markdown target, commenting the sidecar itself, path traversal | ✅ `test_errors_for_missing_comment_duplicate_id_and_bad_targets` | |
+| Demo mode blocks writes, allows reads | ✅ `test_demo_mode_blocks_writes_but_allows_reading` | |
+| Auth guard on `/api/comments` (GET/POST/PATCH/DELETE) | ✅ `test_comments_api_requires_auth` | |
+| Public published page strips the range markers | ✅ `test_strip_markers_removes_range_fences_only` (helper) | `strip_markers` in `publish/router.py` — page rendering itself untested |
+| Markers render as a highlighted span (markers invisible), panel lists number + quote + text, margin badge | ✅ e2e `test_markers_render_as_highlight_and_round_trip_through_a_save` | `commentMarkersToSpans`, `renderCommentsList`, `layoutCommentBadges` |
+| Round trip: an unrelated edit + autosave writes the file with the exact same markers (range across a soft line break) | ✅ e2e `test_markers_render_as_highlight_and_round_trip_through_a_save` | `commentSpansToMarkers` — first open … last close re-joins per-line spans |
+| Select text → floating "Comment" chip → composer → note gets markers, sidecar gets the section; numbering follows document order | ✅ e2e `test_select_text_add_comment_writes_both_files` | `wrapWysiwygSelection` (ProseMirror `span` mark) |
+| Resolve hides the card (until "Show resolved"), delete (two-step confirm) strips the markers from the note | ✅ e2e `test_select_text_add_comment_writes_both_files` | `removeCommentRange` |
+| Cancelling the composer (Ctrl/Cmd+Alt+M shortcut) leaves no trace in either file | ✅ e2e `test_cancelled_comment_leaves_no_trace` | |
+| Comments from the Markdown source view (`replaceSelection` with a span) | 🌐 | `wrapMarkdownSelection` |
+| Markers survive Kanban / Text / Code views (transforms on every view switch) | 🌐 | `setEditorMode` |
+| Markers inside fenced code / inline code stay literal text | 🌐 | `commentMarkersToSpans` skips fences |
+| Orphan detection (range deleted from the text) shows "!" instead of a number | 🌐 | `commentEntries` |
+| Overlapping ranges are refused at creation ("Comments cannot overlap") | 🌐 | Toast UI marks cannot nest, so an overlap would truncate the outer range |
+| Sidecar shows in the tree with a speech-bubble icon; created/removed sidecar patches the tree locally | 🌐 | `applyCommentsResult` |
+| Panel auto-opens (desktop) for a note with open comments; open state remembered in localStorage | 🌐 | `loadCommentsFor` |
+| Mobile: topbar toggle hidden, panel is a right-hand drawer, badges + chip are the entry points | 🌐 | `app.css` media query |
+| Git checkpoint picks up sidecar writes | 🌐 | `record_checkpoint_save` in `comments/router.py` |
+
 ## Test coverage at a glance
 
 ```
@@ -434,9 +472,14 @@ tests/
 ├── test_sftp_backend.py             — 17 tests (exists/is_file/is_dir, read &
 │                                       write round-trips, listing, browse_dirs,
 │                                       create/rename/delete, rglob, root_display)
-├── test_auth_guard.py               — 13 tests (every workspace API endpoint
-│                                       gets 401 from non-local hosts; HTML root
-│                                       redirects to /login; local-host bypass)
+├── test_auth_guard.py               — 14 tests (every workspace + comments API
+│                                       endpoint gets 401 from non-local hosts;
+│                                       HTML root redirects to /login; local-host bypass)
+├── test_comments_service.py         — 10 tests (sidecar naming, parse ⇄ serialize,
+│                                       add/edit/resolve/delete, errors, demo mode)
+├── test_e2e_comments.py             —  3 tests (headless Chromium: markers ⇄
+│                                       highlight round trip, select → comment →
+│                                       both files, resolve/delete, cancel)
 ├── test_git_service.py              — 12 tests (status/commit flow, signatures,
 │                                       ignore rules)
 ├── test_preferences_service.py     —  5 tests (fallback to default root,

@@ -11,6 +11,35 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Review comments on a note.** Select text in the editor and click the
+  floating **Comment** chip (or the toolbar button, or Ctrl/Cmd+Alt+M)
+  to attach a comment to that passage. The document stays a plain
+  Markdown document: the range is fenced by two invisible HTML comments
+  (`<!--comment:c_a7f3d2:start-->` … `<!--comment:c_a7f3d2:end-->`) and
+  the comment bodies live next to the note in `<note>_comments.md` —
+  ordinary Markdown with one `## c_…` section per comment (`status`,
+  `created`, then the text), readable by humans and by an AI assistant
+  alongside the note. In the editor the passage is highlighted with a
+  numbered badge in the margin; a panel on the right lists the comments
+  (numbered in document order, with the quoted passage) with
+  Resolve / Reopen, Edit and Delete. Resolved comments are hidden by
+  default. Clicking a comment scrolls to its passage, clicking a badge
+  opens the comment. Editing text inside a range keeps the comment
+  attached; deleting the whole passage marks the comment as orphaned.
+  Ids are stable random tokens, so deleting one comment never renumbers
+  the others. New API: `GET/POST /api/comments`,
+  `PATCH/DELETE /api/comments/{id}`.
+
+### Fixed
+
+- **Phone topbar overflowed with a long file name.** The single-row
+  topbar sized the whole workspace column to its intrinsic width, so a
+  long note name pushed the Save button (and now the comment badges)
+  past the right edge of the screen. The row now shrinks to the viewport
+  and the title ellipsises as intended.
+
 ## [1.11.1] - 2026-09-17
 
 ### Fixed

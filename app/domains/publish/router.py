@@ -337,14 +337,17 @@ async def publish_public_file_api(request: Request, id: int, path: str = ""):
     # straight into a <div> instead of bringing up Toast UI / CodeMirror /
     # JSONEditor on a read-only page.
     from app.domains.publish import render as _render
+    from app.domains.comments.service import strip_markers as _strip_comment_markers
 
     if document.editable:
         asset_url = str(
             request.url_for("publish_public_file_preview_api", id=id)
         )
         if document.file_type == "markdown":
+            # Review-comment range markers are invisible HTML comments,
+            # but a public page has no comment panel — drop them outright.
             document.html = _render.render_markdown_html(
-                document.content,
+                _strip_comment_markers(document.content),
                 source_path=document.path,
                 asset_url=asset_url,
             )

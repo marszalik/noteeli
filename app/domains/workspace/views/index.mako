@@ -227,6 +227,12 @@
               <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
             </svg>
           </button>
+          <button id="comments-toggle" class="icon-button icon-button-small comments-toggle hidden" type="button" aria-label="Comments" aria-pressed="false" title="Comments" data-i18n-title="comments_toggle_title">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+            </svg>
+            <span id="comments-badge" class="git-menu-badge comments-badge hidden">0</span>
+          </button>
           <div class="editor-mode-menu-wrap">
             <button
               id="editor-mode-toggle"
@@ -278,6 +284,7 @@
         </div>
       </header>
 
+      <div class="workspace-body">
       <section class="editor-stage">
         <div id="editor"></div>
         <div id="json-editor" class="json-editor-panel hidden"></div>
@@ -322,6 +329,22 @@
           <p>Edycja dziala dla Markdown, a podglad dla obrazow i PDF. Ten typ pliku nie ma jeszcze obslugi.</p>
         </div>
       </section>
+
+      <aside id="comments-panel" class="comments-panel hidden" aria-label="Comments" aria-hidden="true">
+        <header class="comments-panel-header">
+          <strong data-i18n="comments_title">Komentarze</strong>
+          <label class="comments-show-resolved">
+            <input id="comments-show-resolved" type="checkbox" />
+            <span data-i18n="comments_show_resolved">Pokaż rozwiązane</span>
+          </label>
+          <button id="comments-close" class="icon-button icon-button-small" type="button" aria-label="Close comments">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </header>
+        <div id="comments-list" class="comments-list"></div>
+        <p id="comments-hint" class="comments-hint muted" data-i18n="comments_hint">Zaznacz tekst → „Komentarz”. Treść trafia do pliku obok notatki.</p>
+      </aside>
+      </div>
 
       <footer class="statusbar">
         <span id="status-message">Gotowe.</span>
@@ -549,6 +572,11 @@
       </footer>
     </section>
   </div>
+
+  <button id="comment-add-floating" class="comment-add-floating hidden" type="button" data-i18n-title="comments_add_title" title="Add a comment to the selection">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h4v2h-4v4h-2v-4H7v-2h4V7h2v4z"/></svg>
+    <span data-i18n="comments_add">Komentarz</span>
+  </button>
 
   <div id="history-modal" class="modal-backdrop hidden" aria-hidden="true">
     <section class="modal-card modal-card-history" role="dialog" aria-modal="true" aria-labelledby="history-title">

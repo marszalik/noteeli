@@ -77,6 +77,18 @@ class WorkspaceService:
             )
         return build_backend(prefs)
 
+    # Public aliases for sibling domains (comments) that operate on the
+    # same storage: they must go through the same backend selection,
+    # demo gate and path sanitisation as the workspace itself.
+    def get_backend(self) -> StorageBackend:
+        return self._get_backend()
+
+    def block_if_demo(self) -> None:
+        self._block_if_demo()
+
+    def resolve_relative_path(self, relative_path: str, backend: StorageBackend) -> str:
+        return self._resolve_path(relative_path, backend)
+
     def _block_if_demo(self) -> None:
         """Refuse every mutation when running as a public demo. Called
         at the top of each writing method — fails fast before the

@@ -555,6 +555,16 @@ if (shell) {
       return decorateMarkdownForPreview(markdown, selectedPath);
     },
     customHTMLRenderer: {
+      // Inline <span> survives WYSIWYG as a mark — the carrier for review
+      // comment ranges (see "Review comments" below). Without a renderer
+      // Toast UI silently drops every <span> on the way in.
+      htmlInline: {
+        span(node, { entering }) {
+          return entering
+            ? { type: "openTag", tagName: "span", attributes: node.attrs }
+            : { type: "closeTag", tagName: "span" };
+        },
+      },
       image(node) {
         const src = node.destination || "";
         if (selectedPath && !isExternalAssetTarget(src) && isEmbeddableAssetTarget(src)) {
@@ -651,6 +661,7 @@ if (shell) {
     markEditorDirty();
     scheduleMermaidPreviewRender();
     scheduleWysiwygDiagramRender();
+    scheduleCommentsLayout();
   });
   editor.on("focus", rememberEditorSelection);
   editor.on("caretChange", rememberEditorSelection);
@@ -2129,7 +2140,7 @@ if (shell) {
     }
 
     if (mode === "kanban") {
-      enterKanbanView(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
+      enterKanbanView(markdown ?? commentSpansToMarkers(cleanEmbeddedUrls(editor.getMarkdown())));
     } else if (mode === "code" || mode === "text") {
       // Both live in the CodeMirror panel — "text" is the bare file,
       // "code" adds markdown syntax highlighting.
@@ -2142,7 +2153,7 @@ if (shell) {
       const wasApplying = isApplyingDocument;
       isApplyingDocument = true;
       codeEditor.setOption("mode", null);
-      codeEditor.setValue(markdown ?? cleanEmbeddedUrls(editor.getMarkdown()));
+      codeEditor.setValue(markdown ?? commentSpansToMarkers(cleanEmbeddedUrls(editor.getMarkdown())));
       codeEditor.clearHistory();
       if (mode === "code") {
         codeEditor.setOption("mode", "markdown");
@@ -2159,7 +2170,7 @@ if (shell) {
         kanbanViewActive = false;
         hideKanbanMode();
         showEditorMode();
-        if (markdown != null) editor.setMarkdown(markdown, false);
+        if (markdown != null) editor.setMarkdown(commentMarkersToSpans(markdown), false);
         try { editor.moveCursorToStart(); } catch {}
       }
       // changeMode fires a Toast UI "change" event — guard it so a mere
@@ -2181,6 +2192,8 @@ if (shell) {
     if (persist && selectedPath && selectedFileType === "markdown" && selectedEditable) {
       storeFileViewMode(selectedPath, mode);
     }
+    hideCommentFloatingButton();
+    renderCommentsUi();
   }
 
   // The button opens a dropdown listing the views — picking one directly
@@ -2379,6 +2392,31 @@ if (shell) {
       st_file_reloaded: "Plik przeładowany z dysku.",
       refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
       toolbar_undo: "Cofnij", toolbar_redo: "Ponów",
+      comments_title: "Komentarze",
+      comments_toggle_title: "Komentarze do notatki",
+      comments_add: "Komentarz",
+      comments_add_title: "Dodaj komentarz do zaznaczenia (Ctrl+Alt+M)",
+      comments_placeholder: "Napisz komentarz…",
+      comments_submit: "Dodaj",
+      comments_cancel: "Anuluj",
+      comments_save: "Zapisz",
+      comments_edit: "Edytuj",
+      comments_delete: "Usuń",
+      comments_confirm_delete: "Na pewno?",
+      comments_resolve: "Rozwiąż",
+      comments_reopen: "Otwórz ponownie",
+      comments_resolved: "rozwiązany",
+      comments_show_resolved: "Pokaż rozwiązane",
+      comments_empty: "Brak komentarzy. Zaznacz fragment tekstu i kliknij „Komentarz”.",
+      comments_orphan: "Fragment usunięty z tekstu",
+      comments_select_text: "Zaznacz fragment tekstu, który chcesz skomentować.",
+      comments_no_overlap: "Komentarze nie mogą na siebie nachodzić.",
+      comments_hint: "Zaznacz tekst → „Komentarz”. Treść trafia do pliku obok notatki.",
+      st_comment_added: "Komentarz dodany.",
+      st_comment_deleted: "Komentarz usunięty.",
+      st_comment_resolved: "Komentarz rozwiązany.",
+      st_comment_reopened: "Komentarz otwarty ponownie.",
+      st_comment_saved: "Komentarz zapisany.",
       refresh_file_confirm: "Masz niezapisane zmiany. Przeładować plik z dysku i je odrzucić?",
       st_pdf_preview: "Podgląd PDF gotowy.",
       st_image_preview: "Podgląd obrazu gotowy.",
@@ -2557,6 +2595,31 @@ if (shell) {
       st_file_reloaded: "File reloaded from disk.",
       refresh_file_title: "Reload file (it may have changed in the background)",
       toolbar_undo: "Undo", toolbar_redo: "Redo",
+      comments_title: "Comments",
+      comments_toggle_title: "Comments on this note",
+      comments_add: "Comment",
+      comments_add_title: "Comment on the selection (Ctrl+Alt+M)",
+      comments_placeholder: "Write a comment…",
+      comments_submit: "Add",
+      comments_cancel: "Cancel",
+      comments_save: "Save",
+      comments_edit: "Edit",
+      comments_delete: "Delete",
+      comments_confirm_delete: "Sure?",
+      comments_resolve: "Resolve",
+      comments_reopen: "Reopen",
+      comments_resolved: "resolved",
+      comments_show_resolved: "Show resolved",
+      comments_empty: "No comments yet. Select some text and click “Comment”.",
+      comments_orphan: "Passage removed from the text",
+      comments_select_text: "Select the text you want to comment on.",
+      comments_no_overlap: "Comments cannot overlap.",
+      comments_hint: "Select text → “Comment”. The text goes to a file next to the note.",
+      st_comment_added: "Comment added.",
+      st_comment_deleted: "Comment deleted.",
+      st_comment_resolved: "Comment resolved.",
+      st_comment_reopened: "Comment reopened.",
+      st_comment_saved: "Comment saved.",
       refresh_file_confirm: "You have unsaved changes. Reload the file from disk and discard them?",
       st_pdf_preview: "PDF preview ready.",
       st_image_preview: "Image preview ready.",
@@ -2735,6 +2798,31 @@ if (shell) {
       st_file_reloaded: "Archivo recargado desde el disco.",
       refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
       toolbar_undo: "Deshacer", toolbar_redo: "Rehacer",
+      comments_title: "Comentarios",
+      comments_toggle_title: "Comentarios de esta nota",
+      comments_add: "Comentar",
+      comments_add_title: "Comentar la selección (Ctrl+Alt+M)",
+      comments_placeholder: "Escribe un comentario…",
+      comments_submit: "Añadir",
+      comments_cancel: "Cancelar",
+      comments_save: "Guardar",
+      comments_edit: "Editar",
+      comments_delete: "Eliminar",
+      comments_confirm_delete: "¿Seguro?",
+      comments_resolve: "Resolver",
+      comments_reopen: "Reabrir",
+      comments_resolved: "resuelto",
+      comments_show_resolved: "Mostrar resueltos",
+      comments_empty: "Aún no hay comentarios. Selecciona texto y pulsa «Comentar».",
+      comments_orphan: "Fragmento eliminado del texto",
+      comments_select_text: "Selecciona el texto que quieres comentar.",
+      comments_no_overlap: "Los comentarios no pueden solaparse.",
+      comments_hint: "Selecciona texto → «Comentar». El texto va a un archivo junto a la nota.",
+      st_comment_added: "Comentario añadido.",
+      st_comment_deleted: "Comentario eliminado.",
+      st_comment_resolved: "Comentario resuelto.",
+      st_comment_reopened: "Comentario reabierto.",
+      st_comment_saved: "Comentario guardado.",
       refresh_file_confirm: "Tienes cambios sin guardar. ¿Recargar el archivo desde el disco y descartarlos?",
       st_pdf_preview: "Vista previa PDF lista.",
       st_image_preview: "Vista previa de imagen lista.",
@@ -2913,6 +3001,31 @@ if (shell) {
       st_file_reloaded: "Datei von der Festplatte neu geladen.",
       refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
       toolbar_undo: "Rückgängig", toolbar_redo: "Wiederholen",
+      comments_title: "Kommentare",
+      comments_toggle_title: "Kommentare zu dieser Notiz",
+      comments_add: "Kommentar",
+      comments_add_title: "Auswahl kommentieren (Strg+Alt+M)",
+      comments_placeholder: "Kommentar schreiben…",
+      comments_submit: "Hinzufügen",
+      comments_cancel: "Abbrechen",
+      comments_save: "Speichern",
+      comments_edit: "Bearbeiten",
+      comments_delete: "Löschen",
+      comments_confirm_delete: "Sicher?",
+      comments_resolve: "Erledigen",
+      comments_reopen: "Wieder öffnen",
+      comments_resolved: "erledigt",
+      comments_show_resolved: "Erledigte anzeigen",
+      comments_empty: "Noch keine Kommentare. Text markieren und „Kommentar“ klicken.",
+      comments_orphan: "Textstelle wurde entfernt",
+      comments_select_text: "Markiere den Text, den du kommentieren möchtest.",
+      comments_no_overlap: "Kommentare dürfen sich nicht überlappen.",
+      comments_hint: "Text markieren → „Kommentar“. Der Text landet in einer Datei neben der Notiz.",
+      st_comment_added: "Kommentar hinzugefügt.",
+      st_comment_deleted: "Kommentar gelöscht.",
+      st_comment_resolved: "Kommentar erledigt.",
+      st_comment_reopened: "Kommentar wieder geöffnet.",
+      st_comment_saved: "Kommentar gespeichert.",
       refresh_file_confirm: "Du hast ungespeicherte Änderungen. Datei von der Festplatte neu laden und verwerfen?",
       st_pdf_preview: "PDF-Vorschau bereit.",
       st_image_preview: "Bildvorschau bereit.",
@@ -3091,6 +3204,31 @@ if (shell) {
       st_file_reloaded: "Файл перезагружен с диска.",
       refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
       toolbar_undo: "Отменить", toolbar_redo: "Повторить",
+      comments_title: "Комментарии",
+      comments_toggle_title: "Комментарии к заметке",
+      comments_add: "Комментарий",
+      comments_add_title: "Прокомментировать выделение (Ctrl+Alt+M)",
+      comments_placeholder: "Напишите комментарий…",
+      comments_submit: "Добавить",
+      comments_cancel: "Отмена",
+      comments_save: "Сохранить",
+      comments_edit: "Изменить",
+      comments_delete: "Удалить",
+      comments_confirm_delete: "Точно?",
+      comments_resolve: "Решено",
+      comments_reopen: "Открыть снова",
+      comments_resolved: "решён",
+      comments_show_resolved: "Показать решённые",
+      comments_empty: "Комментариев пока нет. Выделите текст и нажмите «Комментарий».",
+      comments_orphan: "Фрагмент удалён из текста",
+      comments_select_text: "Выделите текст, который хотите прокомментировать.",
+      comments_no_overlap: "Комментарии не могут пересекаться.",
+      comments_hint: "Выделите текст → «Комментарий». Текст попадает в файл рядом с заметкой.",
+      st_comment_added: "Комментарий добавлен.",
+      st_comment_deleted: "Комментарий удалён.",
+      st_comment_resolved: "Комментарий решён.",
+      st_comment_reopened: "Комментарий открыт снова.",
+      st_comment_saved: "Комментарий сохранён.",
       refresh_file_confirm: "Есть несохранённые изменения. Перезагрузить файл с диска и отменить их?",
       st_pdf_preview: "Предпросмотр PDF готов.",
       st_image_preview: "Предпросмотр изображения готов.",
@@ -3166,6 +3304,7 @@ if (shell) {
       editorModeToggle.textContent = editorModeLabel(currentEditorMode);
     }
     if (kanbanViewActive && kanbanBoard) renderKanbanBoard();
+    if (commentsUiReady) renderCommentsUi();
   }
 
   function t(key) {
@@ -4128,6 +4267,7 @@ if (shell) {
     updateHeader("", "");
     showEditorMode();
     editor.setMarkdown("", false);
+    loadCommentsFor(null);
     toggleOverlay({ empty: true, unsupported: false });
     await loadTree({ autoSelect: true });
   }
@@ -5083,6 +5223,7 @@ if (shell) {
     fileVideo: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-4 16v-7l5 3.5-5 3.5z",
     fileText: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
     fileGeneric: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z",
+    fileComments: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z",
   };
 
   // Extension → category mapping. Keep in sync with the CSS colours below
@@ -5103,6 +5244,8 @@ if (shell) {
 
   function getFileIconInfo(name) {
     const ext = (name.split(".").pop() || "").toLowerCase();
+    if (/_comments\.md$/i.test(name))
+      return { d: TREE_ICONS.fileComments, cls: "tree-icon-comments" };
     if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "avif"].includes(ext))
       return { d: TREE_ICONS.fileImage, cls: "tree-icon-image" };
     if (ext === "pdf")
@@ -6013,7 +6156,7 @@ if (shell) {
           openKanbanBoardView(file.content || "");
         } else if (mode === "code" || mode === "text") {
           showEditorMode();
-          editor.setMarkdown(file.content || "", false);
+          editor.setMarkdown(commentMarkersToSpans(file.content || ""), false);
           try { editor.moveCursorToStart(); } catch {}
           currentEditorMode = "wysiwyg"; // capture source for the switch below
           setEditorMode(mode, { persist: false });
@@ -6021,7 +6164,7 @@ if (shell) {
           showEditorMode();
           if (editorModeToggle) editorModeToggle.classList.remove("hidden");
           setEditorMode(mode, { persist: false });
-          editor.setMarkdown(file.content || "", false);
+          editor.setMarkdown(commentMarkersToSpans(file.content || ""), false);
           // Toast UI keeps the previous cursor position after setMarkdown, which
           // points into the *old* document — toolbar buttons (Task, lists, …)
           // then operate on stale, off-screen positions and look like they did
@@ -6048,6 +6191,7 @@ if (shell) {
       clearAutosaveTimer();
       isApplyingDocument = false;
       renderTree(treeData);
+      loadCommentsFor(file.path);
       // On a phone the overlay drawer covers the editor — close it once
       // the picked file is loaded so the user actually sees the note.
       // Docked (pinned) stays open: that's an explicit choice.
@@ -6096,7 +6240,7 @@ if (shell) {
     if (selectedFileType === "code") {
       return codeEditor.getValue();
     }
-    return cleanEmbeddedUrls(editor.getMarkdown());
+    return commentSpansToMarkers(cleanEmbeddedUrls(editor.getMarkdown()));
   }
 
   function scheduleAutosave() {
@@ -6654,6 +6798,13 @@ if (shell) {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === "KeyM") {
+      if (canUseComments()) {
+        event.preventDefault();
+        startNewComment();
+      }
+      return;
+    }
     if (event.key === "Escape" && !treeContextMenu.classList.contains("hidden")) {
       closeTreeContextMenu();
       return;
@@ -6792,10 +6943,894 @@ if (shell) {
   applyLanguage(shell.dataset.language || "pl");
   applyHiddenFilesToggleState();
   applyTreeScopeState();
+  // ── Review comments ───────────────────────────────────────────
+  //
+  // A comment anchors to a range of the note. In the FILE the range is
+  // fenced by two HTML comments — `<!--comment:c_a7f3d2:start-->` …
+  // `<!--comment:c_a7f3d2:end-->` — so the document stays a plain
+  // Markdown document that every renderer (GitHub, Obsidian, pandoc)
+  // shows unchanged. The comment bodies live next to the note in
+  // `<note>_comments.md` (see app/domains/comments/service.py).
+  //
+  // Toast UI's WYSIWYG converter crashes on an inline HTML comment, so
+  // the markers never reach the editor: on the way in they become
+  // `<span data-comment="ID">` marks (which Toast UI round-trips thanks
+  // to the htmlInline renderer registered on the editor), on the way
+  // out the spans turn back into markers. A span cannot cross a block
+  // boundary, so a multi-paragraph range is split into one span per
+  // line going in and re-joined (first open … last close) going out.
+  // Ids are random and stable; the numbers users see are computed from
+  // document order every render.
+
+  const commentsPanel = document.getElementById("comments-panel");
+  const commentsList = document.getElementById("comments-list");
+  const commentsToggle = document.getElementById("comments-toggle");
+  const commentsBadge = document.getElementById("comments-badge");
+  const commentsCloseButton = document.getElementById("comments-close");
+  const commentsShowResolvedInput = document.getElementById("comments-show-resolved");
+  const commentAddFloating = document.getElementById("comment-add-floating");
+
+  const COMMENT_MARKER_RE = /<!--comment:(c_[0-9a-f]{6,12}):(start|end)-->/g;
+  const COMMENT_BLOCK_PREFIX_RE = /^(\s*(?:>\s*)*(?:(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)?(?:#{1,6}\s+)?)/;
+  const COMMENT_FENCE_RE = /^\s*(```|~~~)/;
+  const COMMENT_SPAN_TOKEN_RE = /<span\b[^>]*>|<\/span>/g;
+  const COMMENT_SPAN_ID_RE = /data-comment="(c_[0-9a-f]{6,12})"/;
+
+  let commentsDoc = null;            // { document, comments_path, exists, comments } for commentsDocPath
+  let commentsDocPath = null;
+  let commentsPanelOpen = localStorage.getItem("comments-panel-open") === "1";
+  let commentsShowResolved = false;
+  let commentComposerId = null;      // a range is marked, its text is being written
+  let commentEditingId = null;
+  let commentConfirmDeleteId = null;
+  let commentActiveId = null;
+  let commentsLayoutTimer = null;
+  let commentFloatingTimer = null;
+  let commentBadgeLayer = null;
+  let commentDynamicStyle = null;
+  // `var` on purpose: applyLanguage() may run before this block's
+  // declarations are initialised, and a hoisted var reads as undefined
+  // instead of throwing.
+  var commentsUiReady = false;
+
+  // ── file markers ⇄ editor spans ──
+
+  function commentMarkersToSpans(markdown) {
+    if (!markdown || !markdown.includes("<!--comment:")) return markdown;
+    // Only a start that is later followed by an end for the same id is a
+    // range. Anything else is dropped here: an unmatched inline HTML
+    // comment would crash the WYSIWYG converter.
+    const starts = new Set();
+    const valid = new Set();
+    COMMENT_MARKER_RE.lastIndex = 0;
+    let match;
+    while ((match = COMMENT_MARKER_RE.exec(markdown))) {
+      const [, id, kind] = match;
+      if (kind === "start") starts.add(id);
+      else if (starts.has(id)) valid.add(id);
+    }
+    const state = { open: [], seen: new Set(), valid };
+    let inFence = false;
+    let inFrontmatter = false;
+    const lines = markdown.split("\n").map((line, index) => {
+      if (index === 0 && line.trim() === "---") {
+        inFrontmatter = true;
+        return line;
+      }
+      if (inFrontmatter) {
+        if (line.trim() === "---") inFrontmatter = false;
+        return line;
+      }
+      if (COMMENT_FENCE_RE.test(line)) {
+        inFence = !inFence;
+        return line;
+      }
+      if (inFence) return line; // markers inside code stay literal text
+      if (/^\s*\|/.test(line)) {
+        // table row: one span per cell, never across the pipes
+        return line.split("|").map((cell) => commentWrapLine(cell, state, false)).join("|");
+      }
+      return commentWrapLine(line, state, true);
+    });
+    return lines.join("\n");
+  }
+
+  function commentWrapLine(line, state, withBlockPrefix) {
+    const pieces = line.split(COMMENT_MARKER_RE); // [text, id, kind, text, id, kind, …, text]
+    if (pieces.length === 1 && !state.open.length) return line;
+    let out = "";
+    for (let index = 0; index < pieces.length; index += 3) {
+      let text = pieces[index];
+      if (index === 0 && withBlockPrefix) {
+        const prefix = (COMMENT_BLOCK_PREFIX_RE.exec(text) || [""])[0];
+        out += prefix;
+        text = text.slice(prefix.length);
+      }
+      out += commentWrapText(text, state.open);
+      const id = pieces[index + 1];
+      const kind = pieces[index + 2];
+      if (id === undefined || !state.valid.has(id)) continue;
+      if (kind === "start") {
+        if (!state.seen.has(id)) {
+          state.seen.add(id);
+          state.open.push(id);
+        }
+      } else {
+        const at = state.open.indexOf(id);
+        if (at !== -1) state.open.splice(at, 1);
+      }
+    }
+    return out;
+  }
+
+  function commentWrapText(text, open) {
+    if (!text || !open.length || !text.trim()) return text;
+    if (/^\s*:?-{2,}:?\s*$/.test(text)) return text; // table separator cell
+    const id = open[open.length - 1]; // innermost range wins (marks can't nest)
+    return `<span data-comment="${id}">${text}</span>`;
+  }
+
+  function commentSpansToMarkers(markdown) {
+    if (!markdown || !markdown.includes("data-comment=")) return markdown;
+    const stack = [];
+    const edits = [];
+    const firstOpen = new Map();
+    const lastClose = new Map();
+    COMMENT_SPAN_TOKEN_RE.lastIndex = 0;
+    let match;
+    while ((match = COMMENT_SPAN_TOKEN_RE.exec(markdown))) {
+      const token = match[0];
+      if (token === "</span>") {
+        const id = stack.pop();
+        if (id) {
+          const edit = { pos: match.index, len: token.length, text: "" };
+          edits.push(edit);
+          lastClose.set(id, edit);
+        }
+        continue;
+      }
+      const idMatch = COMMENT_SPAN_ID_RE.exec(token);
+      const id = idMatch ? idMatch[1] : null;
+      stack.push(id);
+      if (id) {
+        const edit = { pos: match.index, len: token.length, text: "" };
+        edits.push(edit);
+        if (!firstOpen.has(id)) firstOpen.set(id, edit);
+      }
+    }
+    for (const [id, edit] of firstOpen) edit.text = `<!--comment:${id}:start-->`;
+    for (const [id, edit] of lastClose) {
+      if (firstOpen.has(id)) edit.text = `<!--comment:${id}:end-->`;
+    }
+    let out = markdown;
+    for (let index = edits.length - 1; index >= 0; index -= 1) {
+      const edit = edits[index];
+      out = out.slice(0, edit.pos) + edit.text + out.slice(edit.pos + edit.len);
+    }
+    return out;
+  }
+
+  function commentStripMarkers(markdown, id) {
+    if (!markdown) return markdown;
+    const re = new RegExp(`<!--comment:${id}:(?:start|end)-->`, "g");
+    return markdown.replace(re, "");
+  }
+
+  function generateCommentId() {
+    const bytes = new Uint8Array(3);
+    crypto.getRandomValues(bytes);
+    return `c_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  // ── state ──
+
+  function canUseComments() {
+    return !config.isPublic
+      && Boolean(selectedPath)
+      && selectedEditable
+      && selectedFileType === "markdown"
+      && !/_comments\.md$/i.test(selectedPath);
+  }
+
+  function commentsApiUrl(id = null) {
+    return id ? `/api/comments/${encodeURIComponent(id)}` : "/api/comments";
+  }
+
+  async function loadCommentsFor(path) {
+    commentComposerId = null;
+    commentEditingId = null;
+    commentConfirmDeleteId = null;
+    commentActiveId = null;
+    if (!canUseComments() || !path) {
+      commentsDoc = null;
+      commentsDocPath = null;
+      renderCommentsUi();
+      return;
+    }
+    try {
+      const doc = await requestJson(`${commentsApiUrl()}?path=${encodeURIComponent(path)}`, { method: "GET" });
+      if (selectedPath !== path) return;
+      commentsDoc = doc;
+      commentsDocPath = path;
+      // Surface open comments on a note the first time around — but once
+      // the user has closed the panel themselves, respect that and leave
+      // the topbar count as the hint.
+      const neverToggled = localStorage.getItem("comments-panel-open") === null;
+      if (neverToggled && !isMobile() && doc.comments.some((c) => c.status === "open")) {
+        commentsPanelOpen = true;
+      }
+    } catch (error) {
+      commentsDoc = null;
+      commentsDocPath = null;
+      setStatus(error.message, true);
+    }
+    renderCommentsUi();
+  }
+
+  function applyCommentsResult(doc) {
+    commentsDoc = doc;
+    commentsDocPath = selectedPath;
+    // The sidecar is a real file: keep the tree (and the git badge) in
+    // step without a full reload.
+    const inTree = Boolean(findTreeNode(treeData, doc.comments_path));
+    if (doc.exists && !inTree) {
+      const name = doc.comments_path.split("/").pop();
+      applyTreeAdditions([{ name, path: doc.comments_path, kind: "file", editable: true }]);
+    } else if (!doc.exists && inTree) {
+      applyTreeRemoval(doc.comments_path);
+    } else {
+      refreshGitStatus();
+    }
+  }
+
+  // Document order of the ranges: DOM order in WYSIWYG, marker order in
+  // every other view. Ids without a range (the text was deleted) sort last.
+  function commentDocumentOrder() {
+    const ids = [];
+    if (currentEditorMode === "wysiwyg") {
+      editorContainer.querySelectorAll(".toastui-editor-ww-container span[data-comment]").forEach((el) => {
+        const id = el.dataset.comment;
+        if (id && !ids.includes(id)) ids.push(id);
+      });
+    } else {
+      let markdown = "";
+      try { markdown = getCurrentEditorContent(); } catch { markdown = ""; }
+      COMMENT_MARKER_RE.lastIndex = 0;
+      let match;
+      while ((match = COMMENT_MARKER_RE.exec(markdown))) {
+        if (match[2] === "start" && !ids.includes(match[1])) ids.push(match[1]);
+      }
+    }
+    return ids;
+  }
+
+  // Returns [{ comment, number, orphan, quote }] sorted for display.
+  function commentEntries() {
+    if (!commentsDoc) return [];
+    const order = commentDocumentOrder();
+    const rank = (id) => {
+      const at = order.indexOf(id);
+      return at === -1 ? Number.MAX_SAFE_INTEGER : at;
+    };
+    const sorted = [...commentsDoc.comments].sort((a, b) => rank(a.id) - rank(b.id));
+    let number = 0;
+    return sorted.map((comment) => {
+      const orphan = !order.includes(comment.id);
+      const isOpen = comment.status !== "resolved";
+      if (isOpen && !orphan) number += 1;
+      return { comment, orphan, number: isOpen && !orphan ? number : 0, quote: commentQuote(comment.id) };
+    });
+  }
+
+  function commentQuote(id) {
+    if (currentEditorMode !== "wysiwyg") return "";
+    const parts = [];
+    editorContainer.querySelectorAll(`.toastui-editor-ww-container span[data-comment="${id}"]`).forEach((el) => {
+      parts.push(el.textContent);
+    });
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  function commentById(id) {
+    return commentsDoc?.comments.find((c) => c.id === id) || null;
+  }
+
+  // ── panel ──
+
+  function setCommentsPanelOpen(open) {
+    commentsPanelOpen = Boolean(open);
+    localStorage.setItem("comments-panel-open", commentsPanelOpen ? "1" : "0");
+    renderCommentsUi();
+  }
+
+  function renderCommentsUi() {
+    const usable = canUseComments();
+    const showPanel = usable && commentsPanelOpen;
+    commentsToggle?.classList.toggle("hidden", !usable);
+    commentsToggle?.setAttribute("aria-pressed", String(showPanel));
+    commentsPanel?.classList.toggle("hidden", !showPanel);
+    commentsPanel?.setAttribute("aria-hidden", String(!showPanel));
+    if (commentsShowResolvedInput) commentsShowResolvedInput.checked = commentsShowResolved;
+
+    const openCount = commentsDoc ? commentsDoc.comments.filter((c) => c.status !== "resolved").length : 0;
+    if (commentsBadge) {
+      commentsBadge.textContent = String(openCount);
+      commentsBadge.classList.toggle("hidden", !usable || openCount === 0);
+    }
+
+    renderCommentDynamicStyle();
+    if (showPanel) renderCommentsList();
+    scheduleCommentsLayout();
+    if (!usable) hideCommentFloatingButton();
+  }
+
+  function renderCommentDynamicStyle() {
+    if (!commentDynamicStyle) {
+      commentDynamicStyle = document.createElement("style");
+      commentDynamicStyle.id = "comment-dynamic-style";
+      document.head.appendChild(commentDynamicStyle);
+    }
+    if (!canUseComments() || !commentsDoc) {
+      commentDynamicStyle.textContent = "";
+      return;
+    }
+    const rules = [];
+    for (const comment of commentsDoc.comments) {
+      const selector = `.toastui-editor-contents span[data-comment="${comment.id}"]`;
+      if (comment.status === "resolved") {
+        if (commentsShowResolved) {
+          rules.push(`${selector}{border-bottom:1px dotted var(--muted);}`);
+        }
+        continue;
+      }
+      rules.push(`${selector}{background:color-mix(in srgb, var(--accent) 18%, transparent);border-bottom:2px solid color-mix(in srgb, var(--accent) 55%, transparent);}`);
+    }
+    if (commentActiveId) {
+      rules.push(`.toastui-editor-contents span[data-comment="${commentActiveId}"]{background:color-mix(in srgb, var(--accent) 36%, transparent);}`);
+    }
+    commentDynamicStyle.textContent = rules.join("\n");
+  }
+
+  function commentCreatedUnix(comment) {
+    const ms = Date.parse(comment.created || "");
+    return Number.isFinite(ms) ? Math.round(ms / 1000) : 0;
+  }
+
+  function renderCommentsList() {
+    if (!commentsList) return;
+    commentsList.innerHTML = "";
+    const entries = commentEntries();
+    const visible = entries.filter(({ comment }) => commentsShowResolved || comment.status !== "resolved");
+
+    if (commentComposerId) {
+      commentsList.appendChild(renderCommentComposer());
+    }
+    if (!visible.length && !commentComposerId) {
+      const empty = document.createElement("p");
+      empty.className = "comments-empty";
+      empty.textContent = t("comments_empty");
+      commentsList.appendChild(empty);
+      return;
+    }
+    for (const entry of visible) {
+      commentsList.appendChild(renderCommentCard(entry));
+    }
+  }
+
+  function commentTextarea(initial, onSubmit, onCancel) {
+    const textarea = document.createElement("textarea");
+    textarea.className = "comment-textarea";
+    textarea.placeholder = t("comments_placeholder");
+    textarea.value = initial || "";
+    textarea.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        onSubmit();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+      }
+    });
+    textarea.addEventListener("click", (event) => event.stopPropagation());
+    return textarea;
+  }
+
+  function commentActionButton(label, onClick, tone = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `comment-action${tone ? ` ${tone}` : ""}`;
+    button.textContent = label;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onClick();
+    });
+    return button;
+  }
+
+  function renderCommentComposer() {
+    const card = document.createElement("article");
+    card.className = "comment-card is-composer";
+    card.dataset.id = commentComposerId;
+    const head = document.createElement("div");
+    head.className = "comment-card-head";
+    const quote = document.createElement("p");
+    quote.className = "comment-quote";
+    quote.textContent = commentQuote(commentComposerId);
+    const submit = () => submitNewComment(textarea.value);
+    const cancel = () => cancelNewComment();
+    const textarea = commentTextarea("", submit, cancel);
+    const actions = document.createElement("div");
+    actions.className = "comment-card-actions";
+    actions.append(
+      commentActionButton(t("comments_cancel"), cancel),
+      commentActionButton(t("comments_submit"), submit, "is-primary"),
+    );
+    if (quote.textContent) head.appendChild(quote);
+    card.append(head, textarea, actions);
+    setTimeout(() => textarea.focus(), 0);
+    return card;
+  }
+
+  function renderCommentCard({ comment, orphan, number, quote }) {
+    const card = document.createElement("article");
+    const resolved = comment.status === "resolved";
+    card.className = "comment-card"
+      + (resolved ? " is-resolved" : "")
+      + (comment.id === commentActiveId ? " is-active" : "");
+    card.dataset.id = comment.id;
+
+    const head = document.createElement("div");
+    head.className = "comment-card-head";
+    const badge = document.createElement("span");
+    badge.className = "comment-number" + (resolved ? " is-resolved" : "") + (orphan ? " is-orphan" : "");
+    badge.textContent = resolved ? "✓" : (orphan ? "!" : String(number));
+    const when = document.createElement("time");
+    when.dateTime = comment.created || "";
+    when.textContent = formatRelativeTime(commentCreatedUnix(comment));
+    head.append(badge, when);
+    if (resolved) {
+      const label = document.createElement("span");
+      label.textContent = t("comments_resolved");
+      head.appendChild(label);
+    }
+
+    const quoteEl = document.createElement("p");
+    quoteEl.className = "comment-quote" + (orphan ? " is-orphan" : "");
+    quoteEl.textContent = orphan ? t("comments_orphan") : quote;
+
+    const actions = document.createElement("div");
+    actions.className = "comment-card-actions";
+
+    if (commentEditingId === comment.id) {
+      const submit = () => saveCommentText(comment.id, textarea.value);
+      const cancel = () => {
+        commentEditingId = null;
+        renderCommentsList();
+      };
+      const textarea = commentTextarea(comment.text, submit, cancel);
+      actions.append(
+        commentActionButton(t("comments_cancel"), cancel),
+        commentActionButton(t("comments_save"), submit, "is-primary"),
+      );
+      card.append(head, quoteEl, textarea, actions);
+      setTimeout(() => textarea.focus(), 0);
+    } else {
+      const text = document.createElement("p");
+      text.className = "comment-text";
+      text.textContent = comment.text;
+      const deleteLabel = commentConfirmDeleteId === comment.id ? t("comments_confirm_delete") : t("comments_delete");
+      actions.append(
+        commentActionButton(deleteLabel, () => deleteComment(comment.id), "is-danger"),
+        commentActionButton(t("comments_edit"), () => {
+          commentEditingId = comment.id;
+          commentConfirmDeleteId = null;
+          renderCommentsList();
+        }),
+        commentActionButton(
+          resolved ? t("comments_reopen") : t("comments_resolve"),
+          () => setCommentStatus(comment.id, resolved ? "open" : "resolved"),
+          resolved ? "" : "is-primary",
+        ),
+      );
+      card.append(head, quoteEl, text, actions);
+    }
+
+    card.addEventListener("click", () => {
+      if (commentConfirmDeleteId && commentConfirmDeleteId !== comment.id) {
+        commentConfirmDeleteId = null;
+        renderCommentsList();
+      }
+      focusCommentRange(comment.id);
+    });
+    return card;
+  }
+
+  // ── range navigation ──
+
+  function setActiveComment(id) {
+    commentActiveId = id;
+    renderCommentDynamicStyle();
+    commentsList?.querySelectorAll(".comment-card").forEach((card) => {
+      card.classList.toggle("is-active", card.dataset.id === id);
+    });
+    commentBadgeLayer?.querySelectorAll(".comment-badge").forEach((badge) => {
+      badge.classList.toggle("is-active", badge.dataset.id === id);
+    });
+  }
+
+  function focusCommentRange(id) {
+    setActiveComment(id);
+    if (currentEditorMode !== "wysiwyg") return;
+    const span = editorContainer.querySelector(`.toastui-editor-ww-container span[data-comment="${id}"]`);
+    if (span) span.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function focusCommentCard(id) {
+    if (!commentsPanelOpen) setCommentsPanelOpen(true);
+    setActiveComment(id);
+    const comment = commentById(id);
+    if (comment?.status === "resolved" && !commentsShowResolved) {
+      commentsShowResolved = true;
+      renderCommentsUi();
+      setActiveComment(id);
+    }
+    const card = commentsList?.querySelector(`.comment-card[data-id="${id}"]`);
+    if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // ── margin badges (WYSIWYG only) ──
+
+  function ensureCommentBadgeLayer() {
+    const container = editorContainer.querySelector(".toastui-editor-ww-container");
+    if (!container) return null;
+    if (!commentBadgeLayer || commentBadgeLayer.parentElement !== container) {
+      commentBadgeLayer?.remove();
+      commentBadgeLayer = document.createElement("div");
+      commentBadgeLayer.className = "comment-badge-layer";
+      container.appendChild(commentBadgeLayer);
+      // The contenteditable scrolls internally; badges follow via capture.
+      container.addEventListener("scroll", scheduleCommentsLayout, true);
+    }
+    return commentBadgeLayer;
+  }
+
+  function scheduleCommentsLayout() {
+    if (commentsLayoutTimer) return;
+    commentsLayoutTimer = requestAnimationFrame(() => {
+      commentsLayoutTimer = null;
+      layoutCommentBadges();
+    });
+  }
+
+  function layoutCommentBadges() {
+    const layer = ensureCommentBadgeLayer();
+    if (!layer) return;
+    layer.innerHTML = "";
+    if (!canUseComments() || !commentsDoc || currentEditorMode !== "wysiwyg") return;
+    const container = layer.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    let lastTop = -Infinity;
+    for (const { comment, orphan, number } of commentEntries()) {
+      if (orphan) continue;
+      const resolved = comment.status === "resolved";
+      if (resolved && !commentsShowResolved) continue;
+      const span = editorContainer.querySelector(`.toastui-editor-ww-container span[data-comment="${comment.id}"]`);
+      if (!span) continue;
+      const rect = span.getBoundingClientRect();
+      if (!rect.height) continue;
+      let top = rect.top - containerRect.top;
+      if (top < lastTop + 20) top = lastTop + 20;
+      lastTop = top;
+      const badge = document.createElement("button");
+      badge.type = "button";
+      badge.className = "comment-badge"
+        + (resolved ? " is-resolved" : "")
+        + (comment.id === commentActiveId ? " is-active" : "");
+      badge.dataset.id = comment.id;
+      badge.style.top = `${Math.round(top)}px`;
+      badge.textContent = resolved ? "✓" : String(number);
+      badge.title = comment.text.slice(0, 120);
+      badge.addEventListener("mousedown", (event) => event.preventDefault());
+      badge.addEventListener("click", (event) => {
+        event.stopPropagation();
+        focusCommentCard(comment.id);
+      });
+      layer.appendChild(badge);
+    }
+  }
+
+  // ── creating a comment from the selection ──
+
+  function wrapWysiwygSelection(id) {
+    const view = editor.wwEditor?.view;
+    const markType = view?.state.schema.marks.span;
+    if (!view || !markType) return false;
+    const { from, to, empty } = view.state.selection;
+    if (empty) {
+      setStatus(t("comments_select_text"), true);
+      return false;
+    }
+    let hasText = false;
+    let overlaps = false;
+    view.state.doc.nodesBetween(from, to, (node) => {
+      if (!node.isText) return;
+      hasText = true;
+      if (node.marks.some((m) => m.type === markType && m.attrs.htmlAttrs?.["data-comment"])) overlaps = true;
+    });
+    if (!hasText) {
+      setStatus(t("comments_select_text"), true);
+      return false;
+    }
+    if (overlaps) {
+      setStatus(t("comments_no_overlap"), true);
+      return false;
+    }
+    const mark = markType.create({ htmlAttrs: { "data-comment": id }, htmlInline: true });
+    view.dispatch(view.state.tr.addMark(from, to, mark));
+    return true;
+  }
+
+  function wrapMarkdownSelection(id) {
+    let text = "";
+    try { text = editor.getSelectedText() || ""; } catch { text = ""; }
+    if (!text.trim()) {
+      setStatus(t("comments_select_text"), true);
+      return false;
+    }
+    if (text.includes("data-comment=")) {
+      setStatus(t("comments_no_overlap"), true);
+      return false;
+    }
+    editor.replaceSelection(`<span data-comment="${id}">${text}</span>`);
+    return true;
+  }
+
+  function removeCommentRange(id) {
+    if (currentEditorMode === "wysiwyg") {
+      const view = editor.wwEditor?.view;
+      const markType = view?.state.schema.marks.span;
+      if (!view || !markType) return;
+      let tr = view.state.tr;
+      let touched = false;
+      view.state.doc.descendants((node, pos) => {
+        if (!node.isText) return;
+        for (const mark of node.marks) {
+          if (mark.type === markType && mark.attrs.htmlAttrs?.["data-comment"] === id) {
+            tr = tr.removeMark(pos, pos + node.nodeSize, mark);
+            touched = true;
+          }
+        }
+      });
+      if (touched) view.dispatch(tr);
+      return;
+    }
+    if (currentEditorMode === "markdown") {
+      const current = commentSpansToMarkers(editor.getMarkdown());
+      const next = commentStripMarkers(current, id);
+      if (next !== current) editor.setMarkdown(commentMarkersToSpans(next), false);
+      return;
+    }
+    if ((currentEditorMode === "code" || currentEditorMode === "text") && codeEditor) {
+      const current = codeEditor.getValue();
+      const next = commentStripMarkers(current, id);
+      if (next !== current) codeEditor.setValue(next);
+    }
+    // kanban: cards never show markers; a stray pair is harmless and
+    // disappears the next time the note is edited in the editor.
+  }
+
+  function startNewComment() {
+    if (!canUseComments()) return;
+    if (currentEditorMode !== "wysiwyg" && currentEditorMode !== "markdown") {
+      setStatus(t("comments_select_text"), true);
+      return;
+    }
+    if (commentComposerId) cancelNewComment();
+    const id = generateCommentId();
+    const wrapped = currentEditorMode === "wysiwyg" ? wrapWysiwygSelection(id) : wrapMarkdownSelection(id);
+    if (!wrapped) return;
+    hideCommentFloatingButton();
+    markEditorDirty();
+    commentComposerId = id;
+    commentEditingId = null;
+    commentConfirmDeleteId = null;
+    commentActiveId = id;
+    if (!commentsDoc) {
+      commentsDoc = { document: selectedPath, comments_path: "", exists: false, comments: [] };
+      commentsDocPath = selectedPath;
+    }
+    setCommentsPanelOpen(true);
+  }
+
+  function cancelNewComment() {
+    const id = commentComposerId;
+    commentComposerId = null;
+    if (id) {
+      removeCommentRange(id);
+      markEditorDirty();
+    }
+    if (commentActiveId === id) commentActiveId = null;
+    renderCommentsUi();
+  }
+
+  async function submitNewComment(text) {
+    const id = commentComposerId;
+    if (!id) return;
+    if (!text.trim()) {
+      setStatus(t("comments_placeholder"), true);
+      return;
+    }
+    try {
+      const doc = await requestJson(commentsApiUrl(), {
+        method: "POST",
+        body: JSON.stringify({ path: selectedPath, text: text.trim(), id }),
+      });
+      commentComposerId = null;
+      applyCommentsResult(doc);
+      setStatus(t("st_comment_added"));
+      // The range lives in the note: make sure it reaches the disk too.
+      if (editorDirty && isAutosaveEnabled()) scheduleAutosave();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    renderCommentsUi();
+  }
+
+  async function saveCommentText(id, text) {
+    if (!text.trim()) {
+      setStatus(t("comments_placeholder"), true);
+      return;
+    }
+    try {
+      const doc = await requestJson(commentsApiUrl(id), {
+        method: "PATCH",
+        body: JSON.stringify({ path: selectedPath, text: text.trim() }),
+      });
+      commentEditingId = null;
+      applyCommentsResult(doc);
+      setStatus(t("st_comment_saved"));
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    renderCommentsUi();
+  }
+
+  async function setCommentStatus(id, status) {
+    try {
+      const doc = await requestJson(commentsApiUrl(id), {
+        method: "PATCH",
+        body: JSON.stringify({ path: selectedPath, status }),
+      });
+      applyCommentsResult(doc);
+      setStatus(status === "resolved" ? t("st_comment_resolved") : t("st_comment_reopened"));
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    renderCommentsUi();
+  }
+
+  async function deleteComment(id) {
+    if (commentConfirmDeleteId !== id) {
+      commentConfirmDeleteId = id;
+      renderCommentsList();
+      return;
+    }
+    commentConfirmDeleteId = null;
+    try {
+      const doc = await requestJson(`${commentsApiUrl(id)}?path=${encodeURIComponent(selectedPath)}`, {
+        method: "DELETE",
+      });
+      removeCommentRange(id);
+      markEditorDirty();
+      if (commentActiveId === id) commentActiveId = null;
+      applyCommentsResult(doc);
+      setStatus(t("st_comment_deleted"));
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    renderCommentsUi();
+  }
+
+  // ── floating "Comment" chip on selection ──
+
+  function hideCommentFloatingButton() {
+    commentAddFloating?.classList.add("hidden");
+  }
+
+  function updateCommentFloatingButton() {
+    if (!commentAddFloating) return;
+    if (!canUseComments() || (currentEditorMode !== "wysiwyg" && currentEditorMode !== "markdown")) {
+      hideCommentFloatingButton();
+      return;
+    }
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      hideCommentFloatingButton();
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const host = editorContainer.querySelector(
+      currentEditorMode === "wysiwyg" ? ".toastui-editor-ww-container" : ".toastui-editor-md-container",
+    );
+    if (!host || !host.contains(range.commonAncestorContainer)) {
+      hideCommentFloatingButton();
+      return;
+    }
+    if (!range.toString().trim()) {
+      hideCommentFloatingButton();
+      return;
+    }
+    const rects = range.getClientRects();
+    const rect = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect();
+    if (!rect || (!rect.width && !rect.height)) {
+      hideCommentFloatingButton();
+      return;
+    }
+    commentAddFloating.classList.remove("hidden");
+    const width = commentAddFloating.offsetWidth || 120;
+    const height = commentAddFloating.offsetHeight || 32;
+    let left = rect.right + 8;
+    if (left + width > window.innerWidth - 8) left = Math.max(8, rect.left - width - 8);
+    let top = rect.bottom + 8;
+    if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 8);
+    commentAddFloating.style.left = `${Math.round(left)}px`;
+    commentAddFloating.style.top = `${Math.round(top)}px`;
+  }
+
+  function scheduleCommentFloatingUpdate() {
+    clearTimeout(commentFloatingTimer);
+    commentFloatingTimer = setTimeout(updateCommentFloatingButton, 120);
+  }
+
+  document.addEventListener("selectionchange", scheduleCommentFloatingUpdate);
+  commentAddFloating?.addEventListener("mousedown", (event) => event.preventDefault());
+  commentAddFloating?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    startNewComment();
+  });
+
+  // ── toolbar button ──
+
+  function attachCommentToolbarButton() {
+    const toolbar = editorContainer.querySelector(".toastui-editor-defaultUI-toolbar");
+    if (!toolbar || toolbar.querySelector(".noteeli-comment-toolbar-group")) return;
+    const group = document.createElement("div");
+    group.className = "toastui-editor-toolbar-group noteeli-comment-toolbar-group";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "noteeli-toolbar-button noteeli-comment-toolbar-button";
+    button.setAttribute("aria-label", t("comments_add_title"));
+    button.title = t("comments_add_title");
+    button.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/></svg>';
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      startNewComment();
+    });
+    group.appendChild(button);
+    toolbar.appendChild(group);
+  }
+
+  // ── wiring ──
+
+  commentsToggle?.addEventListener("click", () => setCommentsPanelOpen(!commentsPanelOpen));
+  commentsCloseButton?.addEventListener("click", () => setCommentsPanelOpen(false));
+  commentsShowResolvedInput?.addEventListener("change", () => {
+    commentsShowResolved = commentsShowResolvedInput.checked;
+    renderCommentsUi();
+  });
+  window.addEventListener("resize", () => {
+    scheduleCommentsLayout();
+    hideCommentFloatingButton();
+  });
+  commentsUiReady = true;
+
   renderUploadFileList();
   showEditorMode();
   attachUndoRedoToolbarButtons();
   attachDiagramToolbarButtons();
+  attachCommentToolbarButton();
   toggleOverlay({ empty: true, unsupported: false });
   // Public viewer ships only tree + file URLs. Skip preferences and
   // profile loading — those endpoints don't exist on the public surface,

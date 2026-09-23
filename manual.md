@@ -142,6 +142,57 @@ everywhere (Noteeli, GitHub, Azure DevOps) instead of only in Obsidian.
 a script, a git pull), the reload button in the topbar re-reads it — and
 warns you first if you have unsaved edits.
 
+### Review comments
+
+Select a passage in the editor and click the floating **Comment** chip
+(or the speech-bubble toolbar button, or press **Ctrl/Cmd+Alt+M**), write
+your note in the panel that slides in on the right, and click **Add**. The
+passage gets a subtle highlight and a numbered badge in the margin; the
+panel lists every comment in document order with the quoted passage.
+Click a comment to scroll to its passage, click a badge to jump to the
+comment. Each comment has **Resolve** (it disappears until you tick
+*Show resolved*, and can be reopened), **Edit** and **Delete**. The
+topbar bubble shows how many comments are still open. Comments are
+per note — the panel follows whichever note you have open.
+
+The document stays a document. The range is fenced by two invisible
+HTML comments right in the Markdown:
+
+```markdown
+Whether a machine is <!--comment:c_a7f3d2:start-->conscious is a question
+without an instrument<!--comment:c_a7f3d2:end-->.
+```
+
+and the comment text lives in a sibling file, `article_comments.md`,
+which is ordinary Markdown too:
+
+```markdown
+---
+document: article.md
+---
+## c_a7f3d2
+status: open
+created: 2026-09-23T20:41:00+02:00
+
+Is this sentence too absolute?
+```
+
+Both files are readable anywhere — GitHub, Obsidian, `grep` — and both
+travel through git, checkpoints and publishing like any other note
+(published pages simply drop the markers). Because the comments file is
+plain text you can hand it to an AI assistant together with the note:
+
+> Read `article.md` and `article_comments.md`. For each open comment
+> propose one minimal change. Do not modify the document.
+
+Editing text inside a commented passage keeps the comment attached; the
+markers only go away when you delete the whole passage — the comment then
+shows a **!** badge ("passage removed") and can still be resolved or
+deleted. Comments cannot overlap. Ids are stable random tokens, so
+deleting one comment never renumbers the others; the numbers you see are
+just document order. On a phone the topbar has no comments button — tap a
+margin badge to open the panel, or select text and tap **Comment**.
+
 ### Kanban boards
 
 A kanban board in Noteeli is a **plain Markdown file** — the same format as
