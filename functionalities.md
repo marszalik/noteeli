@@ -447,6 +447,7 @@ and back on the way out — see the "Review comments" section of `app.js`.
 | Cancelling the composer (Ctrl/Cmd+Alt+M shortcut) leaves no trace in either file | ✅ e2e `test_cancelled_comment_leaves_no_trace` | |
 | Chip works when the selection collapses before the click (touch) — acts on the range it was shown for | ✅ e2e `test_chip_still_works_when_the_selection_collapses_before_the_click` | `commentChipSelection` snapshot |
 | Selection running into a neighbouring comment is trimmed to the free text, not refused | ✅ e2e `test_selection_running_into_an_existing_comment_is_trimmed` | `wrapWysiwygSelection` |
+| A refusal (no selection / overlap) shows a fading toast next to the selection, not only the status bar | ✅ e2e `test_refusal_shows_a_toast_next_to_the_selection` | `commentNotice` |
 | Orphaned marker pairs (no sidecar entry) are pruned on load and never block a new comment | ✅ e2e `test_orphaned_range_markers_never_block_a_new_comment` | `pruneUnknownCommentRanges`, `knownCommentIds` — regression from a session-timeout half-creation |
 | Comments from the Markdown source view (`replaceSelection` with a span) | 🌐 | `wrapMarkdownSelection` |
 | Markers survive Kanban / Text / Code views (transforms on every view switch) | 🌐 | `setEditorMode` |
@@ -480,7 +481,7 @@ tests/
 │                                       HTML root redirects to /login; local-host bypass)
 ├── test_comments_service.py         — 10 tests (sidecar naming, parse ⇄ serialize,
 │                                       add/edit/resolve/delete, errors, demo mode)
-├── test_e2e_comments.py             —  6 tests (headless Chromium: markers ⇄
+├── test_e2e_comments.py             —  7 tests (headless Chromium: markers ⇄
 │                                       highlight round trip, select → comment →
 │                                       both files, resolve/delete, cancel, chip
 │                                       snapshot, overlap trimming, orphan pruning)

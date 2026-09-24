@@ -6969,6 +6969,7 @@ if (shell) {
   const commentsCloseButton = document.getElementById("comments-close");
   const commentsShowResolvedInput = document.getElementById("comments-show-resolved");
   const commentAddFloating = document.getElementById("comment-add-floating");
+  const commentToast = document.getElementById("comment-toast");
 
   const COMMENT_MARKER_RE = /<!--comment:(c_[0-9a-f]{6,12}):(start|end)-->/g;
   const COMMENT_BLOCK_PREFIX_RE = /^(\s*(?:>\s*)*(?:(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)?(?:#{1,6}\s+)?)/;
@@ -6991,12 +6992,49 @@ if (shell) {
   // live selection before the click lands — the chip then acts on this
   // snapshot, as long as the document has not changed since.
   let commentChipSelection = null;
+  let commentToastTimer = null;
   let commentBadgeLayer = null;
   let commentDynamicStyle = null;
   // `var` on purpose: applyLanguage() may run before this block's
   // declarations are initialised, and a hoisted var reads as undefined
   // instead of throwing.
   var commentsUiReady = false;
+
+  // A refusal ("select some text", "comments cannot overlap") goes to
+  // the status bar AND to a short toast next to the selection — the bar
+  // alone read as "the button does nothing".
+  function commentNotice(message) {
+    setStatus(message, true);
+    if (!commentToast) return;
+    clearTimeout(commentToastTimer);
+    commentToast.textContent = message;
+    commentToast.classList.remove("hidden", "is-fading");
+    let anchor = null;
+    if (commentAddFloating && !commentAddFloating.classList.contains("hidden")) {
+      anchor = commentAddFloating.getBoundingClientRect();
+    } else {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount) {
+        const rects = selection.getRangeAt(0).getClientRects();
+        anchor = rects.length ? rects[rects.length - 1] : selection.getRangeAt(0).getBoundingClientRect();
+      }
+      if (!anchor || (!anchor.width && !anchor.height)) {
+        anchor = editorContainer.querySelector(".noteeli-comment-toolbar-button")?.getBoundingClientRect() || null;
+      }
+    }
+    const width = commentToast.offsetWidth || 240;
+    const height = commentToast.offsetHeight || 32;
+    let left = anchor ? anchor.left : window.innerWidth / 2 - width / 2;
+    let top = anchor ? anchor.bottom + 8 : 80;
+    if (left + width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - width - 8);
+    if (top + height > window.innerHeight - 8) top = Math.max(8, (anchor ? anchor.top : 80) - height - 8);
+    commentToast.style.left = `${Math.round(left)}px`;
+    commentToast.style.top = `${Math.round(top)}px`;
+    commentToastTimer = setTimeout(() => {
+      commentToast.classList.add("is-fading");
+      commentToastTimer = setTimeout(() => commentToast.classList.add("hidden"), 300);
+    }, 2600);
+  }
 
   // ── file markers ⇄ editor spans ──
 
@@ -7587,7 +7625,7 @@ if (shell) {
       empty = from === to;
     }
     if (empty) {
-      setStatus(t("comments_select_text"), true);
+      commentNotice(t("comments_select_text"));
       return false;
     }
     // Marks cannot nest, so a range must not touch an existing comment.
@@ -7611,7 +7649,7 @@ if (shell) {
     });
     const best = free.reduce((a, b) => (b.end - b.start > (a ? a.end - a.start : 0) ? b : a), null);
     if (!best || !view.state.doc.textBetween(best.start, best.end).trim()) {
-      setStatus(free.length || !from ? t("comments_select_text") : t("comments_no_overlap"), true);
+      commentNotice(free.length || !from ? t("comments_select_text") : t("comments_no_overlap"));
       return false;
     }
     const mark = markType.create({ htmlAttrs: { "data-comment": id }, htmlInline: true });
@@ -7623,11 +7661,11 @@ if (shell) {
     let text = "";
     try { text = editor.getSelectedText() || ""; } catch { text = ""; }
     if (!text.trim()) {
-      setStatus(t("comments_select_text"), true);
+      commentNotice(t("comments_select_text"));
       return false;
     }
     if (text.includes("data-comment=")) {
-      setStatus(t("comments_no_overlap"), true);
+      commentNotice(t("comments_no_overlap"));
       return false;
     }
     editor.replaceSelection(`<span data-comment="${id}">${text}</span>`);
@@ -7671,7 +7709,7 @@ if (shell) {
   function startNewComment({ fromChip = false } = {}) {
     if (!canUseComments()) return;
     if (currentEditorMode !== "wysiwyg" && currentEditorMode !== "markdown") {
-      setStatus(t("comments_select_text"), true);
+      commentNotice(t("comments_select_text"));
       return;
     }
     if (commentComposerId) cancelNewComment();

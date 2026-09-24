@@ -5552,3 +5552,31 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
     padding: 0.42rem 0.85rem 0.42rem 0.65rem;
   }
 }
+
+/* A short notice next to the selection when a comment cannot be made —
+   the status bar alone was too easy to miss. */
+.comment-toast {
+  position: fixed;
+  z-index: 1001;
+  max-width: min(320px, calc(100vw - 2rem));
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--warning);
+  background: var(--panel-strong, #fff);
+  color: var(--warning);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.comment-toast.hidden {
+  display: none;
+}
+
+.comment-toast.is-fading {
+  opacity: 0;
+}

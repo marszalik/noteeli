@@ -578,6 +578,8 @@
     <span data-i18n="comments_add">Komentarz</span>
   </button>
 
+  <div id="comment-toast" class="comment-toast hidden" role="status" aria-live="polite"></div>
+
   <div id="history-modal" class="modal-backdrop hidden" aria-hidden="true">
     <section class="modal-card modal-card-history" role="dialog" aria-modal="true" aria-labelledby="history-title">
       <header class="modal-header">

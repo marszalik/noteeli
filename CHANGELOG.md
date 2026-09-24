@@ -11,6 +11,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-09-24
+
+### Changed
+
+- **Comment refusals are visible.** When a comment cannot be made
+  ("select some text", "comments cannot overlap") a short toast now
+  appears next to the selection and fades out, in addition to the
+  status-bar message that was too easy to miss.
+
+
 ## [1.12.1] - 2026-09-24
 
 ### Fixed

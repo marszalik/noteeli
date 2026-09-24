@@ -392,3 +392,26 @@ def test_orphaned_range_markers_never_block_a_new_comment(article_server):
             assert side.count("## c_") == 2
         finally:
             browser.close()
+
+
+def test_refusal_shows_a_toast_next_to_the_selection(article_server):
+    """Pressing the shortcut with nothing selected used to answer only in
+    the status bar. Now a toast appears (and fades) next to the caret."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, _content = article_server
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            editor = _open_article(page, base_url)
+            editor.get_by_text("Closing paragraph.").click()  # caret only, no range
+            page.keyboard.press("Control+Alt+M")
+            toast = page.locator("#comment-toast")
+            expect(toast).to_be_visible()
+            expect(toast).to_have_text(re.compile(r"Zaznacz fragment|Select the text"))
+            expect(page.locator("#comments-panel .comment-card.is-composer")).to_have_count(0)
+            expect(toast).to_be_hidden(timeout=6_000)
+        finally:
+            browser.close()
