@@ -445,6 +445,9 @@ and back on the way out — see the "Review comments" section of `app.js`.
 | Select text → floating "Comment" chip → composer → note gets markers, sidecar gets the section; numbering follows document order | ✅ e2e `test_select_text_add_comment_writes_both_files` | `wrapWysiwygSelection` (ProseMirror `span` mark) |
 | Resolve hides the card (until "Show resolved"), delete (two-step confirm) strips the markers from the note | ✅ e2e `test_select_text_add_comment_writes_both_files` | `removeCommentRange` |
 | Cancelling the composer (Ctrl/Cmd+Alt+M shortcut) leaves no trace in either file | ✅ e2e `test_cancelled_comment_leaves_no_trace` | |
+| Chip works when the selection collapses before the click (touch) — acts on the range it was shown for | ✅ e2e `test_chip_still_works_when_the_selection_collapses_before_the_click` | `commentChipSelection` snapshot |
+| Selection running into a neighbouring comment is trimmed to the free text, not refused | ✅ e2e `test_selection_running_into_an_existing_comment_is_trimmed` | `wrapWysiwygSelection` |
+| Orphaned marker pairs (no sidecar entry) are pruned on load and never block a new comment | ✅ e2e `test_orphaned_range_markers_never_block_a_new_comment` | `pruneUnknownCommentRanges`, `knownCommentIds` — regression from a session-timeout half-creation |
 | Comments from the Markdown source view (`replaceSelection` with a span) | 🌐 | `wrapMarkdownSelection` |
 | Markers survive Kanban / Text / Code views (transforms on every view switch) | 🌐 | `setEditorMode` |
 | Markers inside fenced code / inline code stay literal text | 🌐 | `commentMarkersToSpans` skips fences |
@@ -477,9 +480,10 @@ tests/
 │                                       HTML root redirects to /login; local-host bypass)
 ├── test_comments_service.py         — 10 tests (sidecar naming, parse ⇄ serialize,
 │                                       add/edit/resolve/delete, errors, demo mode)
-├── test_e2e_comments.py             —  3 tests (headless Chromium: markers ⇄
+├── test_e2e_comments.py             —  6 tests (headless Chromium: markers ⇄
 │                                       highlight round trip, select → comment →
-│                                       both files, resolve/delete, cancel)
+│                                       both files, resolve/delete, cancel, chip
+│                                       snapshot, overlap trimming, orphan pruning)
 ├── test_git_service.py              — 12 tests (status/commit flow, signatures,
 │                                       ignore rules)
 ├── test_preferences_service.py     —  5 tests (fallback to default root,

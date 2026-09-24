@@ -267,3 +267,128 @@ def test_cancelled_comment_leaves_no_trace(article_server):
             assert pending_id not in (content / "article_comments.md").read_text(encoding="utf-8")
         finally:
             browser.close()
+
+
+def test_chip_still_works_when_the_selection_collapses_before_the_click(article_server):
+    """Tapping the floating chip on a touch screen collapses the browser
+    selection before the click arrives. The chip keeps a snapshot of the
+    range it was shown for and comments that range instead of complaining
+    "select some text"."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = article_server
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            editor = _open_article(page, base_url)
+            target = editor.get_by_text("Closing paragraph.")
+            _select_by_drag(page, target, 60)
+            chip = page.locator("#comment-add-floating")
+            expect(chip).to_be_visible(timeout=5_000)
+            # Collapse the live selection the way a tap outside does, then
+            # fire the chip before its 120 ms hide debounce runs.
+            page.evaluate("window.getSelection().collapseToStart()")
+            page.evaluate("document.getElementById('comment-add-floating').click()")
+            composer = page.locator("#comments-panel .comment-card.is-composer")
+            expect(composer).to_be_visible()
+            pending_id = composer.get_attribute("data-id")
+            expect(editor.locator(f'span[data-comment="{pending_id}"]')).to_have_text("Closing")
+            composer.locator("textarea").fill("Snapshot range.")
+            composer.locator(".comment-action.is-primary").click()
+            note = _wait_for_file(
+                content / "article.md", lambda t: f"<!--comment:{pending_id}:start-->" in t
+            )
+            assert re.search(
+                rf"<!--comment:{pending_id}:start-->Closing ?<!--comment:{pending_id}:end--> ?paragraph\.", note
+            )
+        finally:
+            browser.close()
+
+
+def test_selection_running_into_an_existing_comment_is_trimmed(article_server):
+    """A drag that ends inside the neighbouring highlight used to be refused
+    with a status-bar message most people never notice. The new comment
+    now covers the free text up to the existing comment's boundary."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = article_server
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            editor = _open_article(page, base_url)
+            # Select from the start of the paragraph well into the existing range.
+            page.evaluate("""() => {
+              const p = Array.from(document.querySelectorAll('.toastui-editor-ww-container .ProseMirror p'))
+                .find(e => e.textContent.startsWith('Whether'));
+              const first = p.firstChild;                 // "Whether a machine is "
+              const span = p.querySelector('span[data-comment]');
+              const range = document.createRange();
+              range.setStart(first, 0);
+              range.setEnd(span.firstChild, 9);           // "conscious"
+              const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+            }""")
+            page.keyboard.press("Control+Alt+M")
+            composer = page.locator("#comments-panel .comment-card.is-composer")
+            expect(composer).to_be_visible()
+            new_id = composer.get_attribute("data-id")
+            expect(editor.locator(f'span[data-comment="{new_id}"]')).to_have_text("Whether a machine is")
+            # The neighbour kept its whole range.
+            expect(editor.locator('span[data-comment="c_a7f3d2"]').first).to_have_text("conscious is a question")
+            composer.locator("textarea").fill("Trimmed.")
+            composer.locator(".comment-action.is-primary").click()
+            note = _wait_for_file(
+                content / "article.md", lambda t: f"<!--comment:{new_id}:start-->" in t
+            )
+            assert re.search(
+                rf"<!--comment:{new_id}:start-->Whether a machine is ?<!--comment:{new_id}:end--> ?"
+                rf"<!--comment:c_a7f3d2:start-->conscious",
+                note,
+            )
+        finally:
+            browser.close()
+
+
+def test_orphaned_range_markers_never_block_a_new_comment(article_server):
+    """Regression: a marker pair with no sidecar entry (left behind when a
+    comment's creation failed half-way) has no highlight, yet it used to
+    make every selection touching it fail with a status-bar message —
+    "clicking the chip does nothing". Unknown ranges are dropped on load
+    and never count as occupied."""
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+    base_url, content = article_server
+    note = content / "article.md"
+    note.write_text(
+        note.read_text(encoding="utf-8").replace(
+            "Closing paragraph.",
+            "<!--comment:c_dead01:start-->Closing paragraph.<!--comment:c_dead01:end-->",
+        ),
+        encoding="utf-8",
+    )
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        try:
+            page = browser.new_page()
+            editor = _open_article(page, base_url)
+            # The leftover is gone from the editor and, via autosave, from the file.
+            expect(editor.locator('span[data-comment="c_dead01"]')).to_have_count(0)
+            cleaned = _wait_for_file(note, lambda t: "c_dead01" not in t)
+            assert "c_dead01" not in cleaned
+            assert "c_a7f3d2:start" in cleaned
+
+            target = editor.get_by_text("Closing paragraph.")
+            _select_by_drag(page, target, 60)
+            page.locator("#comment-add-floating").click()
+            composer = page.locator("#comments-panel .comment-card.is-composer")
+            expect(composer).to_be_visible()
+            composer.locator("textarea").fill("Now it works.")
+            composer.locator(".comment-action.is-primary").click()
+            side = _wait_for_file(content / "article_comments.md", lambda t: "Now it works." in t)
+            assert side.count("## c_") == 2
+        finally:
+            browser.close()

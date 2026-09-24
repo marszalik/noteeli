@@ -11,6 +11,24 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-09-24
+
+### Fixed
+
+- **"Clicking Comment does nothing" next to existing comments.** A range
+  marker pair left in the note without a sidecar entry (the trace of a
+  comment whose creation failed half-way, e.g. on a session timeout) had
+  no highlight, yet every selection touching it was refused as
+  "overlapping" — with the refusal visible only in the status bar. Such
+  leftover ranges are now dropped when the note loads and never count as
+  occupied. A selection that runs a little into a neighbouring comment is
+  trimmed to the free text instead of being refused.
+- **Floating "Comment" chip.** It now appears above the selection instead
+  of covering the next line, has no browser tooltip, stays clickable
+  above the editor on every layout, and still works when the selection
+  collapses between showing the chip and tapping it (touch screens).
+
+
 ## [1.12.0] - 2026-09-23
 
 ### Added

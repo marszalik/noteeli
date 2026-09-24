@@ -6986,6 +6986,11 @@ if (shell) {
   let commentActiveId = null;
   let commentsLayoutTimer = null;
   let commentFloatingTimer = null;
+  // The WYSIWYG range the floating chip was shown for. Tapping the chip
+  // on a touch screen (and some focus moves on desktop) collapses the
+  // live selection before the click lands — the chip then acts on this
+  // snapshot, as long as the document has not changed since.
+  let commentChipSelection = null;
   let commentBadgeLayer = null;
   let commentDynamicStyle = null;
   // `var` on purpose: applyLanguage() may run before this block's
@@ -7152,6 +7157,7 @@ if (shell) {
       if (selectedPath !== path) return;
       commentsDoc = doc;
       commentsDocPath = path;
+      pruneUnknownCommentRanges();
       // Surface open comments on a note the first time around — but once
       // the user has closed the panel themselves, respect that and leave
       // the topbar count as the hint.
@@ -7233,6 +7239,28 @@ if (shell) {
 
   function commentById(id) {
     return commentsDoc?.comments.find((c) => c.id === id) || null;
+  }
+
+  // Ids that own a range: everything in the sidecar plus the comment
+  // being written. A span with any other id is a leftover (a comment
+  // whose creation failed mid-way, a hand-edited sidecar) — it has no
+  // highlight, so it must never block a new comment either.
+  function knownCommentIds() {
+    const ids = new Set((commentsDoc?.comments || []).map((c) => c.id));
+    if (commentComposerId) ids.add(commentComposerId);
+    return ids;
+  }
+
+  function pruneUnknownCommentRanges() {
+    if (currentEditorMode !== "wysiwyg" || !commentsDoc) return;
+    const known = knownCommentIds();
+    const stale = new Set();
+    editorContainer.querySelectorAll(".toastui-editor-ww-container span[data-comment]").forEach((el) => {
+      if (!known.has(el.dataset.comment)) stale.add(el.dataset.comment);
+    });
+    if (!stale.size) return;
+    for (const id of stale) removeCommentRange(id);
+    markEditorDirty();
   }
 
   // ── panel ──
@@ -7542,32 +7570,52 @@ if (shell) {
 
   // ── creating a comment from the selection ──
 
-  function wrapWysiwygSelection(id) {
+  function captureChipSelection() {
+    const view = editor.wwEditor?.view;
+    if (currentEditorMode !== "wysiwyg" || !view) return null;
+    const { from, to, empty } = view.state.selection;
+    return empty ? null : { from, to, doc: view.state.doc };
+  }
+
+  function wrapWysiwygSelection(id, { fromChip = false } = {}) {
     const view = editor.wwEditor?.view;
     const markType = view?.state.schema.marks.span;
     if (!view || !markType) return false;
-    const { from, to, empty } = view.state.selection;
+    let { from, to, empty } = view.state.selection;
+    if (empty && fromChip && commentChipSelection && commentChipSelection.doc === view.state.doc) {
+      ({ from, to } = commentChipSelection);
+      empty = from === to;
+    }
     if (empty) {
       setStatus(t("comments_select_text"), true);
       return false;
     }
-    let hasText = false;
-    let overlaps = false;
-    view.state.doc.nodesBetween(from, to, (node) => {
+    // Marks cannot nest, so a range must not touch an existing comment.
+    // A drag that ends a character inside the neighbouring highlight is
+    // the common case — trim the selection to the free text instead of
+    // refusing (and keep the longest free stretch when it is split).
+    const free = [];
+    const known = knownCommentIds();
+    let current = null;
+    view.state.doc.nodesBetween(from, to, (node, pos) => {
       if (!node.isText) return;
-      hasText = true;
-      if (node.marks.some((m) => m.type === markType && m.attrs.htmlAttrs?.["data-comment"])) overlaps = true;
+      const start = Math.max(from, pos);
+      const end = Math.min(to, pos + node.nodeSize);
+      const taken = node.marks.some((m) => m.type === markType && known.has(m.attrs.htmlAttrs?.["data-comment"]));
+      if (taken) {
+        current = null;
+        return;
+      }
+      if (current && current.end === start) current.end = end;
+      else free.push((current = { start, end }));
     });
-    if (!hasText) {
-      setStatus(t("comments_select_text"), true);
-      return false;
-    }
-    if (overlaps) {
-      setStatus(t("comments_no_overlap"), true);
+    const best = free.reduce((a, b) => (b.end - b.start > (a ? a.end - a.start : 0) ? b : a), null);
+    if (!best || !view.state.doc.textBetween(best.start, best.end).trim()) {
+      setStatus(free.length || !from ? t("comments_select_text") : t("comments_no_overlap"), true);
       return false;
     }
     const mark = markType.create({ htmlAttrs: { "data-comment": id }, htmlInline: true });
-    view.dispatch(view.state.tr.addMark(from, to, mark));
+    view.dispatch(view.state.tr.addMark(best.start, best.end, mark));
     return true;
   }
 
@@ -7620,7 +7668,7 @@ if (shell) {
     // disappears the next time the note is edited in the editor.
   }
 
-  function startNewComment() {
+  function startNewComment({ fromChip = false } = {}) {
     if (!canUseComments()) return;
     if (currentEditorMode !== "wysiwyg" && currentEditorMode !== "markdown") {
       setStatus(t("comments_select_text"), true);
@@ -7628,7 +7676,17 @@ if (shell) {
     }
     if (commentComposerId) cancelNewComment();
     const id = generateCommentId();
-    const wrapped = currentEditorMode === "wysiwyg" ? wrapWysiwygSelection(id) : wrapMarkdownSelection(id);
+    let wrapped = false;
+    try {
+      wrapped = currentEditorMode === "wysiwyg"
+        ? wrapWysiwygSelection(id, { fromChip })
+        : wrapMarkdownSelection(id);
+    } catch (error) {
+      console.error("comment: could not mark the selection", error);
+      setStatus(`${t("comments_select_text")} (${error.message})`, true);
+      return;
+    }
+    commentChipSelection = null;
     if (!wrapped) return;
     hideCommentFloatingButton();
     markEditorDirty();
@@ -7767,13 +7825,17 @@ if (shell) {
       hideCommentFloatingButton();
       return;
     }
+    commentChipSelection = captureChipSelection();
     commentAddFloating.classList.remove("hidden");
     const width = commentAddFloating.offsetWidth || 120;
     const height = commentAddFloating.offsetHeight || 32;
+    // Above the selection's last line, so it never covers the text the
+    // user is about to read or drag over next; below only when there is
+    // no room at the top.
     let left = rect.right + 8;
-    if (left + width > window.innerWidth - 8) left = Math.max(8, rect.left - width - 8);
-    let top = rect.bottom + 8;
-    if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 8);
+    if (left + width > window.innerWidth - 8) left = Math.max(8, rect.right - width);
+    let top = rect.top - height - 6;
+    if (top < 8) top = Math.min(window.innerHeight - height - 8, rect.bottom + 6);
     commentAddFloating.style.left = `${Math.round(left)}px`;
     commentAddFloating.style.top = `${Math.round(top)}px`;
   }
@@ -7787,8 +7849,15 @@ if (shell) {
   commentAddFloating?.addEventListener("mousedown", (event) => event.preventDefault());
   commentAddFloating?.addEventListener("click", (event) => {
     event.stopPropagation();
-    startNewComment();
+    startNewComment({ fromChip: true });
   });
+  // Touch: act on touchend and swallow the synthesized click, so iOS
+  // never gets to clear the selection (or scroll the callout) first.
+  commentAddFloating?.addEventListener("touchend", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    startNewComment({ fromChip: true });
+  }, { passive: false });
 
   // ── toolbar button ──
 

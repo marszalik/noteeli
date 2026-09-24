@@ -573,7 +573,7 @@
     </section>
   </div>
 
-  <button id="comment-add-floating" class="comment-add-floating hidden" type="button" data-i18n-title="comments_add_title" title="Add a comment to the selection">
+  <button id="comment-add-floating" class="comment-add-floating hidden" type="button" aria-label="Add a comment to the selection" data-i18n-aria-label="comments_add_title">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h4v2h-4v4h-2v-4H7v-2h4V7h2v4z"/></svg>
     <span data-i18n="comments_add">Komentarz</span>
   </button>

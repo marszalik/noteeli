@@ -5425,20 +5425,22 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
 /* floating "Comment" chip that follows a text selection */
 .comment-add-floating {
   position: fixed;
-  z-index: 45;
+  z-index: 1000;
+  opacity: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.7rem 0.3rem 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--accent);
-  background: var(--panel-strong);
+  background: var(--panel-strong, #fff);
   color: var(--accent);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+  -webkit-user-select: none;
   user-select: none;
   -webkit-user-select: none;
 }
