@@ -11,6 +11,15 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-09-24
+
+### Fixed
+
+- **"Comment" chip went see-through on hover.** Its hover tint was a
+  translucent colour, so the editor text underneath bled through the
+  label. The hover colour is now opaque.
+
+
 ## [1.12.2] - 2026-09-24
 
 ### Changed

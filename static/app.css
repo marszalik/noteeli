@@ -5451,7 +5451,9 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
 }
 
 .comment-add-floating:hover {
-  background: var(--accent-soft);
+  /* --accent-soft is translucent — over editor text the label became
+     unreadable. Mix the tint into an opaque panel colour instead. */
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-strong, #fff));
 }
 
 .comment-add-floating.hidden {
