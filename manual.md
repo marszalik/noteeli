@@ -334,7 +334,11 @@ save and autosave.
 remote (`↑2 ↓1`), the list of changed files, a commit message box and the
 operations: **Commit**, **Commit & Push**, **Fetch**, **Pull**, **Push**.
 Remote and credentials are whatever the repository already has configured —
-Noteeli doesn't manage them.
+Noteeli doesn't manage them. If someone pushed to the remote while you had
+local commits (typical when a team edits from two machines), **Pull** and
+**Push** replay your commits on top of the remote automatically as long as
+the changes don't overlap. When they do, nothing is touched: you get a
+message and resolve the conflict once on the command line.
 
 **Committing one thing.** Right-click a file or folder → *Commit (this
 item)* or *Commit & push (this item)* to commit just that path with its own

@@ -11,6 +11,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.12.4] - 2026-09-29
+
+### Fixed
+
+- **Pull / Push in the git menu got stuck when a colleague had pushed
+  from another machine.** With one local commit and one unpulled remote
+  commit, Push answered "Updates were rejected … your current branch is
+  behind" and Pull answered "Not possible to fast-forward", with no way
+  out of the UI even when the two commits touched different lines. Both
+  buttons now replay local commits on top of the remote (`pull --rebase`,
+  with autostash so pending edits don't block it). A genuine content
+  conflict aborts the rebase and leaves the repository exactly as it was,
+  with a message pointing to the command line.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed

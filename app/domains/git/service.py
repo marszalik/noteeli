@@ -514,14 +514,21 @@ class GitService:
         return GitOpResult(ok=True, message="Committed.", output=out.strip())
 
     def push(self) -> GitOpResult:
-        return self._network_op(["push"], "Pushed.")
+        """The git menu's Push button. Same non-destructive contract as
+        the checkpoint auto-push: a plain push, and when the remote has
+        moved ahead in the meantime, local commits are replayed on top
+        with `pull --rebase` and pushed again. Before this shared
+        behaviour, a colleague pushing from a second machine left the
+        button stuck on "Updates were rejected … tip of your current
+        branch is behind" with no way out of the UI."""
+        return self.sync_push()
 
     def sync_push(self) -> GitOpResult:
-        """Best-effort push for automated checkpoints. Never destructive:
-        plain push → if the remote moved ahead, replay local commits with
-        `pull --rebase` and push again → if the rebase hits a CONTENT
-        conflict, abort it and park (local commits stay intact; the git
-        menu's ahead/behind counters show the stalled state for a human
+        """Best-effort push (checkpoints and the Push button). Never
+        destructive: plain push → if the remote moved ahead, replay local
+        commits with `pull --rebase` and push again → if the rebase hits a
+        CONTENT conflict, abort it and park (local commits stay intact; the
+        git menu's ahead/behind counters show the stalled state for a human
         to resolve). `output` carries a machine-readable outcome."""
         runner = self._require_runner()
         if not self.is_repo():
@@ -538,21 +545,14 @@ class GitService:
         ):
             return GitOpResult(ok=False, message=(err or out).strip(), output="no_remote")
 
-        code, out, err = runner.run(["pull", "--rebase"], timeout=90)
-        if code == 0:
+        rebased = self._rebase_onto_remote()
+        if rebased.ok:
             code2, out2, err2 = runner.run(["push"], timeout=90)
             if code2 == 0:
                 return GitOpResult(
                     ok=True, message="Rebased onto remote and pushed.", output="pushed"
                 )
             return GitOpResult(ok=False, message=(err2 or out2).strip(), output="push_failed")
-
-        # Conflict (or other rebase failure) — make sure no half-done
-        # rebase is left behind, then park.
-        try:
-            runner.run(["rebase", "--abort"])
-        except GitError:
-            pass
         return GitOpResult(
             ok=False,
             message="Remote has conflicting changes — sync parked for manual resolution.",
@@ -560,7 +560,55 @@ class GitService:
         )
 
     def pull(self) -> GitOpResult:
-        return self._network_op(["pull", "--ff-only"], "Pulled.")
+        """The git menu's Pull button. Fast-forward when possible; when the
+        branches have diverged (someone pushed while we had local commits),
+        replay our commits on top of the remote with `pull --rebase`. A
+        genuine content conflict aborts the rebase and leaves the repo
+        exactly as it was — nothing is ever half-merged from the UI."""
+        runner = self._require_runner()
+        if not self.is_repo():
+            raise GitNotConfiguredError("The workspace is not a git repository.")
+        code, out, err = runner.run(["pull", "--ff-only"], timeout=90)
+        combined = (out + ("\n" if out and err else "") + err).strip()
+        if code == 0:
+            return GitOpResult(ok=True, message="Pulled.", output=combined)
+        text = combined.lower()
+        if "fast-forward" not in text and "diverg" not in text:
+            # Network / auth / no-upstream failures are reported verbatim.
+            return GitOpResult(ok=False, message=(err or out or "git failed").strip(), output=combined)
+
+        rebased = self._rebase_onto_remote()
+        if rebased.ok:
+            return GitOpResult(
+                ok=True,
+                message="Pulled: local commits replayed on top of the remote.",
+                output=rebased.output,
+            )
+        return GitOpResult(
+            ok=False,
+            message=(
+                "Remote has conflicting changes — pull aborted, nothing was changed. "
+                "Resolve the conflict on the command line (git pull --rebase)."
+            ),
+            output=rebased.output,
+        )
+
+    def _rebase_onto_remote(self) -> GitOpResult:
+        """`pull --rebase --autostash`, and on any failure `rebase --abort`
+        so no half-done rebase is ever left behind. Autostash lets the
+        replay work even while the workspace has unsaved-to-git edits
+        (common with checkpoints pending); the stash is restored on
+        success and on abort alike."""
+        runner = self._require_runner()
+        code, out, err = runner.run(["pull", "--rebase", "--autostash"], timeout=90)
+        combined = (out + ("\n" if out and err else "") + err).strip()
+        if code == 0:
+            return GitOpResult(ok=True, message="Rebased.", output=combined)
+        try:
+            runner.run(["rebase", "--abort"])
+        except GitError:
+            pass
+        return GitOpResult(ok=False, message=(err or out or "rebase failed").strip(), output=combined)
 
     def fetch(self) -> GitOpResult:
         return self._network_op(["fetch"], "Fetched.")
