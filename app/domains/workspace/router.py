@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from app.domains.workspace.schemas import (
     TreeNode,
     UploadItemsResponse,
 )
+from app.domains.workspace.office_pdf import OfficeConversionError
 from app.domains.workspace.service import (
     DemoReadOnlyError,
     DocumentNotFoundError,
@@ -42,6 +44,7 @@ from app.domains.workspace.service import (
 )
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["workspace"])
 settings = get_settings()
 auth_service = AuthService(settings)
@@ -181,10 +184,18 @@ async def workspace_file_preview_api(request: Request, background_tasks: Backgro
     if preview_kind is None:
         raise HTTPException(status_code=422, detail="This file type is not available in preview mode.")
 
-    # Office docs (.docx, .xlsx) are rendered server-side into HTML so the
-    # browser can display them in a sandboxed iframe — no edit, just view.
+    # Office docs are rendered server-side: slides as a faithful PDF when
+    # LibreOffice is installed, otherwise (and for Word / spreadsheets)
+    # as HTML for a sandboxed iframe — no edit, just view.
     if preview_kind in ("docx", "xlsx", "pptx"):
         from fastapi.responses import HTMLResponse
+
+        if workspace_service.get_preview_rendering(preview_kind) == "pdf":
+            try:
+                pdf_path = workspace_service.render_office_pdf(rel_path)
+                return FileResponse(path=pdf_path, media_type="application/pdf")
+            except OfficeConversionError as exc:
+                logger.warning("Office PDF preview failed for %s, using HTML fallback: %s", rel_path, exc)
 
         html = workspace_service.render_office_preview(rel_path)
         return HTMLResponse(content=html)

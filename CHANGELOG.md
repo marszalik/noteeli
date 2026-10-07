@@ -11,6 +11,27 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-10-07
+
+### Added
+
+- **Real slide previews for PowerPoint.** A `.pptx` used to open as a
+  column of white text cards. When LibreOffice is installed on the
+  server (`apt install libreoffice-impress`), the deck is now converted
+  to a PDF on first open and shown in the PDF viewer exactly as it was
+  designed — layout, backgrounds, fonts, charts. Conversions are cached
+  by content hash, so re-opening is instant. Without LibreOffice the
+  text cards remain as the fallback. `NOTEELI_OFFICE_CONVERTER` points
+  at a non-standard binary or turns the conversion `off`.
+
+### Fixed
+
+- **Comment on a selection the editor had not noticed yet.** A text
+  selection made while the editor was not focused (find-in-page, a
+  toolbar click first) was invisible to the editor's own selection
+  state, so "Comment" answered "select some text". The browser
+  selection is now read directly when that happens.
+
 ## [1.12.4] - 2026-09-29
 
 ### Fixed

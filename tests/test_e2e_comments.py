@@ -101,11 +101,21 @@ def _open_article(page, base_url):
     # article.md sorts first, so the workspace auto-opens it on load. A
     # second click would start another load that lands mid-test and
     # resets the comment state — only click when it is not open yet.
+    # `is-active` is painted when that load completes, so waiting for it
+    # (rather than peeking once — networkidle can fire while git status
+    # is still running) guarantees the auto-open has finished before we
+    # touch the editor. Only a tree whose auto-open picked another file
+    # needs the click.
     link = page.locator(".tree-link-file", has_text="article.md").first
-    if "is-active" not in (link.get_attribute("class") or ""):
+    try:
+        expect(link).to_have_class(re.compile(r"\bis-active\b"), timeout=10_000)
+    except AssertionError:
         link.click()
     editor = page.locator("#editor .toastui-editor-ww-container .ProseMirror")
     expect(editor).to_contain_text("Trailing text", timeout=15_000)
+    expect(page.locator("#status-message")).to_have_text(
+        re.compile(r"gotowy|ready|automatyczn|autosav|Zapisano|saved", re.I), timeout=15_000
+    )
     # The fixture always has an open comment → the panel auto-opens once
     # the comments request lands. Wait for it so the layout is settled.
     expect(page.locator("#comments-panel")).to_be_visible(timeout=15_000)

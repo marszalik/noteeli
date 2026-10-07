@@ -20,6 +20,10 @@ class FileDocument(BaseModel):
     content: str
     previewable: bool = False
     preview_kind: Literal["image", "pdf", "docx", "xlsx", "pptx"] | None = None
+    # How an office preview is delivered: "pdf" when the server can run
+    # LibreOffice (faithful rendering in the PDF viewer), "html" for the
+    # text-card fallback. None for everything that is not an office file.
+    preview_rendering: Literal["html", "pdf"] | None = None
     message: str | None = None
     # Server-rendered HTML view of `content` (markdown / code / json /
     # plain text). Populated by the public read-only viewer so the

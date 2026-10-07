@@ -160,6 +160,7 @@ Main variables:
 - `NOTEELI_CONTENT_ROOT` - base directory for notes
 - `NOTEELI_DATA_DIR` - directory for SQLite and app data
 - `NOTEELI_TREE_IGNORE_NAMES` - comma-separated directory names excluded from the notes tree (defaults to `node_modules`, `__pycache__`, `.venv` and other dependency/cache dirs)
+- `NOTEELI_OFFICE_CONVERTER` - LibreOffice binary used to preview `.pptx` as a faithful PDF (empty = auto-detect `soffice` on PATH, `off` = text-card preview only). Install with `apt install libreoffice-impress` to get real slide previews
 - `NOTEELI_SESSION_SECRET` - session secret
 - `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret

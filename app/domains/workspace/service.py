@@ -15,6 +15,7 @@ from app.domains.workspace.schemas import (
     UploadItemsResponse,
     UploadedItemError,
 )
+from app.domains.workspace.office_pdf import OfficeConversionError, OfficePdfConverter
 from app.domains.workspace.storage import StorageBackend, StorageEntry, build_backend, invalidate_sftp_cache
 
 
@@ -65,6 +66,7 @@ class WorkspaceService:
         self.settings = settings or get_settings()
         self.preferences_repository = preferences_repository or PreferencesRepository(self.settings)
         self.preferences_service = PreferencesService(self.settings, self.preferences_repository)
+        self.office_pdf = OfficePdfConverter(self.settings)
 
     def _get_backend(self) -> StorageBackend:
         prefs = self.preferences_service.get_preferences()
@@ -389,6 +391,7 @@ class WorkspaceService:
                 content="",
                 previewable=True,
                 preview_kind=preview_kind,
+                preview_rendering=self.get_preview_rendering(preview_kind),
                 message="This file is available in preview mode.",
             )
 
@@ -756,6 +759,30 @@ class WorkspaceService:
         if suffix in self.PPTX_EXTENSIONS:
             return "pptx"
         return None
+
+    # Which office kinds are rendered through LibreOffice when it exists.
+    # Word and spreadsheets keep their HTML renderers (readable, themed,
+    # searchable); slides are the case where only a real layout engine
+    # gives a result that resembles the deck.
+    PDF_RENDERED_KINDS = ("pptx",)
+
+    def get_preview_rendering(self, preview_kind: str | None) -> str | None:
+        if preview_kind not in ("docx", "xlsx", "pptx"):
+            return None
+        if preview_kind in self.PDF_RENDERED_KINDS and self.office_pdf.available():
+            return "pdf"
+        return "html"
+
+    def render_office_pdf(self, path: str) -> Path:
+        """A cached PDF of an office file, rendered by LibreOffice. Raises
+        OfficeConversionError when LibreOffice is missing or fails — the
+        caller falls back to render_office_preview()."""
+        backend = self._get_backend()
+        rel = self._resolve_path(path, backend)
+        suffix = Path(rel).suffix.lower()
+        if self.get_preview_kind(rel) not in ("docx", "xlsx", "pptx"):
+            raise UnsupportedFileTypeError("This file type is not an office preview format.")
+        return self.office_pdf.convert_to_pdf(backend.read_bytes(rel), suffix)
 
     def render_office_preview(self, path: str) -> str:
         """Convert a .docx or .xlsx file into self-contained HTML for

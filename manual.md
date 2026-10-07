@@ -302,8 +302,17 @@ with ready-made templates for both.
   12 highlight themes — or *auto*, which follows the app theme. Unknown text
   files up to 1 MB open as plain text.
 - **Read-only previews**: images, PDFs, Word documents (`.docx`) rendered as
-  formatted text, and Excel sheets (`.xlsx`/`.xlsm`) rendered as tables — one
-  per sheet.
+  formatted text, Excel sheets (`.xlsx`/`.xlsm`) rendered as tables — one
+  per sheet — and PowerPoint decks (`.pptx`).
+- **Slides look like slides when LibreOffice is installed.** Without it a
+  `.pptx` is shown as plain text cards (titles, bullets, pictures). With
+  LibreOffice on the server, Noteeli converts the deck to a PDF the first
+  time it is opened and shows the real slides — layout, backgrounds, fonts,
+  charts — in the PDF viewer; the PDF is cached, so the next open is
+  instant. Install it with `sudo apt install libreoffice-impress` (Debian /
+  Ubuntu) or `brew install --cask libreoffice` (macOS) and restart Noteeli;
+  it is picked up automatically. `NOTEELI_OFFICE_CONVERTER` points at a
+  non-standard binary, or `off` disables the conversion.
 
 ## 9. Publishing notes publicly
 

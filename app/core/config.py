@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # incidents are diagnosable after the journal rotates away.
     log_retention_days: int = 14
 
+    # ── Office previews ─────────────────────────────────────────────────
+    # Slides (.pptx) are previewed as a faithful PDF when LibreOffice is
+    # installed: empty = auto-detect `soffice` / `libreoffice` on PATH (and
+    # the usual install locations), a path = use that binary, "off" = never
+    # convert and fall back to the plain text-card preview.
+    office_converter: str = ""
+
     # ── Locked workspace ────────────────────────────────────────────────
     # When True, the storage source and root are pinned: users can't change
     # source_type / content_root / SFTP settings from Settings, the source

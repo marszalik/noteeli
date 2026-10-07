@@ -286,6 +286,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | File search box (magnifier toggle) — filter tree by name fragment, auto-expands matching folders | 🌐 | `filterTreeBySearch`, `treeSearchQuery`, toggle `#tree-search-toggle` |
 | New file / new directory toolbar buttons | 🌐 | `openCreateModal` |
 | Tree-row context menu with icons + i18n labels (open in new tab / scope / upload / new file / new folder / download / copy path / rename / duplicate / refresh / delete) | 🌐 | `renderTreeContextMenu` (recent overhaul) |
+| PowerPoint preview as a faithful PDF via LibreOffice when `soffice` exists (auto-detect / `NOTEELI_OFFICE_CONVERTER`), cached by content hash; `preview_rendering` tells the frontend which frame to use | ✅ `tests/test_office_pdf_preview.py` (7 tests with a fake `soffice`: conversion + cache, absent/off, failure not cached, `read_document` reports `pdf` only with a converter, backend/path safety, endpoint serves `application/pdf`, HTML fallback when LibreOffice fails) | `OfficePdfConverter` in `workspace/office_pdf.py`; Word / Excel keep their HTML renderers |
 | "Open in new tab" (context menu, files) — serves the file verbatim with inline disposition via `/api/file/raw`: browser-native viewer for PDF/images, download → native app for pptx/docx | ✅ `tests/test_file_raw_endpoint.py` | replaced the old "Open" entry, which duplicated a plain click |
 | Duplicate file (context menu) → copy in same folder as `<name>_N.<ext>` | ✅ | `duplicate_item`, `test_duplicate_item_*` |
 
@@ -480,6 +481,8 @@ tests/
 ├── test_auth_guard.py               — 14 tests (every workspace + comments API
 │                                       endpoint gets 401 from non-local hosts;
 │                                       HTML root redirects to /login; local-host bypass)
+├── test_office_pdf_preview.py       —  7 tests (LibreOffice PDF slide preview
+│                                       with a fake soffice: cache, fallback, endpoint)
 ├── test_comments_service.py         — 10 tests (sidecar naming, parse ⇄ serialize,
 │                                       add/edit/resolve/delete, errors, demo mode)
 ├── test_e2e_comments.py             —  7 tests (headless Chromium: markers ⇄

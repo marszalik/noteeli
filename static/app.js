@@ -3592,12 +3592,16 @@ if (shell) {
     hideKanbanMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
-    const isOffice =
+    // An office file the server renders through LibreOffice arrives as a
+    // PDF — it goes to the PDF viewer frame (the sandboxed office frame
+    // blocks the browser's PDF plugin).
+    const asPdf = file.preview_kind === "pdf" || file.preview_rendering === "pdf";
+    const isOffice = !asPdf && (
       file.preview_kind === "docx"
       || file.preview_kind === "xlsx"
-      || file.preview_kind === "pptx";
+      || file.preview_kind === "pptx");
     imagePreview.classList.toggle("hidden", file.preview_kind !== "image");
-    pdfPreview.classList.toggle("hidden", file.preview_kind !== "pdf");
+    pdfPreview.classList.toggle("hidden", !asPdf);
     if (officePreview) officePreview.classList.toggle("hidden", !isOffice);
 
     const previewUrl = getPreviewUrl(file.path);
@@ -3606,7 +3610,7 @@ if (shell) {
       imagePreview.alt = file.name;
       pdfPreview.removeAttribute("src");
       officePreview?.removeAttribute("src");
-    } else if (file.preview_kind === "pdf") {
+    } else if (asPdf) {
       pdfPreview.src = previewUrl;
       imagePreview.removeAttribute("src");
       imagePreview.alt = "";
@@ -7615,6 +7619,20 @@ if (shell) {
     return empty ? null : { from, to, doc: view.state.doc };
   }
 
+  function domSelectionRangeInEditor(view) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+    const range = selection.getRangeAt(0);
+    if (!view.dom.contains(range.commonAncestorContainer)) return null;
+    try {
+      const from = view.posAtDOM(range.startContainer, range.startOffset);
+      const to = view.posAtDOM(range.endContainer, range.endOffset);
+      return from <= to ? { from, to } : { from: to, to: from };
+    } catch {
+      return null;
+    }
+  }
+
   function wrapWysiwygSelection(id, { fromChip = false } = {}) {
     const view = editor.wwEditor?.view;
     const markType = view?.state.schema.marks.span;
@@ -7623,6 +7641,16 @@ if (shell) {
     if (empty && fromChip && commentChipSelection && commentChipSelection.doc === view.state.doc) {
       ({ from, to } = commentChipSelection);
       empty = from === to;
+    }
+    if (empty) {
+      // ProseMirror only mirrors the browser selection while it has
+      // focus; a selection made with focus elsewhere (find-in-page, a
+      // toolbar click, scripted) is still a real selection to the user.
+      const domRange = domSelectionRangeInEditor(view);
+      if (domRange) {
+        ({ from, to } = domRange);
+        empty = from === to;
+      }
     }
     if (empty) {
       commentNotice(t("comments_select_text"));
