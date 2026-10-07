@@ -11,6 +11,21 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-10-07
+
+### Added
+
+- **LibreOffice ships with Noteeli, one way or another.** Real slide
+  previews (1.13.0) need LibreOffice, and that is now Noteeli's job, not
+  the admin's: `install.sh` installs it from the system package manager
+  (apt / dnf / Homebrew; `NOTEELI_SKIP_LIBREOFFICE=1` opts out), and an
+  instance without it shows a banner above the text-card preview of a
+  `.pptx` with a **Download LibreOffice** button — one click fetches a
+  portable copy (official AppImage, unpacked without root or FUSE, about
+  300 MB) into the data directory with progress shown, then reopens the
+  deck as slides. Other platforms get the install command in the banner.
+  New API: `GET /api/office-converter`, `POST /api/office-converter/install`.
+
 ## [1.13.0] - 2026-10-07
 
 ### Added

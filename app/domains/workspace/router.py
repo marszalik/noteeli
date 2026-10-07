@@ -208,6 +208,22 @@ async def workspace_file_preview_api(request: Request, background_tasks: Backgro
     return FileResponse(path=local_path, media_type=media_type or "application/octet-stream")
 
 
+@router.get("/api/office-converter", name="workspace_office_converter_api")
+async def workspace_office_converter_api(request: Request):
+    """Whether slides can be previewed faithfully, and how a portable
+    LibreOffice download is going (the preview banner polls this)."""
+    auth_service.require_api_access(request)
+    return workspace_service.office_pdf.install_status()
+
+
+@router.post("/api/office-converter/install", name="workspace_office_converter_install_api")
+async def workspace_office_converter_install_api(request: Request):
+    auth_service.require_api_access(request)
+    if settings.demo_mode:
+        raise HTTPException(status_code=403, detail="Read-only demo.")
+    return workspace_service.office_pdf.start_portable_install()
+
+
 @router.get("/api/file/raw", name="workspace_file_raw_api")
 async def workspace_file_raw_api(request: Request, background_tasks: BackgroundTasks, path: str):
     """Serve any file verbatim with an inline disposition — for "open in

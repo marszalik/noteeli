@@ -17,19 +17,35 @@ a private user profile.
 from __future__ import annotations
 
 import hashlib
+import logging
+import os
+import platform
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
-import time
+import urllib.request
 from pathlib import Path
 
 from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
 
 CONVERTIBLE_SUFFIXES = {".pptx", ".ppt", ".odp", ".docx", ".doc", ".odt", ".xlsx", ".xls", ".ods"}
 CACHE_DIR_NAME = "office-pdf-cache"
 CACHE_MAX_FILES = 200
 CONVERT_TIMEOUT_SECONDS = 120
+
+# Portable LibreOffice, fetched by the app itself when no system install
+# exists: an AppImage unpacked with `--appimage-extract` (no FUSE, no
+# root) under <data_dir>/libreoffice. LibreItalia publishes the official
+# AppImages under stable, unversioned names.
+PORTABLE_DIR_NAME = "libreoffice"
+PORTABLE_APPIMAGE_URL = "https://appimages.libreitalia.org/LibreOffice-still.basic-x86_64.AppImage"
+PORTABLE_APPIMAGE_NAME = "LibreOffice.AppImage"
+PORTABLE_RUNNER = Path("squashfs-root") / "AppRun"
+PORTABLE_MIN_BYTES = 50 * 1024 * 1024
 
 
 class OfficeConversionError(Exception):
@@ -38,10 +54,13 @@ class OfficeConversionError(Exception):
 
 class OfficePdfConverter:
     _lock = threading.Lock()
+    _install_lock = threading.Lock()
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._executable: str | None | bool = False  # False = not looked up yet
+        self._install: dict = {"state": "idle", "received": 0, "total": 0, "error": ""}
+        self._install_thread: threading.Thread | None = None
 
     # ── availability ────────────────────────────────────────────────
 
@@ -70,7 +89,101 @@ class OfficePdfConverter:
                           "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
             if Path(candidate).is_file():
                 return candidate
+        portable = self.portable_runner
+        if portable.is_file() and os.access(portable, os.X_OK):
+            return str(portable)
         return None
+
+    def kind(self) -> str | None:
+        """'portable' for the app-fetched AppImage, 'system' for anything
+        else that works, None when there is no converter."""
+        exe = self.executable()
+        if exe is None:
+            return None
+        return "portable" if Path(exe) == self.portable_runner else "system"
+
+    # ── portable install ────────────────────────────────────────────
+
+    @property
+    def portable_dir(self) -> Path:
+        return Path(self.settings.data_dir) / PORTABLE_DIR_NAME
+
+    @property
+    def portable_runner(self) -> Path:
+        return self.portable_dir / PORTABLE_RUNNER
+
+    @staticmethod
+    def portable_supported() -> bool:
+        return sys.platform.startswith("linux") and platform.machine() in ("x86_64", "AMD64")
+
+    def install_status(self) -> dict:
+        return {**self._install, "available": self.available(), "kind": self.kind(),
+                "portable_supported": self.portable_supported()}
+
+    def start_portable_install(self) -> dict:
+        """Kick off the download + unpack in a background thread (no-op
+        when one is already running or a converter already exists)."""
+        if self.available():
+            return self.install_status()
+        if not self.portable_supported():
+            self._install = {"state": "error", "received": 0, "total": 0,
+                             "error": "Portable LibreOffice is only available for Linux x86_64."}
+            return self.install_status()
+        with self._install_lock:
+            if self._install_thread and self._install_thread.is_alive():
+                return self.install_status()
+            self._install = {"state": "downloading", "received": 0, "total": 0, "error": ""}
+            self._install_thread = threading.Thread(target=self._run_portable_install, daemon=True)
+            self._install_thread.start()
+        return self.install_status()
+
+    def _run_portable_install(self) -> None:
+        try:
+            self.portable_dir.mkdir(parents=True, exist_ok=True)
+            appimage = self.portable_dir / PORTABLE_APPIMAGE_NAME
+            self._download(PORTABLE_APPIMAGE_URL, appimage)
+            if appimage.stat().st_size < PORTABLE_MIN_BYTES:
+                raise OfficeConversionError("The downloaded file is too small to be LibreOffice.")
+            self._install["state"] = "extracting"
+            self._extract(appimage)
+            if not self.portable_runner.is_file():
+                raise OfficeConversionError("The AppImage did not unpack into squashfs-root/AppRun.")
+            appimage.unlink(missing_ok=True)  # the unpacked tree is what runs
+            self._executable = False  # re-detect
+            self._install = {"state": "ready", "received": 0, "total": 0, "error": ""}
+            logger.info("Portable LibreOffice installed at %s", self.portable_runner)
+        except Exception as exc:  # noqa: BLE001 — surfaced to the UI
+            logger.warning("Portable LibreOffice install failed: %s", exc)
+            self._install = {"state": "error", "received": 0, "total": 0, "error": str(exc)}
+
+    def _download(self, url: str, target: Path) -> None:
+        request = urllib.request.Request(url, headers={"User-Agent": "Noteeli"})
+        with urllib.request.urlopen(request, timeout=60) as response, target.open("wb") as out:
+            total = int(response.headers.get("Content-Length") or 0)
+            self._install["total"] = total
+            received = 0
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
+                received += len(chunk)
+                self._install["received"] = received
+
+    def _extract(self, appimage: Path) -> None:
+        appimage.chmod(appimage.stat().st_mode | 0o755)
+        shutil.rmtree(self.portable_dir / "squashfs-root", ignore_errors=True)
+        completed = subprocess.run(
+            [str(appimage), "--appimage-extract"],
+            cwd=str(self.portable_dir),
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout or "").strip()[-400:]
+            raise OfficeConversionError(f"Unpacking the AppImage failed (exit {completed.returncode}). {detail}")
 
     # ── conversion ──────────────────────────────────────────────────
 

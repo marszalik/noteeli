@@ -111,6 +111,10 @@ if (shell) {
   const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
   const officePreview = document.getElementById("office-preview");
+  const officeFallbackBanner = document.getElementById("office-fallback-banner");
+  const officeFallbackText = document.getElementById("office-fallback-text");
+  const officeFallbackInstall = document.getElementById("office-fallback-install");
+  const officeFallbackCommand = document.getElementById("office-fallback-command");
   const imagePreview = document.getElementById("image-preview");
   const pdfPreview = document.getElementById("pdf-preview");
   const uploadStage = document.getElementById("upload-stage");
@@ -2392,6 +2396,13 @@ if (shell) {
       st_file_reloaded: "Plik przeładowany z dysku.",
       refresh_file_title: "Przeładuj plik (mógł się zmienić w tle)",
       toolbar_undo: "Cofnij", toolbar_redo: "Ponów",
+      office_fallback_text: "Slajdy są pokazane jako tekst. Żeby zobaczyć je tak, jak zostały zaprojektowane, Noteeli potrzebuje LibreOffice (jednorazowe pobranie ok. 300 MB na serwer).",
+      office_install_button: "Pobierz LibreOffice",
+      office_downloading: "Pobieranie LibreOffice…",
+      office_extracting: "Rozpakowywanie LibreOffice…",
+      office_install_failed: "Pobranie LibreOffice nie powiodło się.",
+      office_ready: "LibreOffice jest gotowy, odświeżam podgląd…",
+      office_installed: "LibreOffice zainstalowany. Slajdy będą teraz wyświetlane jak w PowerPoincie.",
       comments_title: "Komentarze",
       comments_toggle_title: "Komentarze do notatki",
       comments_add: "Komentarz",
@@ -2595,6 +2606,13 @@ if (shell) {
       st_file_reloaded: "File reloaded from disk.",
       refresh_file_title: "Reload file (it may have changed in the background)",
       toolbar_undo: "Undo", toolbar_redo: "Redo",
+      office_fallback_text: "Slides are shown as text. To see them as designed, Noteeli needs LibreOffice (a one-time download of about 300 MB onto the server).",
+      office_install_button: "Download LibreOffice",
+      office_downloading: "Downloading LibreOffice…",
+      office_extracting: "Unpacking LibreOffice…",
+      office_install_failed: "The LibreOffice download failed.",
+      office_ready: "LibreOffice is ready, refreshing the preview…",
+      office_installed: "LibreOffice installed. Slides now show as in PowerPoint.",
       comments_title: "Comments",
       comments_toggle_title: "Comments on this note",
       comments_add: "Comment",
@@ -2798,6 +2816,13 @@ if (shell) {
       st_file_reloaded: "Archivo recargado desde el disco.",
       refresh_file_title: "Recargar archivo (puede haber cambiado en segundo plano)",
       toolbar_undo: "Deshacer", toolbar_redo: "Rehacer",
+      office_fallback_text: "Las diapositivas se muestran como texto. Para verlas tal como fueron diseñadas, Noteeli necesita LibreOffice (una descarga única de unos 300 MB en el servidor).",
+      office_install_button: "Descargar LibreOffice",
+      office_downloading: "Descargando LibreOffice…",
+      office_extracting: "Descomprimiendo LibreOffice…",
+      office_install_failed: "La descarga de LibreOffice falló.",
+      office_ready: "LibreOffice está listo, actualizando la vista previa…",
+      office_installed: "LibreOffice instalado. Las diapositivas se muestran ahora como en PowerPoint.",
       comments_title: "Comentarios",
       comments_toggle_title: "Comentarios de esta nota",
       comments_add: "Comentar",
@@ -3001,6 +3026,13 @@ if (shell) {
       st_file_reloaded: "Datei von der Festplatte neu geladen.",
       refresh_file_title: "Datei neu laden (sie könnte sich im Hintergrund geändert haben)",
       toolbar_undo: "Rückgängig", toolbar_redo: "Wiederholen",
+      office_fallback_text: "Folien werden als Text angezeigt. Für die Originaldarstellung braucht Noteeli LibreOffice (einmaliger Download von ca. 300 MB auf den Server).",
+      office_install_button: "LibreOffice herunterladen",
+      office_downloading: "LibreOffice wird heruntergeladen…",
+      office_extracting: "LibreOffice wird entpackt…",
+      office_install_failed: "Der LibreOffice-Download ist fehlgeschlagen.",
+      office_ready: "LibreOffice ist bereit, Vorschau wird aktualisiert…",
+      office_installed: "LibreOffice installiert. Folien erscheinen jetzt wie in PowerPoint.",
       comments_title: "Kommentare",
       comments_toggle_title: "Kommentare zu dieser Notiz",
       comments_add: "Kommentar",
@@ -3204,6 +3236,13 @@ if (shell) {
       st_file_reloaded: "Файл перезагружен с диска.",
       refresh_file_title: "Перезагрузить файл (он мог измениться в фоне)",
       toolbar_undo: "Отменить", toolbar_redo: "Повторить",
+      office_fallback_text: "Слайды показаны как текст. Чтобы увидеть их в оригинальном оформлении, Noteeli нужен LibreOffice (разовая загрузка около 300 МБ на сервер).",
+      office_install_button: "Скачать LibreOffice",
+      office_downloading: "Загрузка LibreOffice…",
+      office_extracting: "Распаковка LibreOffice…",
+      office_install_failed: "Загрузка LibreOffice не удалась.",
+      office_ready: "LibreOffice готов, обновляю предпросмотр…",
+      office_installed: "LibreOffice установлен. Слайды теперь отображаются как в PowerPoint.",
       comments_title: "Комментарии",
       comments_toggle_title: "Комментарии к заметке",
       comments_add: "Комментарий",
@@ -3560,7 +3599,92 @@ if (shell) {
     return transformed;
   }
 
+  // ── Slide preview without LibreOffice ──
+  // The server can only show a .pptx as text cards until a converter
+  // exists. On Linux x86_64 the app can fetch a portable LibreOffice by
+  // itself (no root); elsewhere the banner shows the install command.
+  let officeInstallTimer = null;
+
+  function hideOfficeFallbackBanner() {
+    officeFallbackBanner?.classList.add("hidden");
+    clearTimeout(officeInstallTimer);
+    officeInstallTimer = null;
+  }
+
+  function formatMegabytes(bytes) {
+    return `${Math.round((bytes || 0) / (1024 * 1024))} MB`;
+  }
+
+  function renderOfficeFallbackBanner(status) {
+    if (!officeFallbackBanner) return;
+    officeFallbackBanner.classList.remove("hidden");
+    officeFallbackCommand?.classList.add("hidden");
+    if (officeFallbackInstall) officeFallbackInstall.classList.add("hidden");
+    const state = status?.state || "idle";
+    if (status?.available) {
+      officeFallbackText.textContent = t("office_ready");
+      return;
+    }
+    if (state === "downloading") {
+      const progress = status.total
+        ? `${formatMegabytes(status.received)} / ${formatMegabytes(status.total)}`
+        : formatMegabytes(status.received);
+      officeFallbackText.textContent = `${t("office_downloading")} ${progress}`;
+      return;
+    }
+    if (state === "extracting") {
+      officeFallbackText.textContent = t("office_extracting");
+      return;
+    }
+    if (state === "error") {
+      officeFallbackText.textContent = `${t("office_install_failed")} ${status.error || ""}`.trim();
+    } else {
+      officeFallbackText.textContent = t("office_fallback_text");
+    }
+    if (status?.portable_supported && !config.isPublic) {
+      officeFallbackInstall?.classList.remove("hidden");
+    } else if (officeFallbackCommand) {
+      officeFallbackCommand.textContent = "sudo apt install libreoffice-impress";
+      officeFallbackCommand.classList.remove("hidden");
+    }
+  }
+
+  async function refreshOfficeFallbackBanner() {
+    if (!officeFallbackBanner || config.isPublic) return;
+    clearTimeout(officeInstallTimer);
+    officeInstallTimer = null;
+    let status = null;
+    try {
+      status = await requestJson("/api/office-converter", { method: "GET" });
+    } catch {
+      return;
+    }
+    if (!selectedPath || !previewStage || previewStage.classList.contains("hidden")) return;
+    renderOfficeFallbackBanner(status);
+    if (status.state === "downloading" || status.state === "extracting") {
+      officeInstallTimer = setTimeout(refreshOfficeFallbackBanner, 1500);
+    } else if (status.state === "ready" || status.available) {
+      // The converter just appeared: reopen the deck as real slides.
+      setStatus(t("office_installed"));
+      const path = selectedPath;
+      setTimeout(() => { if (selectedPath === path) loadFile(path); }, 600);
+    }
+  }
+
+  officeFallbackInstall?.addEventListener("click", async () => {
+    officeFallbackInstall.classList.add("hidden");
+    try {
+      const status = await requestJson("/api/office-converter/install", { method: "POST" });
+      renderOfficeFallbackBanner(status);
+      officeInstallTimer = setTimeout(refreshOfficeFallbackBanner, 1500);
+    } catch (error) {
+      setStatus(error.message, true);
+      officeFallbackInstall.classList.remove("hidden");
+    }
+  });
+
   function hidePreview() {
+    hideOfficeFallbackBanner();
     previewStage.classList.add("hidden");
     imagePreview.classList.add("hidden");
     imagePreview.removeAttribute("src");
@@ -3592,6 +3716,7 @@ if (shell) {
     hideKanbanMode();
     previewStage.classList.remove("hidden");
     hideUploadStage();
+    hideOfficeFallbackBanner();
     // An office file the server renders through LibreOffice arrives as a
     // PDF — it goes to the PDF viewer frame (the sandboxed office frame
     // blocks the browser's PDF plugin).
@@ -3616,6 +3741,7 @@ if (shell) {
       imagePreview.alt = "";
       officePreview?.removeAttribute("src");
     } else if (isOffice) {
+      if (file.preview_kind === "pptx") refreshOfficeFallbackBanner();
       // Server returns rendered HTML — pass it to a sandboxed iframe.
       // sandbox="allow-same-origin" lets the iframe inherit theme styles
       // but blocks scripts and form submission.

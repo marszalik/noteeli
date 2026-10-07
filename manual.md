@@ -304,15 +304,18 @@ with ready-made templates for both.
 - **Read-only previews**: images, PDFs, Word documents (`.docx`) rendered as
   formatted text, Excel sheets (`.xlsx`/`.xlsm`) rendered as tables — one
   per sheet — and PowerPoint decks (`.pptx`).
-- **Slides look like slides when LibreOffice is installed.** Without it a
-  `.pptx` is shown as plain text cards (titles, bullets, pictures). With
-  LibreOffice on the server, Noteeli converts the deck to a PDF the first
-  time it is opened and shows the real slides — layout, backgrounds, fonts,
-  charts — in the PDF viewer; the PDF is cached, so the next open is
-  instant. Install it with `sudo apt install libreoffice-impress` (Debian /
-  Ubuntu) or `brew install --cask libreoffice` (macOS) and restart Noteeli;
-  it is picked up automatically. `NOTEELI_OFFICE_CONVERTER` points at a
-  non-standard binary, or `off` disables the conversion.
+- **PowerPoint decks open as real slides.** Noteeli renders a `.pptx`
+  through LibreOffice into a PDF the first time it is opened and shows it
+  in the PDF viewer — layout, backgrounds, fonts, charts, as designed. The
+  PDF is cached, so the next open is instant. The installer (`install.sh`)
+  puts LibreOffice in place from your system's package manager. If it is
+  missing anyway (an older install, a container, no package manager), the
+  deck opens as text cards under a banner with a **Download LibreOffice**
+  button: one click fetches a portable copy (about 300 MB, Linux x86_64)
+  into Noteeli's data directory, no root needed, and the deck reopens as
+  slides when it is done. On other platforms the banner shows the install
+  command instead. `NOTEELI_OFFICE_CONVERTER` points at a non-standard
+  binary, or `off` disables the conversion.
 
 ## 9. Publishing notes publicly
 

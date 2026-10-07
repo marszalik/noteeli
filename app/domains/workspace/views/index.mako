@@ -293,6 +293,11 @@
         <div id="public-content" class="public-content hidden"></div>
 
         <div id="preview-stage" class="file-preview hidden">
+          <div id="office-fallback-banner" class="office-fallback-banner hidden" role="status">
+            <span id="office-fallback-text"></span>
+            <button id="office-fallback-install" class="button button-primary button-sm" type="button" data-i18n="office_install_button">Pobierz LibreOffice</button>
+            <code id="office-fallback-command" class="office-fallback-command hidden"></code>
+          </div>
           <img id="image-preview" class="file-preview-image hidden" alt="" />
           <iframe id="pdf-preview" class="file-preview-pdf hidden" title="Podglad PDF"></iframe>
           <iframe id="office-preview" class="file-preview-office hidden" sandbox="allow-same-origin" title="Podglad dokumentu"></iframe>

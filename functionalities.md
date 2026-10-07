@@ -287,6 +287,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | New file / new directory toolbar buttons | 🌐 | `openCreateModal` |
 | Tree-row context menu with icons + i18n labels (open in new tab / scope / upload / new file / new folder / download / copy path / rename / duplicate / refresh / delete) | 🌐 | `renderTreeContextMenu` (recent overhaul) |
 | PowerPoint preview as a faithful PDF via LibreOffice when `soffice` exists (auto-detect / `NOTEELI_OFFICE_CONVERTER`), cached by content hash; `preview_rendering` tells the frontend which frame to use | ✅ `tests/test_office_pdf_preview.py` (7 tests with a fake `soffice`: conversion + cache, absent/off, failure not cached, `read_document` reports `pdf` only with a converter, backend/path safety, endpoint serves `application/pdf`, HTML fallback when LibreOffice fails) | `OfficePdfConverter` in `workspace/office_pdf.py`; Word / Excel keep their HTML renderers |
+| Portable LibreOffice fetched by the app (banner over the text-card `.pptx` preview → `POST /api/office-converter/install` downloads the AppImage into `<data_dir>/libreoffice`, unpacks with `--appimage-extract`, progress via `GET /api/office-converter`, deck reopens as slides); `install.sh` installs the system package when it can | ✅ `test_portable_runner_in_data_dir_is_detected_as_converter`, `test_portable_install_downloads_unpacks_and_enables_previews`, `test_portable_install_reports_failures`, `test_office_converter_endpoints`; e2e `tests/test_e2e_office_banner.py` | download / extract are monkeypatched in tests; Linux x86_64 only, other platforms get the install command |
 | "Open in new tab" (context menu, files) — serves the file verbatim with inline disposition via `/api/file/raw`: browser-native viewer for PDF/images, download → native app for pptx/docx | ✅ `tests/test_file_raw_endpoint.py` | replaced the old "Open" entry, which duplicated a plain click |
 | Duplicate file (context menu) → copy in same folder as `<name>_N.<ext>` | ✅ | `duplicate_item`, `test_duplicate_item_*` |
 
@@ -481,8 +482,11 @@ tests/
 ├── test_auth_guard.py               — 14 tests (every workspace + comments API
 │                                       endpoint gets 401 from non-local hosts;
 │                                       HTML root redirects to /login; local-host bypass)
-├── test_office_pdf_preview.py       —  7 tests (LibreOffice PDF slide preview
-│                                       with a fake soffice: cache, fallback, endpoint)
+├── test_office_pdf_preview.py       — 11 tests (LibreOffice PDF slide preview
+│                                       with a fake soffice: cache, fallback, endpoint,
+│                                       portable install flow)
+├── test_e2e_office_banner.py        —  1 test (headless Chromium: .pptx without
+│                                       LibreOffice shows the download banner)
 ├── test_comments_service.py         — 10 tests (sidecar naming, parse ⇄ serialize,
 │                                       add/edit/resolve/delete, errors, demo mode)
 ├── test_e2e_comments.py             —  7 tests (headless Chromium: markers ⇄

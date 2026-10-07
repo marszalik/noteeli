@@ -12,6 +12,7 @@
 #   NOTEELI_DIR        Install directory                 (default: ~/.noteeli)
 #   NOTEELI_NOTES_DIR  Notes content root                (default: ~/notes)
 #   NOTEELI_VERSION    Release tag to pin to, e.g. v1.0.0
+#   NOTEELI_SKIP_LIBREOFFICE=1  Don't install LibreOffice (slide previews)
 #   NOTEELI_BRANCH     Git branch (only used when NOTEELI_VERSION is unset;
 #                      default: main — i.e. latest development tip)
 #
@@ -74,6 +75,37 @@ ok "git:    $(git --version | awk '{print $3}')"
 # venv module ships with python on most distros, but not all (Debian/Ubuntu split it out).
 "$PYTHON_BIN" -c 'import venv' 2>/dev/null \
   || fail "Python venv module missing. On Debian/Ubuntu run: sudo apt install python3-venv"
+
+# LibreOffice renders PowerPoint previews as real slides. It is an
+# optional system package: install it when a package manager is at hand,
+# otherwise Noteeli can fetch a portable copy from inside the app later.
+# NOTEELI_SKIP_LIBREOFFICE=1 skips this step.
+if [[ "${NOTEELI_SKIP_LIBREOFFICE:-}" != "1" ]]; then
+  if command -v soffice >/dev/null 2>&1 || command -v libreoffice >/dev/null 2>&1; then
+    ok "LibreOffice: found (slide previews enabled)"
+  else
+    SUDO=""
+    if [[ "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+    if command -v apt-get >/dev/null 2>&1; then
+      step "Installing LibreOffice (slide previews) via apt"
+      $SUDO apt-get install -y -q libreoffice-impress >/dev/null 2>&1 \
+        && ok "LibreOffice installed" \
+        || warn "Could not install LibreOffice via apt. Slide previews fall back to text; the app offers a portable download instead."
+    elif command -v dnf >/dev/null 2>&1; then
+      step "Installing LibreOffice (slide previews) via dnf"
+      $SUDO dnf install -y -q libreoffice-impress >/dev/null 2>&1 \
+        && ok "LibreOffice installed" \
+        || warn "Could not install LibreOffice via dnf. Slide previews fall back to text; the app offers a portable download instead."
+    elif command -v brew >/dev/null 2>&1; then
+      step "Installing LibreOffice (slide previews) via Homebrew"
+      brew install --cask --quiet libreoffice >/dev/null 2>&1 \
+        && ok "LibreOffice installed" \
+        || warn "Could not install LibreOffice via Homebrew. Slide previews fall back to text."
+    else
+      warn "No package manager found for LibreOffice. Slide previews fall back to text; on Linux x86_64 the app offers a portable download."
+    fi
+  fi
+fi
 
 # ── 2. Source ────────────────────────────────────────────────────
 step "Fetching source into $INSTALL_DIR"

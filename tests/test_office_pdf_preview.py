@@ -26,9 +26,10 @@ while [ $# -gt 0 ]; do
     *) input="$1"; shift ;;
   esac
 done
-echo run >> "$(dirname "$0")/calls.log"
+# no dirname/basename: tests run this with an empty PATH
+echo run >> "${0%/*}/calls.log"
 if [ -n "$FAKE_SOFFICE_FAIL" ]; then echo "boom" >&2; exit 1; fi
-stem=$(basename "$input")
+stem="${input##*/}"
 stem="${stem%.*}"
 printf '%%PDF-1.4 fake from %s\\n' "$input" > "$outdir/$stem.pdf"
 """
@@ -183,3 +184,109 @@ def test_preview_endpoint_falls_back_to_html_when_libreoffice_fails(preview_clie
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert "Slajd 1" in response.text
+
+
+# ── portable LibreOffice (fetched by the app) ─────────────────────────
+
+
+def _portable_runner(converter: OfficePdfConverter) -> Path:
+    runner = converter.portable_runner
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    runner.write_text(FAKE_SOFFICE)
+    runner.chmod(runner.stat().st_mode | stat.S_IEXEC)
+    return runner
+
+
+def test_portable_runner_in_data_dir_is_detected_as_converter(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    converter = OfficePdfConverter(_settings(tmp_path / "vault", ""))
+    assert converter.available() is False and converter.kind() is None
+    _portable_runner(converter)
+    converter._executable = False  # re-detect
+    assert converter.available() is True
+    assert converter.kind() == "portable"
+    pdf = converter.convert_to_pdf(b"deck", ".pptx")
+    assert pdf.read_bytes().startswith(b"%PDF")
+
+
+def test_portable_install_downloads_unpacks_and_enables_previews(tmp_path: Path, monkeypatch):
+    from app.domains.workspace import office_pdf as module
+
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.setattr(module, "PORTABLE_MIN_BYTES", 10)
+    monkeypatch.setattr(OfficePdfConverter, "portable_supported", staticmethod(lambda: True))
+    converter = OfficePdfConverter(_settings(tmp_path / "vault", ""))
+
+    def fake_download(self, url, target):
+        assert url == module.PORTABLE_APPIMAGE_URL
+        target.write_bytes(b"x" * 1000)
+        self._install["total"] = 1000
+        self._install["received"] = 1000
+
+    def fake_extract(self, appimage):
+        assert appimage.name == module.PORTABLE_APPIMAGE_NAME
+        _portable_runner(self)
+
+    monkeypatch.setattr(OfficePdfConverter, "_download", fake_download)
+    monkeypatch.setattr(OfficePdfConverter, "_extract", fake_extract)
+
+    status = converter.start_portable_install()
+    assert status["state"] in ("downloading", "extracting", "ready")
+    converter._install_thread.join(timeout=10)
+    final = converter.install_status()
+    assert final["state"] == "ready"
+    assert final["available"] is True and final["kind"] == "portable"
+    assert not (converter.portable_dir / module.PORTABLE_APPIMAGE_NAME).exists()
+    # Already available → a second start is a no-op that reports readiness.
+    assert converter.start_portable_install()["available"] is True
+
+
+def test_portable_install_reports_failures(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.setattr(OfficePdfConverter, "portable_supported", staticmethod(lambda: True))
+    converter = OfficePdfConverter(_settings(tmp_path / "vault", ""))
+
+    def failing_download(self, url, target):
+        raise OSError("network down")
+
+    monkeypatch.setattr(OfficePdfConverter, "_download", failing_download)
+    converter.start_portable_install()
+    converter._install_thread.join(timeout=10)
+    status = converter.install_status()
+    assert status["state"] == "error" and "network down" in status["error"]
+    assert status["available"] is False
+
+    monkeypatch.setattr(OfficePdfConverter, "portable_supported", staticmethod(lambda: False))
+    unsupported = OfficePdfConverter(_settings(tmp_path / "vault", "")).start_portable_install()
+    assert unsupported["state"] == "error" and "Linux x86_64" in unsupported["error"]
+
+
+def test_office_converter_endpoints(tmp_path: Path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.domains.workspace import router as workspace_router
+    from app.main import create_app
+
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    content = Path(os.environ["NOTEELI_CONTENT_ROOT"])
+    content.mkdir(parents=True, exist_ok=True)
+    converter = OfficePdfConverter(_settings(content, ""))
+    monkeypatch.setattr(OfficePdfConverter, "portable_supported", staticmethod(lambda: True))
+    monkeypatch.setattr(OfficePdfConverter, "_download", lambda self, url, target: target.write_bytes(b"x" * 1000))
+    monkeypatch.setattr(OfficePdfConverter, "_extract", lambda self, appimage: _portable_runner(self))
+    from app.domains.workspace import office_pdf as module
+
+    monkeypatch.setattr(module, "PORTABLE_MIN_BYTES", 10)
+    original = workspace_router.workspace_service.office_pdf
+    workspace_router.workspace_service.office_pdf = converter
+    try:
+        client = TestClient(create_app(), base_url="http://127.0.0.1")
+        before = client.get("/api/office-converter").json()
+        assert before["available"] is False and before["portable_supported"] is True
+        started = client.post("/api/office-converter/install").json()
+        assert started["state"] in ("downloading", "extracting", "ready")
+        converter._install_thread.join(timeout=10)
+        after = client.get("/api/office-converter").json()
+        assert after["state"] == "ready" and after["available"] is True and after["kind"] == "portable"
+    finally:
+        workspace_router.workspace_service.office_pdf = original

@@ -5582,3 +5582,49 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
 .comment-toast.is-fading {
   opacity: 0;
 }
+
+/* ── Slide preview without LibreOffice ──────────────────────────────
+   Shown above the text-card fallback of a .pptx: explains why the deck
+   looks like text and offers the portable download (Linux x86_64) or
+   the install command. */
+.file-preview {
+  display: flex;
+  flex-direction: column;
+}
+
+.office-fallback-banner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel-strong));
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.office-fallback-banner.hidden {
+  display: none;
+}
+
+.office-fallback-banner span {
+  flex: 1 1 320px;
+}
+
+.office-fallback-command {
+  flex: 1 1 100%;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.78rem;
+  user-select: all;
+}
+
+.office-fallback-command.hidden {
+  display: none;
+}
