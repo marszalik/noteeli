@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-10-31
+
 ### Changed
 
 - **The file tree loads lazily.** Opening or refreshing Noteeli used to
