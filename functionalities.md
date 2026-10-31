@@ -283,6 +283,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Mobile: drawer sits below the topbar (hamburger/Save stay tappable), first visit defaults to overlay | ✅ `test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap` (e2e) | `--topbar-h` via ResizeObserver |
 | Mobile: expanding a folder keeps the drawer open (composedPath, not contains) | ✅ same e2e | backdrop-close handler in `initSidebar` |
 | Mobile: picking a file closes the overlay drawer | ✅ same e2e | end of `loadFile` |
+| "New version" bar fires on any deploy (version **or** asset-mtime build id) | ✅ `test_build_id_changes_when_static_assets_change`, `test_version_endpoint_reports_running_version`, `test_update_bar_appears_when_server_version_changes` (e2e) | `build_id()` in `app/core/templates.py`, `meta[name=app-build]`, `checkForUpdate` in app.js |
 | Download in iOS home-screen app → fetch + `navigator.share` (File), "file ready" dialog fallback | ✅ `test_download_in_ios_standalone_hands_file_to_share_sheet`, `test_download_in_ios_standalone_without_file_share_shows_ready_dialog` (e2e, stubbed share — real iOS share sheet 🌐 untested) | `downloadViaShareSheet`, `showDownloadReadyDialog`; other standalone modes keep `window.open` |
 | Refresh tree button | 🌐 | `refreshButton` |
 | Reload open file from disk (topbar) — confirms if there are unsaved edits | 🌐 | `refreshFileButton` → `loadFile(selectedPath)` |

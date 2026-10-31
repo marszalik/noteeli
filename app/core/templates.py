@@ -32,12 +32,22 @@ def _static_version() -> int:
         return 0
 
 
+def build_id() -> str:
+    """Identity of the code the browser would load: release version plus the
+    static-asset mtime token. The update bar compares this, so a deploy
+    between releases (same version number, new app.js) is noticed too."""
+    from app import __version__
+
+    return f"{__version__}+{_static_version()}"
+
+
 def render_template(template_name: str, request, **context) -> HTMLResponse:
     template = template_lookup.get_template(template_name)
     body = template.render(
         request=request,
         settings=get_settings(),
         static_version=_static_version(),
+        app_build=build_id(),
         **context,
     )
     # Never let the app-shell HTML go stale. The document carries the

@@ -20,6 +20,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
   sheet (Save to Files, AirDrop, …); if iOS wants a fresh tap first (bigger
   files), a "file ready" dialog with a Save / share button appears.
   Browser tabs and Android are unchanged.
+- **The "new version" bar now fires on every deploy**, not just on a
+  version bump. It used to compare only the release number, so a fix
+  pulled onto a server between releases never showed the bar and the open
+  app kept running the old JavaScript. `/api/version` now also reports a
+  `build` (version + the modification time of `app.js` / `app.css`) that
+  the page compares against its own copy.
 
 ## [1.15.0] - 2026-10-31
 

@@ -105,7 +105,9 @@ def test_version_endpoint_reports_running_version(client: TestClient):
     response = client.get("/api/version")
     assert response.status_code == 200
     assert response.headers.get("cache-control") == "no-store, max-age=0"
-    assert response.json() == {"version": __version__}
+    data = response.json()
+    assert data["version"] == __version__
+    assert data["build"].startswith(f"{__version__}+")
 
 
 def test_shell_carries_app_version_meta(client: TestClient):
@@ -115,3 +117,25 @@ def test_shell_carries_app_version_meta(client: TestClient):
 
     body = client.get("/").text
     assert f'name="app-version" content="{__version__}"' in body
+
+
+def test_build_id_changes_when_static_assets_change(client: TestClient, monkeypatch):
+    """A deploy between releases keeps the version number but changes
+    app.js — the update bar must still fire, so the build id tracks the
+    asset mtime and the shell's meta carries the same value as the API."""
+    import os
+
+    from app.core import templates
+    from app.core.config import get_settings
+
+    body = client.get("/").text
+    build = client.get("/api/version").json()["build"]
+    assert f'name="app-build" content="{build}"' in body
+
+    app_js = get_settings().static_dir / "app.js"
+    before = app_js.stat()
+    try:
+        os.utime(app_js, (before.st_atime, before.st_mtime + 100))
+        assert templates.build_id() != build
+    finally:
+        os.utime(app_js, (before.st_atime, before.st_mtime))

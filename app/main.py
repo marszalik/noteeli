@@ -164,9 +164,10 @@ def create_app() -> FastAPI:
     @app.get("/api/version", include_in_schema=False)
     async def api_version():
         from app import __version__
+        from app.core.templates import build_id
 
         return JSONResponse(
-            content={"version": __version__},
+            content={"version": __version__, "build": build_id()},
             headers={"Cache-Control": "no-store, max-age=0"},
         )
 

@@ -8440,6 +8440,9 @@ if (shell) {
 // with a cache-buster, so it also unsticks clients pinned by the old PWA.
 (() => {
   const pageVersion = document.querySelector('meta[name="app-version"]')?.content || "";
+  // "build" = version + asset mtime: also changes on a deploy between
+  // releases. Older servers only send "version" — compare that instead.
+  const pageBuild = document.querySelector('meta[name="app-build"]')?.content || "";
   if (!pageVersion) return;
 
   const forceRefresh = async () => {
@@ -8485,7 +8488,11 @@ if (shell) {
       const resp = await fetch("/api/version", { cache: "no-store" });
       if (!resp.ok) return;
       const data = await resp.json();
-      if (data.version && data.version !== pageVersion) showUpdateBar();
+      const changed =
+        data.build && pageBuild
+          ? data.build !== pageBuild
+          : data.version && data.version !== pageVersion;
+      if (changed) showUpdateBar();
     } catch {
       // offline / server restarting — try again on the next trigger
     }
