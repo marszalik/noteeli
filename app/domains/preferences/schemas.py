@@ -88,6 +88,10 @@ class SavePreferencesProfileRequest(UpdatePreferencesRequest):
     gdrive_credentials: str = ""
 
 
+class RenameProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
 class ReorderItemsRequest(BaseModel):
     parent_path: str
     ordered_paths: list[str]

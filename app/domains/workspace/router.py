@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.templates import render_template
 from app.domains.preferences.schemas import (
     AppPreferences,
+    RenameProfileRequest,
     ReorderItemsRequest,
     SavePreferencesProfileRequest,
     SavedPreferencesProfilesResponse,
@@ -609,6 +610,36 @@ async def workspace_update_preference_profile_api(
         )
     except PreferenceProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PreferenceProfileConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.put(
+    "/api/preferences/profiles/{profile_id}/name",
+    response_model=SavedPreferencesProfile,
+    name="workspace_rename_preference_profile_api",
+)
+async def workspace_rename_preference_profile_api(
+    request: Request, profile_id: int, payload: RenameProfileRequest
+):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.rename_preference_profile(profile_id, payload.name, _user_key(request))
+    except PreferenceProfileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PreferenceProfileConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/api/preferences/profiles/from-current",
+    response_model=SavedPreferencesProfile,
+    name="workspace_profile_from_current_api",
+)
+async def workspace_profile_from_current_api(request: Request, payload: RenameProfileRequest):
+    auth_service.require_api_access(request)
+    try:
+        return workspace_service.create_preference_profile_from_current(payload.name, _user_key(request))
     except PreferenceProfileConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

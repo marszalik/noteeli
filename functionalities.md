@@ -238,14 +238,19 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Apply a profile (becomes the active preferences) | ✅ same | `apply_preference_profile` |
 | Update an existing profile | ✅ `test_update_preference_profile_changes_existing_entry` | |
 | Delete a profile | ✅ `test_delete_preference_profile_removes_entry` | |
-| Quick-switch dropdown in topbar | 🌐 | `togglePreferenceProfilesButton` |
-| Profile management lives in Settings → Profile tab | 🌐 | recent UX move |
+| Settings write through to the active profile (Settings dialog, font ±, …) | ✅ `test_settings_changes_write_through_to_the_active_profile` | `PreferencesService._sync_active_profile` |
+| Stale "active profile" (source changed under it) is dropped, never overwritten | ✅ `test_stale_active_profile_is_dropped_when_source_no_longer_matches` | `_reconcile_active_profile` |
+| Applying an SFTP profile without a password doesn't inherit the previous profile's | ✅ `test_applying_sftp_profile_without_password_does_not_inherit_previous_one` | `clear_sftp_password` |
+| Rename a profile (`PUT /api/preferences/profiles/{id}/name`) | ✅ `test_rename_profile_and_conflicts` | |
+| First save on a pre-profile install creates + activates one (`POST …/from-current`) | ✅ `test_create_profile_from_current_activates_it`, e2e below | |
+| Profile switcher in the sidebar header (switch / edit / delete / reorder / + New profile) | ✅ `test_profiles_own_the_settings_and_switch_from_the_sidebar` (e2e) | `renderProfileSwitcher`, `renderPreferenceProfiles`; replaces the topbar dropdown |
+| Settings dialog has the profile name; "new" mode starts with an empty source | ✅ same e2e | `openSettingsModal("new" \| "edit")`, `saveSettings` |
 
 ## 12. Settings modal UI
 
 | Feature | Status | Notes |
 |---|---|---|
-| 5-tab sidebar layout (Source / Appearance / Editor / Images / Profiles) | 🌐 | `setActiveSettingsTab`, last tab persisted in localStorage |
+| 4-tab sidebar layout (Source / Appearance / Editor / Images) + profile name field on top | 🌐 | `setActiveSettingsTab`, last tab persisted in localStorage |
 | Wide modal (880 px), responsive (collapses tabs to a horizontal scroller below 640 px) | 🌐 | `.modal-card-settings` |
 | Translated tab labels via `data-i18n` | 🌐 | |
 | Smaller buttons inside any modal via scoped CSS | 🌐 | `.modal-actions .button` |
@@ -505,7 +510,7 @@ tests/
 ├── test_config.py                   —  4 tests (demo/hosted exclusivity, defaults,
 │                                       blank boolean env values tolerated)
 ├── test_lock_workspace.py           —  4 tests (pinned storage, confined browser)
-├── test_preference_profiles.py     —  4 tests (save/list/apply, update, delete)
+├── test_preference_profiles.py     —  9 tests (save/list/apply, update, delete, write-through, rename)
 ├── test_shell_freshness.py          —  4 tests (no-store shell, SW kill-switch)
 ├── test_directory_browser_service.py — 3 tests (browser modal backend)
 ├── test_file_logging.py             —  3 tests (rotating file logs)

@@ -74,7 +74,23 @@
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
           </button>
         </div>
-        <p id="content-root-display" class="sidebar-path">${content_root}</p>
+        <div class="profile-switcher">
+          <button id="toggle-preference-profiles" class="profile-switcher-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="preference-profiles-dropdown" title="Switch profile" data-i18n-title="profile_switch_title">
+            <span class="profile-switcher-text">
+              <strong id="profile-switcher-name" class="profile-switcher-name">Profil</strong>
+              <span id="content-root-display" class="sidebar-path">${content_root}</span>
+            </span>
+            <svg class="profile-switcher-chevron" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div id="preference-profiles-dropdown" class="profiles-dropdown hidden" aria-hidden="true">
+            <div id="preference-profiles-list" class="profiles-dropdown-list"></div>
+            % if not lock_workspace:
+            <div class="profiles-dropdown-footer">
+              <button id="profile-new" class="button button-secondary button-sm profile-new-button" type="button" data-i18n="profile_add">+ Nowy profil</button>
+            </div>
+            % endif
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-actions">
@@ -141,35 +157,6 @@
         </div>
 
         <div class="topbar-actions">
-          <div class="profiles-menu">
-            <button id="toggle-preference-profiles" class="icon-button" type="button" aria-label="Show saved preference profiles" aria-expanded="false" aria-controls="preference-profiles-dropdown" title="Saved preference profiles">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M18 2H8a3 3 0 0 0-3 3v14a2 2 0 0 0 2 2h11a3 3 0 0 1 3 3V5a3 3 0 0 0-3-3zm0 17.08A4.97 4.97 0 0 0 17 19H7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1zM8.5 7H16v2H8.5zm0 4H16v2H8.5zm0 4H13v2H8.5z" />
-              </svg>
-            </button>
-            <div id="preference-profiles-dropdown" class="profiles-dropdown hidden" aria-hidden="true">
-              <div class="profiles-dropdown-header">
-                <div class="label" data-i18n="quick_start">Quick start</div>
-                <strong data-i18n="saved_profiles">Saved profiles</strong>
-              </div>
-              <div id="preference-profiles-list" class="profiles-dropdown-list"></div>
-              <div class="profiles-dropdown-footer">
-                <input
-                  id="profile-quick-name"
-                  type="text"
-                  class="settings-input"
-                  data-i18n-placeholder="save_new_profile_placeholder"
-                  placeholder="Save current as new profile…"
-                />
-                <button
-                  id="profile-quick-save"
-                  type="button"
-                  class="button button-primary button-sm"
-                  data-i18n="save_action"
-                >Save</button>
-              </div>
-            </div>
-          </div>
           <div class="git-menu hidden" id="git-menu">
             <button id="git-menu-toggle" class="icon-button" type="button" aria-label="Git" aria-haspopup="true" aria-expanded="false" aria-controls="git-menu-dropdown" title="Git">
               <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -369,6 +356,12 @@
         </div>
         <button id="close-settings" class="icon-button" type="button" aria-label="Close settings">X</button>
       </header>
+
+      <div class="settings-profile-bar">
+        <label class="settings-label" for="profile-name-input" data-i18n="label_profile_name">Nazwa profilu</label>
+        <input id="profile-name-input" class="settings-input" type="text" maxlength="120" autocomplete="off" />
+        <p id="profile-name-hint" class="muted small-note hidden"></p>
+      </div>
 
       <div class="settings-body">
 <% _locked = bool(context.get('lock_workspace')) %>

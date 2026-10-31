@@ -1670,6 +1670,112 @@ body[data-theme="noteeli"] .modal-actions {
   position: relative;
 }
 
+/* Profile switcher: lives in the sidebar header, replaces the plain
+   path line. The profile owns the source, so this is where you choose it. */
+.profile-switcher {
+  position: relative;
+  margin-top: 0.35rem;
+}
+
+.profile-switcher-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface, var(--panel)) 70%, transparent);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.profile-switcher-button:hover,
+.profile-switcher-button[aria-expanded="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.profile-switcher-text {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.profile-switcher-name {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-switcher-text .sidebar-path {
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.profile-switcher-chevron {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.profile-switcher .profiles-dropdown {
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: auto;
+  width: 100%;
+  min-width: 260px;
+  max-width: calc(100vw - 1.5rem);
+}
+
+.profile-new-button {
+  width: 100%;
+}
+
+.profiles-dropdown-edit {
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.profiles-dropdown-edit:hover {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.profiles-dropdown-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Settings belong to a profile: its name is the first thing in the dialog. */
+.settings-profile-bar {
+  padding: 0.2rem 1.4rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-profile-bar .settings-input {
+  margin-top: 0.2rem;
+}
+
+.settings-profile-bar .small-note {
+  margin: 0.4rem 0 0;
+}
+
 .profiles-dropdown {
   position: absolute;
   top: calc(100% + 0.6rem);
@@ -5627,4 +5733,12 @@ body[data-theme="obsidian"] .tree-icon-generic { color: #808080; }
 
 .office-fallback-command.hidden {
   display: none;
+}
+
+/* The sidebar profile dropdown floats over the file tree: keep it opaque in
+   every theme (the topbar version could afford blur; here the tree icons
+   showed through). Last in the file so it wins over the per-theme rules. */
+body .profile-switcher .profiles-dropdown {
+  background: var(--panel-strong);
+  backdrop-filter: none;
 }

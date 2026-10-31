@@ -330,6 +330,42 @@ class PreferencesRepository:
             return None
         return self._profile_from_row(row)
 
+    def rename_profile(self, profile_id: int, name: str, user_key: str | None = None) -> SavedPreferencesProfile | None:
+        scope, params = self._profile_scope(user_key)
+        with self._connect() as connection:
+            cursor = connection.execute(
+                f"UPDATE preference_profiles SET name = ? WHERE id = ? AND {scope}",
+                (name, profile_id, *params),
+            )
+            if cursor.rowcount == 0:
+                return None
+            row = connection.execute(
+                "SELECT id, name, payload FROM preference_profiles WHERE id = ?",
+                (profile_id,),
+            ).fetchone()
+        return self._profile_from_row(row) if row else None
+
+    def update_profile_preferences(
+        self, profile_id: int, preferences: AppPreferences, user_key: str | None = None
+    ) -> bool:
+        """Overwrite only the stored settings of a profile (name untouched)."""
+        payload = json.dumps(self._encrypted_profile_payload(preferences), ensure_ascii=False)
+        scope, params = self._profile_scope(user_key)
+        with self._connect() as connection:
+            cursor = connection.execute(
+                f"UPDATE preference_profiles SET payload = ? WHERE id = ? AND {scope}",
+                (payload, profile_id, *params),
+            )
+        return cursor.rowcount > 0
+
+    def clear_sftp_password(self) -> None:
+        """Explicitly wipe the stored SFTP password (empty input elsewhere
+        means "keep existing")."""
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO app_settings(key, value) VALUES('sftp_password', '')"
+            )
+
     def delete_profile(self, profile_id: int, user_key: str | None = None) -> bool:
         scope, params = self._profile_scope(user_key)
         with self._connect() as connection:

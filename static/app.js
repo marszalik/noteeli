@@ -42,14 +42,10 @@ if (shell) {
   const togglePreferenceProfilesButton = document.getElementById("toggle-preference-profiles");
   const preferenceProfilesDropdown = document.getElementById("preference-profiles-dropdown");
   const preferenceProfilesList = document.getElementById("preference-profiles-list");
-  const profileQuickNameInput = document.getElementById("profile-quick-name");
-  const profileQuickSaveButton = document.getElementById("profile-quick-save");
   const openSettingsButton = document.getElementById("open-settings");
   const closeSettingsButton = document.getElementById("close-settings");
   const cancelSettingsButton = document.getElementById("cancel-settings");
   const saveSettingsButton = document.getElementById("save-settings");
-  const saveProfileButton = document.getElementById("save-profile");
-  const cancelProfileEditButton = document.getElementById("cancel-profile-edit");
   const settingsModal = document.getElementById("settings-modal");
   const browseContentRootButton = document.getElementById("browse-content-root");
   const directoryBrowserModal = document.getElementById("directory-browser-modal");
@@ -89,8 +85,10 @@ if (shell) {
   const editorFontSizeInput = document.getElementById("editor-font-size-input");
   const autosaveEnabledInput = document.getElementById("autosave-enabled-input");
   const profileNameInput = document.getElementById("profile-name-input");
-  const profileEditorTitle = document.getElementById("profile-editor-title");
-  const settingsProfileList = document.getElementById("settings-profile-list");
+  const profileNameHint = document.getElementById("profile-name-hint");
+  const profileSwitcherName = document.getElementById("profile-switcher-name");
+  const profileNewButton = document.getElementById("profile-new");
+  const settingsTitle = document.getElementById("settings-title");
   const codeThemeSelect = document.getElementById("code-theme-select");
   const markdownStyleSelect = document.getElementById("markdown-style-select");
   const imageUploadModeSelect = document.getElementById("image-upload-mode-select");
@@ -144,7 +142,6 @@ if (shell) {
   let gitDirtyDirs = new Set();        // ancestor dirs that contain a change
   let gitTreeSignature = null;         // last status fingerprint painted into the tree
   let preferenceProfiles = [];
-  let editingPreferenceProfileId = null;
   let profileFormGdriveCredentials = "";
   let selectedPath = null;
   let selectedEditable = false;
@@ -2263,7 +2260,12 @@ if (shell) {
       save_changes: "Zapisz zmiany", edit: "Edytuj", delete_action: "Usuń",
       profile_hint: "Zapisuje aktualne pola formularza jako profil.",
       editing_profile_prefix: "Edytujesz",
-      no_profiles_hint: "Brak zapisanych zestawów. Wpisz nazwę poniżej, żeby zapisać aktualne ustawienia jako profil.",
+      no_profiles_hint: "Brak profili. Kliknij „Nowy profil”, aby dodać pierwszy.",
+      profile_switch_title: "Przełącz profil", profile_add: "+ Nowy profil", profile_edit_title: "Edytuj profil",
+      label_profile_name: "Nazwa profilu", profile_none: "Brak profilu", profile_create: "Utwórz profil",
+      profile_new_hint: "Nowy profil zaczyna z pustym źródłem notatek. Wygląd i edytor są skopiowane z bieżącego profilu.",
+      profile_legacy_hint: "Te ustawienia nie mają jeszcze profilu — zapisanie utworzy go pod tą nazwą.",
+      profile_local_root_required: "Podaj folder z notatkami dla nowego profilu.",
       profile_active_title: "Aktywny zestaw — jego ustawienia są teraz używane.",
       save_new_profile_placeholder: "Zapisz aktualne jako nowy profil…", save_action: "Zapisz",
       quick_start: "Szybki start", saved_profiles: "Zapisane profile",
@@ -2475,7 +2477,12 @@ if (shell) {
       save_changes: "Save changes", edit: "Edit", delete_action: "Delete",
       profile_hint: "Saves the current form fields as a quick-switch profile.",
       editing_profile_prefix: "Editing",
-      no_profiles_hint: "No saved profiles yet. Type a name below to save the current settings as a profile.",
+      no_profiles_hint: "No profiles yet. Click “New profile” to add the first one.",
+      profile_switch_title: "Switch profile", profile_add: "+ New profile", profile_edit_title: "Edit profile",
+      label_profile_name: "Profile name", profile_none: "No profile", profile_create: "Create profile",
+      profile_new_hint: "A new profile starts with an empty notes source. Appearance and editor settings are copied from the current profile.",
+      profile_legacy_hint: "These settings have no profile yet — saving will create one with this name.",
+      profile_local_root_required: "Enter the notes folder for the new profile.",
       profile_active_title: "Active profile — its settings are currently applied.",
       save_new_profile_placeholder: "Save current as new profile…", save_action: "Save",
       quick_start: "Quick start", saved_profiles: "Saved profiles",
@@ -2687,7 +2694,12 @@ if (shell) {
       save_changes: "Guardar cambios", edit: "Editar", delete_action: "Eliminar",
       profile_hint: "Guarda los campos actuales como perfil de cambio rápido.",
       editing_profile_prefix: "Editando",
-      no_profiles_hint: "No hay perfiles guardados. Escribe un nombre abajo para guardar la configuración actual.",
+      no_profiles_hint: "Aún no hay perfiles. Haz clic en «Nuevo perfil» para añadir el primero.",
+      profile_switch_title: "Cambiar de perfil", profile_add: "+ Nuevo perfil", profile_edit_title: "Editar perfil",
+      label_profile_name: "Nombre del perfil", profile_none: "Sin perfil", profile_create: "Crear perfil",
+      profile_new_hint: "Un perfil nuevo empieza con el origen de notas vacío. La apariencia y el editor se copian del perfil actual.",
+      profile_legacy_hint: "Esta configuración aún no tiene perfil: al guardar se creará uno con este nombre.",
+      profile_local_root_required: "Indica la carpeta de notas del nuevo perfil.",
       profile_active_title: "Perfil activo — sus ajustes están aplicados ahora.",
       save_new_profile_placeholder: "Guardar como nuevo perfil…", save_action: "Guardar",
       quick_start: "Inicio rápido", saved_profiles: "Perfiles guardados",
@@ -2899,7 +2911,12 @@ if (shell) {
       save_changes: "Änderungen speichern", edit: "Bearbeiten", delete_action: "Löschen",
       profile_hint: "Speichert die aktuellen Felder als Schnellwechsel-Profil.",
       editing_profile_prefix: "Bearbeitung von",
-      no_profiles_hint: "Noch keine Profile. Gib unten einen Namen ein, um die aktuellen Einstellungen zu speichern.",
+      no_profiles_hint: "Noch keine Profile. Klicke auf „Neues Profil“, um das erste anzulegen.",
+      profile_switch_title: "Profil wechseln", profile_add: "+ Neues Profil", profile_edit_title: "Profil bearbeiten",
+      label_profile_name: "Profilname", profile_none: "Kein Profil", profile_create: "Profil erstellen",
+      profile_new_hint: "Ein neues Profil startet mit leerer Notizquelle. Darstellung und Editor werden vom aktuellen Profil übernommen.",
+      profile_legacy_hint: "Für diese Einstellungen gibt es noch kein Profil – Speichern legt eines mit diesem Namen an.",
+      profile_local_root_required: "Gib den Notizordner für das neue Profil an.",
       profile_active_title: "Aktives Profil — seine Einstellungen sind aktuell aktiv.",
       save_new_profile_placeholder: "Aktuelle Einstellungen als neues Profil…", save_action: "Speichern",
       quick_start: "Schnellstart", saved_profiles: "Gespeicherte Profile",
@@ -3111,7 +3128,12 @@ if (shell) {
       save_changes: "Сохранить изменения", edit: "Редактировать", delete_action: "Удалить",
       profile_hint: "Сохраняет текущие поля как профиль быстрого переключения.",
       editing_profile_prefix: "Редактирование",
-      no_profiles_hint: "Нет сохранённых профилей. Введите имя ниже, чтобы сохранить текущие настройки как профиль.",
+      no_profiles_hint: "Профилей пока нет. Нажмите «Новый профиль», чтобы добавить первый.",
+      profile_switch_title: "Сменить профиль", profile_add: "+ Новый профиль", profile_edit_title: "Редактировать профиль",
+      label_profile_name: "Название профиля", profile_none: "Нет профиля", profile_create: "Создать профиль",
+      profile_new_hint: "Новый профиль начинается с пустого источника заметок. Оформление и редактор копируются из текущего профиля.",
+      profile_legacy_hint: "У этих настроек пока нет профиля — при сохранении он будет создан с этим именем.",
+      profile_local_root_required: "Укажите папку с заметками для нового профиля.",
       profile_active_title: "Активный профиль — его настройки сейчас применяются.",
       save_new_profile_placeholder: "Сохранить текущее как новый профиль…", save_action: "Сохранить",
       quick_start: "Быстрый старт", saved_profiles: "Сохранённые профили",
@@ -3405,12 +3427,60 @@ if (shell) {
     codeEditor?.refresh();
   }
 
-  function openSettingsModal() {
+  // Settings always belong to a profile: "edit" changes the active one,
+  // "new" starts a fresh profile (empty source, appearance copied).
+  let settingsMode = "edit";
+
+  function suggestProfileName(p) {
+    if (p.source_type === "sftp") return p.sftp_host || "SFTP";
+    if (p.source_type === "gdrive") return "Google Drive";
+    const leaf = (p.content_root_display || p.content_root || "").replace(/\/+$/, "").split("/").pop();
+    return leaf || "Notatki";
+  }
+
+  function openSettingsModal(mode = "edit") {
     closePreferenceProfilesDropdown();
+    settingsMode = mode === "new" ? "new" : "edit";
+    const active = findPreferenceProfile(preferences?.active_profile_id);
+    let hint = "";
+    if (settingsMode === "new") {
+      applyPreferencesToForm({
+        ...preferences,
+        source_type: sourceTypeSelect?.options?.[0]?.value || "local",
+        content_root: "",
+        sftp_host: "",
+        sftp_port: 22,
+        sftp_username: "",
+        sftp_path: "/",
+        gdrive_folder_id: "root",
+        gdrive_credentials: "",
+        has_stored_sftp_password: false,
+      });
+      if (profileNameInput) profileNameInput.value = "";
+      hint = t("profile_new_hint");
+    } else {
+      applyPreferencesToForm(preferences); // drop edits left over from an earlier cancel
+      if (profileNameInput) {
+        profileNameInput.value = active ? active.name : suggestProfileName(preferences);
+      }
+      if (!active) hint = t("profile_legacy_hint");
+    }
+    if (settingsTitle) {
+      settingsTitle.removeAttribute("data-i18n");
+      settingsTitle.textContent = settingsMode === "new" ? t("profile_new") : t("settings_title");
+    }
+    saveSettingsButton.removeAttribute("data-i18n");
+    saveSettingsButton.textContent =
+      settingsMode === "new" ? t("profile_create") : t("save_settings");
+    if (profileNameHint) {
+      profileNameHint.textContent = hint;
+      profileNameHint.classList.toggle("hidden", !hint);
+    }
     settingsModal.classList.remove("hidden");
     settingsModal.setAttribute("aria-hidden", "false");
     const lastTab = localStorage.getItem("settings-active-tab") || "source";
-    setActiveSettingsTab(lastTab);
+    setActiveSettingsTab(settingsMode === "new" ? "source" : lastTab);
+    if (settingsMode === "new") window.setTimeout(() => profileNameInput?.focus(), 0);
   }
 
   function closeSettingsModal() {
@@ -4073,6 +4143,12 @@ if (shell) {
     return p.content_root_display || p.content_root || "";
   }
 
+  function renderProfileSwitcher() {
+    if (!profileSwitcherName) return;
+    const active = findPreferenceProfile(preferences?.active_profile_id);
+    profileSwitcherName.textContent = active ? active.name : t("profile_none");
+  }
+
   function applyPreferencesToUi(nextPreferences) {
     preferences = nextPreferences;
     applyPreferencesToForm(nextPreferences);
@@ -4080,6 +4156,7 @@ if (shell) {
     applyTheme(preferences.theme_mode);
     applyEditorFontSize(preferences.editor_font_size);
     applyLanguage(preferences.language || "pl");
+    renderProfileSwitcher();
     if (saveButton) saveButton.classList.toggle("hidden", Boolean(preferences.autosave_enabled));
   }
 
@@ -4111,30 +4188,6 @@ if (shell) {
 
   function findPreferenceProfile(profileId) {
     return preferenceProfiles.find((profile) => profile.id === profileId) || null;
-  }
-
-  function resetProfileEditor({ resetForm = false } = {}) {
-    editingPreferenceProfileId = null;
-    if (profileEditorTitle) profileEditorTitle.textContent = t("profile_new");
-    if (saveProfileButton) saveProfileButton.textContent = t("save_profile");
-    cancelProfileEditButton?.classList.add("hidden");
-    if (profileNameInput) profileNameInput.value = "";
-    if (resetForm && preferences) {
-      applyPreferencesToForm(preferences);
-    }
-    renderSettingsPreferenceProfiles();
-  }
-
-  function startProfileEditing(profile) {
-    editingPreferenceProfileId = profile.id;
-    if (profileEditorTitle) profileEditorTitle.textContent = `${t("editing_profile_prefix")}: ${profile.name}`;
-    if (saveProfileButton) saveProfileButton.textContent = t("save_changes");
-    cancelProfileEditButton?.classList.remove("hidden");
-    if (profileNameInput) profileNameInput.value = profile.name;
-    applyPreferencesToForm(profile);
-    renderSettingsPreferenceProfiles();
-    profileNameInput?.focus();
-    profileNameInput?.select();
   }
 
   function getProfileSummary(profile) {
@@ -4194,18 +4247,23 @@ if (shell) {
       apply.append(title, summary);
       apply.addEventListener("click", () => applyPreferenceProfile(profile.id, profile.name));
 
-      // Update icon — overwrite this profile with current settings
-      const update = document.createElement("button");
-      update.type = "button";
-      update.className = "profiles-dropdown-update icon-button icon-button-small";
-      update.title = "Update with current settings";
-      update.setAttribute("aria-label", "Update with current settings");
-      update.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
-        + '<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>'
+      // Edit = switch to this profile and open its settings. (Settings
+      // always edit the ACTIVE profile, so there's no separate "update".)
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "profiles-dropdown-edit icon-button icon-button-small";
+      edit.title = t("profile_edit_title");
+      edit.setAttribute("aria-label", t("profile_edit_title"));
+      edit.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+        + '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>'
         + '</svg>';
-      update.addEventListener("click", (event) => {
+      edit.addEventListener("click", async (event) => {
         event.stopPropagation();
-        updatePreferenceProfile(profile);
+        closePreferenceProfilesDropdown();
+        if (preferences?.active_profile_id !== profile.id) {
+          await applyPreferenceProfile(profile.id, profile.name);
+        }
+        openSettingsModal("edit");
       });
 
       const del = document.createElement("button");
@@ -4254,120 +4312,16 @@ if (shell) {
         reorderPreferenceProfiles(preferenceProfiles.map(p => p.id));
       });
 
-      row.append(handle, apply, update, del);
+      row.append(handle, apply, edit, del);
       preferenceProfilesList.appendChild(row);
     });
-  }
-
-  // The settings-modal profile list was removed when profile management
-  // moved into the topbar dropdown. Keep the function as a no-op so the
-  // existing call sites don't have to be hunted down.
-  function renderSettingsPreferenceProfiles() {
-    return;
-    /* legacy below — kept for reference until removal in next cleanup
-    if (!settingsProfileList) {
-      return;
-    }
-
-    settingsProfileList.innerHTML = "";
-    if (!preferenceProfiles.length) {
-      const empty = document.createElement("div");
-      empty.className = "settings-profile-empty muted";
-      empty.textContent = t("no_profiles_list");
-      settingsProfileList.appendChild(empty);
-      return;
-    }
-
-    preferenceProfiles.forEach((profile) => {
-      const row = document.createElement("div");
-      row.className = "settings-profile-item";
-      if (editingPreferenceProfileId === profile.id) {
-        row.classList.add("is-editing");
-      }
-
-      const info = document.createElement("div");
-      info.className = "settings-profile-item-info";
-      const title = document.createElement("strong");
-      title.textContent = profile.name;
-      const summary = document.createElement("span");
-      summary.textContent = getProfileSummary(profile);
-      info.append(title, summary);
-
-      const actions = document.createElement("div");
-      actions.className = "settings-profile-actions";
-
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.className = "button button-secondary settings-profile-action";
-      editButton.textContent = t("edit");
-      editButton.addEventListener("click", () => startProfileEditing(profile));
-
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "button button-secondary settings-profile-action";
-      deleteButton.textContent = t("delete_action");
-      deleteButton.addEventListener("click", () => deletePreferenceProfile(profile));
-
-      actions.append(editButton, deleteButton);
-      row.append(info, actions);
-      settingsProfileList.appendChild(row);
-    });
-    */
   }
 
   async function loadPreferenceProfiles() {
     const payload = await requestJson(config.preferenceProfilesUrl, { method: "GET" });
     preferenceProfiles = payload.profiles || [];
-    if (editingPreferenceProfileId && !findPreferenceProfile(editingPreferenceProfileId)) {
-      resetProfileEditor();
-    }
     renderPreferenceProfiles();
-    renderSettingsPreferenceProfiles();
-  }
-
-  async function saveCurrentPreferenceProfile() {
-    // Reads from the topbar dropdown's quick-save input. The whole
-    // edit-an-existing-profile flow was scrapped — users can delete
-    // and resave instead, much simpler.
-    const input = profileQuickNameInput;
-    const profileName = input?.value.trim() || "";
-    if (!profileName) {
-      setStatus(t("st_profile_name_required"), true);
-      input?.focus();
-      return;
-    }
-
-    try {
-      setStatus(t("st_saving_profile"));
-      const profile = await requestJson(config.preferenceProfilesUrl, {
-        method: "POST",
-        body: JSON.stringify(buildProfilePayload({ name: profileName })),
-      });
-      await loadPreferenceProfiles();
-      if (input) input.value = "";
-      setStatus(`${t("st_profile_saved")}: ${profile.name}.`);
-    } catch (error) {
-      setStatus(error.message, true);
-    }
-  }
-
-  async function updatePreferenceProfile(profile) {
-    // Overwrite an existing profile with the user's CURRENT preferences,
-    // keeping the same id and name. Saves the dance of delete + re-save.
-    if (!window.confirm(`Update "${profile.name}" with current settings?`)) {
-      return;
-    }
-    try {
-      setStatus(t("st_saving_profile"));
-      await requestJson(`${config.preferenceProfilesUrl}/${profile.id}`, {
-        method: "PUT",
-        body: JSON.stringify(buildProfilePayload({ name: profile.name })),
-      });
-      await loadPreferenceProfiles();
-      setStatus(`${t("st_profile_saved")}: ${profile.name}.`);
-    } catch (error) {
-      setStatus(error.message, true);
-    }
+    renderProfileSwitcher();
   }
 
   async function reorderPreferenceProfiles(orderedIds) {
@@ -4393,9 +4347,6 @@ if (shell) {
       await requestJson(`${config.preferenceProfilesUrl}/${profile.id}`, {
         method: "DELETE",
       });
-      if (editingPreferenceProfileId === profile.id) {
-        resetProfileEditor({ resetForm: true });
-      }
       await loadPreferenceProfiles();
       setStatus(`${t("st_profile_deleted")}: ${profile.name}.`);
     } catch (error) {
@@ -6667,9 +6618,53 @@ if (shell) {
   }
 
   async function saveSettings() {
+    const profileName = profileNameInput?.value.trim() || "";
+    if (!profileName) {
+      setStatus(t("st_profile_name_required"), true);
+      profileNameInput?.focus();
+      return;
+    }
     try {
       setStatus(t("st_saving_settings"));
-      await persistPreferences();
+      if (settingsMode === "new") {
+        const payload = buildProfilePayload({ name: profileName });
+        if (payload.source_type === "local" && !payload.content_root.trim()) {
+          setStatus(t("profile_local_root_required"), true);
+          setActiveSettingsTab("source");
+          return;
+        }
+        const created = await requestJson(config.preferenceProfilesUrl, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        const applied = await requestJson(
+          `${config.preferenceProfilesUrl}/${created.id}/apply`,
+          { method: "POST" },
+        );
+        applyPreferencesToUi(applied);
+      } else {
+        const active = findPreferenceProfile(preferences?.active_profile_id);
+        // Rename first: a name clash should stop the save before anything
+        // else changes.
+        if (active && active.name !== profileName) {
+          await requestJson(`${config.preferenceProfilesUrl}/${active.id}/name`, {
+            method: "PUT",
+            body: JSON.stringify({ name: profileName }),
+          });
+        }
+        // The server writes these settings through to the active profile.
+        await persistPreferences();
+        if (!active) {
+          // First save on an install that predates profiles.
+          await requestJson(`${config.preferenceProfilesUrl}/from-current`, {
+            method: "POST",
+            body: JSON.stringify({ name: profileName }),
+          });
+          preferences = await requestJson(config.preferencesUrl, { method: "GET" });
+        }
+      }
+      await loadPreferenceProfiles();
+      renderProfileSwitcher();
       closeSettingsModal();
       await resetWorkspaceAfterPreferencesChange();
       setStatus(t("st_settings_saved"));
@@ -7146,13 +7141,11 @@ if (shell) {
   });
   closeSettingsButton.addEventListener("click", closeSettingsModal);
   cancelSettingsButton.addEventListener("click", closeSettingsModal);
-  // Legacy settings-tab profile UI was removed; quick-save input
-  // in the topbar dropdown drives profile creation now.
-  profileQuickSaveButton?.addEventListener("click", saveCurrentPreferenceProfile);
-  profileQuickNameInput?.addEventListener("keydown", (event) => {
+  profileNewButton?.addEventListener("click", () => openSettingsModal("new"));
+  profileNameInput?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      saveCurrentPreferenceProfile();
+      saveSettings();
     }
   });
   // Optional-chained: the whole Source panel (including this button) is

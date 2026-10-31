@@ -151,3 +151,110 @@ def test_apply_profile_marks_it_active_and_delete_clears(tmp_path: Path):
     # Deleting the active B clears the marker.
     service.delete_profile(b.id)
     assert service.get_preferences().active_profile_id is None
+
+
+def _make_profile(service: PreferencesService, tmp_path: Path, name: str, **over):
+    args = dict(
+        name=name,
+        source_type="local",
+        content_root=str(tmp_path / name),
+        sort_mode="alphabetical",
+        theme_mode="light",
+        editor_font_size=16,
+    )
+    args.update(over)
+    return service.create_profile(**args)
+
+
+def _update(service: PreferencesService, base, **over):
+    args = dict(
+        content_root=base.content_root,
+        sort_mode=base.sort_mode,
+        theme_mode=base.theme_mode,
+        editor_font_size=base.editor_font_size,
+        source_type=base.source_type,
+    )
+    args.update(over)
+    return service.update_preferences(**args)
+
+
+def test_settings_changes_write_through_to_the_active_profile(tmp_path: Path):
+    _repo, service = build_service(tmp_path)
+    work = _make_profile(service, tmp_path, "praca")
+    other = _make_profile(service, tmp_path, "dom", theme_mode="dark")
+    applied = service.apply_profile(work.id)
+
+    _update(service, applied, theme_mode="obsidian", editor_font_size=22)
+
+    profiles = {p.name: p for p in service.list_profiles()}
+    assert profiles["praca"].theme_mode == "obsidian"
+    assert profiles["praca"].editor_font_size == 22
+    assert profiles["dom"].theme_mode == "dark"  # other profiles untouched
+    assert service.get_preferences().active_profile_id == work.id
+    assert other.id != work.id
+
+
+def test_applying_sftp_profile_without_password_does_not_inherit_previous_one(tmp_path: Path):
+    _repo, service = build_service(tmp_path)
+    a = _make_profile(
+        service, tmp_path, "a", source_type="sftp", sftp_host="a.example", sftp_password="secret-a"
+    )
+    b = _make_profile(service, tmp_path, "b", source_type="sftp", sftp_host="b.example")
+
+    service.apply_profile(a.id)
+    applied_b = service.apply_profile(b.id)
+
+    assert applied_b.sftp_password == ""
+    assert applied_b.has_stored_sftp_password is False
+    # ...and A still has its own password.
+    assert service.apply_profile(a.id).sftp_password == "secret-a"
+
+
+def test_stale_active_profile_is_dropped_when_source_no_longer_matches(tmp_path: Path):
+    repo, service = build_service(tmp_path)
+    work = _make_profile(service, tmp_path, "praca")
+    service.apply_profile(work.id)
+    # Legacy behaviour: the source was changed without touching the marker.
+    repo.update_app_preferences(content_root=str(tmp_path / "somewhere-else"))
+    (tmp_path / "somewhere-else").mkdir()
+
+    assert service.get_preferences().active_profile_id is None
+    # ...so a later settings save can no longer overwrite "praca".
+    before = service.list_profiles()[0].content_root
+    _update(service, service.get_preferences(), theme_mode="dark")
+    assert service.list_profiles()[0].content_root == before
+
+
+def test_rename_profile_and_conflicts(tmp_path: Path):
+    _repo, service = build_service(tmp_path)
+    a = _make_profile(service, tmp_path, "a")
+    _make_profile(service, tmp_path, "b")
+
+    renamed = service.rename_profile(a.id, "  alfa ")
+    assert renamed.name == "alfa"
+    import pytest
+    from app.domains.preferences.service import (
+        PreferenceProfileConflictError,
+        PreferenceProfileNotFoundError,
+    )
+
+    with pytest.raises(PreferenceProfileConflictError):
+        service.rename_profile(a.id, "b")
+    with pytest.raises(PreferenceProfileNotFoundError):
+        service.rename_profile(9999, "x")
+
+
+def test_create_profile_from_current_activates_it(tmp_path: Path):
+    _repo, service = build_service(tmp_path)
+    current = service.update_preferences(
+        content_root=str(tmp_path / "moje"),
+        sort_mode="alphabetical",
+        theme_mode="dark",
+        editor_font_size=19,
+    )
+
+    profile = service.create_profile_from_current("Moje")
+
+    assert profile.theme_mode == "dark" and profile.editor_font_size == 19
+    assert profile.content_root == current.content_root
+    assert service.get_preferences().active_profile_id == profile.id

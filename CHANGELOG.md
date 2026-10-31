@@ -11,6 +11,29 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Profiles are the unit of everything.** A profile now is the whole setup
+  — where the notes live *and* theme, language, editor and image options —
+  and Settings always edit the active one, with the profile name at the top
+  of the dialog. No more "change the source in Settings, save, then save a
+  profile under a name": one dialog, one Save. Changing a setting anywhere
+  (including the font-size buttons) is saved into the active profile.
+- **Profile switcher moved to the sidebar header.** The path line is now a
+  button showing the active profile; it opens the list (switch, pencil =
+  edit, bin = delete, drag = reorder) and **+ New profile**, which opens
+  Settings with an empty source and the appearance copied over and creates
+  + activates the profile in one step. The topbar notebook icon is gone.
+- First save on an install that has no profile yet creates one for you
+  (name suggested from the folder / host).
+
+### Fixed
+
+- Applying an SFTP profile that has no stored password no longer keeps the
+  previous profile's password.
+- A leftover "active profile" marker (source changed under it in an older
+  version) is dropped instead of being overwritten by the next save.
+
 ## [1.15.1] - 2026-10-31
 
 ### Fixed

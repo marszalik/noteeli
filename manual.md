@@ -40,12 +40,14 @@ Click a Markdown file to start editing. That's it — there is no import step.
 
 ## 2. The workspace at a glance
 
-- **Sidebar (left)** — the file tree, a search toggle, new-file / new-folder
+- **Sidebar (left)** — at the top the **profile switcher** (the active
+  profile's name and where its notes live — click it to switch profiles or
+  add one), then the file tree, a search toggle, new-file / new-folder
   buttons, a refresh button, and at the bottom a small **version chip**
   (click it to read the release notes for the version you're running).
 - **Topbar** — the name of the open file, save/reload buttons, editor font
-  size controls, the profile quick-switcher, the **git menu** (if the
-  workspace is a git repository), and the account menu (settings, logout).
+  size controls, the **git menu** (if the workspace is a git repository),
+  and the account menu (settings, logout).
 - **Editor (center)** — the right editor for the file type opens
   automatically: Markdown WYSIWYG, JSON form editor, code editor with syntax
   highlighting, or a read-only preview for images, PDFs and Office files.
@@ -394,17 +396,24 @@ with Pull.
 
 ## 11. Personalisation
 
-Settings (account menu → Settings) are organised in five tabs: **Source**,
-**Appearance**, **Editor**, **Images**, **Profiles**.
+Everything here belongs to a **profile** (see below). Settings (account menu
+→ Settings) are organised in four tabs: **Source**, **Appearance**,
+**Editor**, **Images** — and always edit the active profile, with its name
+at the top of the dialog.
 
 - **Themes** — Light, Dark, Noteeli, Webnote, Obsidian. The browser status
   bar tint follows along on mobile.
 - **Languages** — English, Polish, Spanish, German, Russian.
 - **Editor** — autosave toggle, font size.
 - **Images** — upload location (see [section 6](#6-images-and-attachments)).
-- **Profiles** — save the current preferences as a named set, then switch
-  between sets from the topbar quick-switcher (handy for e.g. "writing" vs
-  "reviewing" setups, or two different note roots).
+- **Profiles** — a profile is a complete setup: where the notes live
+  (local folder, SFTP, Google Drive) *and* theme, language, editor and image
+  options. Click the profile name at the top of the sidebar to switch; the
+  workspace reloads with that profile's notes and look. **+ New profile**
+  opens the settings dialog empty: give it a name, choose its source, hit
+  *Create profile* — done, no separate save step. Changing any setting (or
+  the font size) updates the active profile automatically; use the pencil in
+  the list to edit another one, the bin to delete it, drag to reorder.
 
 On a shared instance, personal settings (theme, language, font, autosave,
 sort mode, profiles) are **per account** — your dark theme doesn't restyle

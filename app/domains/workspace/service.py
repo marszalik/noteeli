@@ -314,6 +314,14 @@ class WorkspaceService:
         self._block_if_demo()
         self.preferences_service.delete_profile(profile_id, user_key)
 
+    def rename_preference_profile(self, profile_id: int, name: str, user_key: str | None = None) -> SavedPreferencesProfile:
+        self._block_if_demo()
+        return self.preferences_service.rename_profile(profile_id, name, user_key)
+
+    def create_preference_profile_from_current(self, name: str, user_key: str | None = None) -> SavedPreferencesProfile:
+        self._block_if_demo()
+        return self.preferences_service.create_profile_from_current(name, user_key)
+
     def reorder_preference_profiles(self, ordered_ids: list[int], user_key: str | None = None) -> None:
         self._block_if_demo()
         self.preferences_service.reorder_profiles(ordered_ids, user_key)

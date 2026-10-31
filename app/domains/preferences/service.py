@@ -23,7 +23,58 @@ class PreferencesService:
         self.settings = settings or get_settings()
         self.repository = repository or PreferencesRepository(self.settings)
 
+    @staticmethod
+    def _source_identity(p: AppPreferences) -> tuple:
+        """What makes two settings point at the same notes."""
+        if p.source_type == "sftp":
+            return ("sftp", p.sftp_host, p.sftp_port, p.sftp_username, p.sftp_path)
+        if p.source_type == "gdrive":
+            return ("gdrive", p.gdrive_folder_id)
+        return ("local", p.content_root)
+
+    def _reconcile_active_profile(self, user_key: str | None) -> None:
+        """Settings now write through to the active profile, so the active
+        profile must actually be the one in effect. Before that, editing
+        the source in Settings left a stale "active" marker behind; drop it
+        rather than let the next save overwrite an unrelated profile."""
+        active_id = self.repository.get_active_profile_id(user_key)
+        if not active_id:
+            return
+        stored = self.repository.get_profile_preferences(active_id, user_key)
+        current = self.repository.get_app_preferences(user_key)
+        if stored is None or self._source_identity(stored) != self._source_identity(current):
+            self.repository.set_active_profile_id(None, user_key)
+
+    def _sync_active_profile(self, user_key: str | None) -> None:
+        """Write the settings now in effect into the active profile."""
+        active_id = self.repository.get_active_profile_id(user_key)
+        if active_id:
+            self.repository.update_profile_preferences(
+                active_id, self.repository.get_app_preferences(user_key), user_key
+            )
+
+    def rename_profile(self, profile_id: int, name: str, user_key: str | None = None) -> SavedPreferencesProfile:
+        try:
+            profile = self.repository.rename_profile(profile_id, name.strip(), user_key)
+        except sqlite3.IntegrityError as exc:
+            raise PreferenceProfileConflictError("Saved settings profile name already exists.") from exc
+        if profile is None:
+            raise PreferenceProfileNotFoundError("Saved settings profile does not exist.")
+        return profile
+
+    def create_profile_from_current(self, name: str, user_key: str | None = None) -> SavedPreferencesProfile:
+        """Turn the settings currently in effect into a profile and make it
+        the active one (first save for installs that predate profiles)."""
+        current = self.repository.get_app_preferences(user_key)
+        try:
+            profile = self.repository.create_profile(name.strip(), current, user_key)
+        except sqlite3.IntegrityError as exc:
+            raise PreferenceProfileConflictError("Saved settings profile name already exists.") from exc
+        self.repository.set_active_profile_id(profile.id, user_key)
+        return profile
+
     def get_preferences(self, user_key: str | None = None) -> AppPreferences:
+        self._reconcile_active_profile(user_key)
         preferences = self.repository.get_app_preferences(user_key)
         if preferences.source_type == "local":
             try:
@@ -63,7 +114,7 @@ class PreferencesService:
             resolved_root = self._ensure_local_content_root(content_root)
             content_root = str(resolved_root)
 
-        return self.repository.update_app_preferences(
+        updated = self.repository.update_app_preferences(
             user_key=user_key,
             source_type=source_type,
             content_root=content_root,
@@ -82,6 +133,10 @@ class PreferencesService:
             image_upload_subdir=image_upload_subdir,
             language=language,
         )
+        # Settings and the active profile are one thing: whatever changes
+        # here (Settings dialog, font +/-, …) is saved into that profile.
+        self._sync_active_profile(user_key)
+        return updated
 
     def list_profiles(self, user_key: str | None = None) -> list[SavedPreferencesProfile]:
         return self.repository.list_profiles(user_key)
@@ -199,6 +254,11 @@ class PreferencesService:
         # Mark as the active profile BEFORE running update_preferences so
         # that the returned AppPreferences carries the right active_profile_id.
         self.repository.set_active_profile_id(profile_id, user_key)
+
+        # An empty password in update_preferences means "keep existing" —
+        # which would carry the PREVIOUS profile's password over to this one.
+        if profile_preferences.source_type == "sftp" and not profile_preferences.sftp_password:
+            self.repository.clear_sftp_password()
 
         return self.update_preferences(
             user_key=user_key,
