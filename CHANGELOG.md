@@ -12,7 +12,7 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- **Noteeli PDF** (file menu ⋮ → *Noteeli PDF…*): the open note rendered by the server in Noteeli's own look and saved next to the source as `<name>-noteeli.pdf` (never overwriting a PDF you placed by hand), with a download button afterwards. Two styles: **Light** and **Mixed** (light page, dark headings and code blocks). The default follows the active profile's theme — its accent colour is kept and dark themes get *Mixed*, because a fully dark PDF is hard to read. Needs a Chromium/Chrome binary on the server (auto-detected; override with `NOTEELI_PDF_BROWSER`, `off` disables). The page is rendered with scripts and network blocked.
+- **Noteeli PDF** (file menu ⋮ → *Noteeli PDF…*): the open note rendered by the server in Noteeli's own look and saved next to the source as `<name>-noteeli.pdf` (never overwriting a PDF you placed by hand), with a download button afterwards. **Colours come from the active profile's theme** (its accent, its dark surface for the title band, code and table headers; light themes also lend their paper and ink) and **typography from the "Markdown rendering style"** (default / clean / magazine with drop cap / compact / manuscript, justified and indented) — both are preselected and can be changed in the dialog. Two colour schemes: *Light* and *Mixed*; the page itself is always light, so even dark themes print and read well. Needs a Chromium/Chrome binary on the server (auto-detected; override with `NOTEELI_PDF_BROWSER`, `off` disables). The page is rendered with scripts and network blocked.
 
 ## [1.17.0] - 2026-10-31
 

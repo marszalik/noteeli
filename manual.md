@@ -92,10 +92,12 @@ described in their own sections below.
   in the interface language; choose it again to stop).
 - **Noteeli PDF…** (in the same menu) makes a nicely styled PDF of the note
   on the server and saves it next to the note as `name-noteeli.pdf`, then
-  offers to download it. Choose **Light** or **Mixed** (light page with dark
-  headings and code blocks); the default follows your profile's theme. It needs
-  Chromium or Google Chrome on the server (set `NOTEELI_PDF_BROWSER` if it is
-  not found automatically).
+  offers to download it. The colours follow your profile's theme and the layout
+  follows your *Markdown rendering style* (magazine, manuscript, compact…);
+  both can be changed in the dialog, and you can pick **Light** or **Mixed**
+  (dark title, code and table headers). The page itself is always light, so it
+  reads and prints well. It needs Chromium or Google Chrome on the server (set
+  `NOTEELI_PDF_BROWSER` if it is not found automatically).
 - **Download** fetches a single file as-is; downloading a folder gives you a
   ZIP of the whole subtree. In the installed (home-screen) app on a phone
   the file opens in a separate sheet with the system share/save controls —

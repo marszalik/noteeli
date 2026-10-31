@@ -511,6 +511,9 @@ class WorkspaceService:
     def create_styled_pdf(
         self, relative_path: str, html: str | None, text: str | None, style: str,
         accent: str | None = None,
+        layout: str = "default",
+        palette: dict | None = None,
+        lang: str = "pl",
     ) -> str:
         """Render the open document as a Noteeli-styled PDF and store it
         next to the source as `<name>-noteeli.pdf` (own name, so a PDF
@@ -521,7 +524,7 @@ class WorkspaceService:
         rel = self._resolve_path(relative_path, backend)
         parent, _, name = rel.rpartition("/")
         stem = name.rsplit(".", 1)[0] if "." in name else name
-        pdf = self.styled_pdf.render(stem, html, text, style, accent)
+        pdf = self.styled_pdf.render(stem, html, text, style, accent, layout, palette, lang)
         target = f"{parent}/{stem}-noteeli.pdf" if parent else f"{stem}-noteeli.pdf"
         backend.write_bytes(target, pdf)
         return target

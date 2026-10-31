@@ -2319,7 +2319,8 @@ if (shell) {
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
       file_menu_title: "Akcje pliku", file_save_pdf: "Zapisz jako PDF", file_read_aloud: "Czytaj na głos", file_read_stop: "Zatrzymaj czytanie", file_pdf_empty: "Brak tekstu do wydrukowania.", file_read_unsupported: "Ta przeglądarka nie umie czytać na głos.", file_read_empty: "Brak tekstu do przeczytania.",
-      file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "Ładny PDF w stylu Noteeli, zapisany obok pliku źródłowego.", npdf_style_light: "Jasny", npdf_style_light_hint: "Biała strona, czytelny do druku.", npdf_style_mixed: "Mieszany", npdf_style_mixed_hint: "Jasna strona z ciemnymi nagłówkami i blokami kodu.", npdf_create: "Utwórz PDF", npdf_working: "Tworzę PDF…", npdf_saved: "Zapisano jako", npdf_unavailable: "Na serwerze brakuje Chromium/Chrome do tworzenia PDF-ów. Zainstaluj go albo wskaż w NOTEELI_PDF_BROWSER.", npdf_failed: "Nie udało się utworzyć PDF-a.", npdf_download: "Pobierz", npdf_close: "Zamknij",
+      npdf_layout: "Układ tekstu",
+      file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "Ładny PDF w stylu Noteeli, zapisany obok pliku źródłowego.", npdf_style_light: "Jasny", npdf_style_light_hint: "Czysta, jasna strona w kolorach motywu.", npdf_style_mixed: "Mieszany", npdf_style_mixed_hint: "Jasna strona z ciemnym tytułem, kodem i tabelami z motywu.", npdf_create: "Utwórz PDF", npdf_working: "Tworzę PDF…", npdf_saved: "Zapisano jako", npdf_unavailable: "Na serwerze brakuje Chromium/Chrome do tworzenia PDF-ów. Zainstaluj go albo wskaż w NOTEELI_PDF_BROWSER.", npdf_failed: "Nie udało się utworzyć PDF-a.", npdf_download: "Pobierz", npdf_close: "Zamknij",
       ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
       ctx_duplicate: "Duplikuj",
       ctx_git_commit: "Commit (ten element)", ctx_git_commit_push: "Commit i push (ten element)",
@@ -2538,7 +2539,8 @@ if (shell) {
       ctx_new_file: "New file", ctx_new_dir: "New folder",
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
       file_menu_title: "File actions", file_save_pdf: "Save as PDF", file_read_aloud: "Read aloud", file_read_stop: "Stop reading", file_pdf_empty: "Nothing to print.", file_read_unsupported: "This browser cannot read aloud.", file_read_empty: "Nothing to read.",
-      file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "A nicely styled PDF, saved next to the source file.", npdf_style_light: "Light", npdf_style_light_hint: "White page, good for printing.", npdf_style_mixed: "Mixed", npdf_style_mixed_hint: "Light page with dark headings and code blocks.", npdf_create: "Create PDF", npdf_working: "Creating PDF…", npdf_saved: "Saved as", npdf_unavailable: "The server has no Chromium/Chrome for making PDFs. Install one or point NOTEELI_PDF_BROWSER at it.", npdf_failed: "Could not create the PDF.", npdf_download: "Download", npdf_close: "Close",
+      npdf_layout: "Text layout",
+      file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "A nicely styled PDF, saved next to the source file.", npdf_style_light: "Light", npdf_style_light_hint: "Clean light page in the theme's colours.", npdf_style_mixed: "Mixed", npdf_style_mixed_hint: "Light page with the theme's dark title, code and tables.", npdf_create: "Create PDF", npdf_working: "Creating PDF…", npdf_saved: "Saved as", npdf_unavailable: "The server has no Chromium/Chrome for making PDFs. Install one or point NOTEELI_PDF_BROWSER at it.", npdf_failed: "Could not create the PDF.", npdf_download: "Download", npdf_close: "Close",
       ctx_copy_path: "Copy path", ctx_rename: "Rename",
       ctx_duplicate: "Duplicate",
       ctx_git_commit: "Commit (this item)", ctx_git_commit_push: "Commit & push (this item)",
@@ -2757,6 +2759,7 @@ if (shell) {
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
       file_menu_title: "Acciones del archivo", file_save_pdf: "Guardar como PDF", file_read_aloud: "Leer en voz alta", file_read_stop: "Detener lectura", file_pdf_empty: "No hay texto para imprimir.", file_read_unsupported: "Este navegador no puede leer en voz alta.", file_read_empty: "No hay texto para leer.",
+      npdf_layout: "Diseño del texto",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "Un PDF con el estilo de Noteeli, guardado junto al archivo de origen.", npdf_style_light: "Claro", npdf_style_light_hint: "Página blanca, ideal para imprimir.", npdf_style_mixed: "Mixto", npdf_style_mixed_hint: "Página clara con encabezados y bloques de código oscuros.", npdf_create: "Crear PDF", npdf_working: "Creando PDF…", npdf_saved: "Guardado como", npdf_unavailable: "El servidor no tiene Chromium/Chrome para crear PDF. Instálalo o indícalo en NOTEELI_PDF_BROWSER.", npdf_failed: "No se pudo crear el PDF.", npdf_download: "Descargar", npdf_close: "Cerrar",
       ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
       ctx_duplicate: "Duplicar",
@@ -2976,6 +2979,7 @@ if (shell) {
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
       file_menu_title: "Dateiaktionen", file_save_pdf: "Als PDF speichern", file_read_aloud: "Vorlesen", file_read_stop: "Vorlesen stoppen", file_pdf_empty: "Kein Text zum Drucken.", file_read_unsupported: "Dieser Browser kann nicht vorlesen.", file_read_empty: "Kein Text zum Vorlesen.",
+      npdf_layout: "Textlayout",
       file_noteeli_pdf: "Noteeli-PDF…", npdf_title: "Noteeli-PDF", npdf_hint: "Ein PDF im Noteeli-Stil, neben der Quelldatei gespeichert.", npdf_style_light: "Hell", npdf_style_light_hint: "Weiße Seite, gut zum Drucken.", npdf_style_mixed: "Gemischt", npdf_style_mixed_hint: "Helle Seite mit dunklen Überschriften und Codeblöcken.", npdf_create: "PDF erstellen", npdf_working: "PDF wird erstellt…", npdf_saved: "Gespeichert als", npdf_unavailable: "Auf dem Server fehlt Chromium/Chrome zum Erstellen von PDFs. Installieren oder in NOTEELI_PDF_BROWSER angeben.", npdf_failed: "Das PDF konnte nicht erstellt werden.", npdf_download: "Herunterladen", npdf_close: "Schließen",
       ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
       ctx_duplicate: "Duplizieren",
@@ -3195,6 +3199,7 @@ if (shell) {
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
       file_menu_title: "Действия с файлом", file_save_pdf: "Сохранить как PDF", file_read_aloud: "Прочитать вслух", file_read_stop: "Остановить чтение", file_pdf_empty: "Нет текста для печати.", file_read_unsupported: "Этот браузер не умеет читать вслух.", file_read_empty: "Нет текста для чтения.",
+      npdf_layout: "Макет текста",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "PDF в стиле Noteeli, сохранённый рядом с исходным файлом.", npdf_style_light: "Светлый", npdf_style_light_hint: "Белая страница, удобно для печати.", npdf_style_mixed: "Смешанный", npdf_style_mixed_hint: "Светлая страница с тёмными заголовками и блоками кода.", npdf_create: "Создать PDF", npdf_working: "Создаю PDF…", npdf_saved: "Сохранено как", npdf_unavailable: "На сервере нет Chromium/Chrome для создания PDF. Установите его или укажите в NOTEELI_PDF_BROWSER.", npdf_failed: "Не удалось создать PDF.", npdf_download: "Скачать", npdf_close: "Закрыть",
       ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
       ctx_duplicate: "Дублировать",
@@ -7316,19 +7321,26 @@ if (shell) {
     const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
-  // The profile's theme decides the look: its accent colour is kept
-  // (darkened when too pale for a white page) and a dark theme maps to the
-  // "mixed" style — a fully dark PDF is hard to read.
+  // The profile's theme supplies the colours (the server turns them into a
+  // light, printable page with the theme's dark surfaces and accent); the
+  // "Markdown rendering style" supplies the typography. A dark theme maps to
+  // the "mixed" scheme — a fully dark PDF is hard to read.
   function pdfThemeHints() {
     const styles = getComputedStyle(document.body);
-    const bg = cssColorToHex(styles.getPropertyValue("--bg").trim() || "#fff");
-    const isDark = bg ? luminanceOf(bg) < 0.4 : false;
-    let accent = cssColorToHex(styles.getPropertyValue("--accent").trim() || "#0891b2");
-    if (accent && luminanceOf(accent) > 0.45) {
-      accent = [0, 2, 4].map((i) => Math.round(parseInt(accent.slice(i, i + 2), 16) * 0.6)
-        .toString(16).padStart(2, "0")).join("");
-    }
-    return { style: isDark ? "mixed" : "light", accent: accent ? `#${accent}` : null };
+    const pick = (name, fallback) => {
+      const hex = cssColorToHex(styles.getPropertyValue(name).trim() || fallback);
+      return hex ? `#${hex}` : `#${cssColorToHex(fallback)}`;
+    };
+    const palette = {
+      bg: pick("--bg", "#ffffff"),
+      text: pick("--text", "#1f2937"),
+      muted: pick("--muted", "#6b7280"),
+      accent: pick("--accent", "#0891b2"),
+      panel: pick("--panel-strong", "#f1f5f9"),
+    };
+    const isDark = luminanceOf(palette.bg.slice(1)) < 0.4;
+    const layout = document.body.dataset.mdStyle || "default";
+    return { style: isDark ? "mixed" : "light", palette, layout };
   }
 
   async function inlineImagesAsDataUris(html) {
@@ -7366,6 +7378,8 @@ if (shell) {
         <header class="modal-header"><div><div class="label"></div><h3></h3></div></header>
         <div class="modal-content">
           <p class="muted small-note npdf-hint"></p>
+          <label class="npdf-layout-row"><span class="label"></span>
+            <select class="npdf-layout"></select></label>
           <div class="npdf-styles"></div>
           <p class="npdf-result small-note hidden"></p>
         </div>
@@ -7374,6 +7388,16 @@ if (shell) {
     backdrop.querySelector(".label").textContent = t("npdf_title");
     backdrop.querySelector("h3").textContent = currentFileLabel.textContent;
     backdrop.querySelector(".npdf-hint").textContent = t("npdf_hint");
+    const layoutSelect = backdrop.querySelector(".npdf-layout");
+    backdrop.querySelector(".npdf-layout-row .label").textContent = t("npdf_layout");
+    for (const name of ["default", "clean", "magazine", "compact", "manuscript"]) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = t(`md_style_${name}`);
+      layoutSelect.appendChild(option);
+    }
+    layoutSelect.value = hints.layout;
+    if (layoutSelect.value !== hints.layout) layoutSelect.value = "default";
     const stylesBox = backdrop.querySelector(".npdf-styles");
     for (const name of ["light", "mixed"]) {
       const label = document.createElement("label");
@@ -7406,7 +7430,13 @@ if (shell) {
       try {
         const doc = currentDocumentForExport();
         const style = backdrop.querySelector('input[name="npdf-style"]:checked')?.value || hints.style;
-        const body = { path: sourcePath, style, accent: hints.accent };
+        const body = {
+          path: sourcePath,
+          style,
+          layout: layoutSelect.value,
+          palette: hints.palette,
+          lang: preferences?.language || shell?.dataset?.language || "pl",
+        };
         if (doc.html !== undefined) body.html = await inlineImagesAsDataUris(doc.html);
         else body.text = doc.text || "";
         const response = await fetch("/api/pdf/styled", {
@@ -7417,6 +7447,7 @@ if (shell) {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.detail || t("npdf_failed"));
         stylesBox.classList.add("hidden");
+        backdrop.querySelector(".npdf-layout-row").classList.add("hidden");
         result.textContent = `${t("npdf_saved")} ${payload.path}`;
         result.classList.remove("hidden");
         actions.textContent = "";

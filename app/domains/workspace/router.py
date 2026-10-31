@@ -258,6 +258,9 @@ class StyledPdfRequest(BaseModel):
     text: str | None = None
     style: str = "mixed"
     accent: str | None = None
+    layout: str = "default"
+    palette: dict[str, str] | None = None
+    lang: str = "pl"
 
 
 @router.get("/api/pdf/styled", name="workspace_styled_pdf_status_api")
@@ -273,7 +276,8 @@ async def workspace_styled_pdf_api(request: Request, payload: StyledPdfRequest):
     auth_service.require_api_access(request)
     try:
         saved = workspace_service.create_styled_pdf(
-            payload.path, payload.html, payload.text, payload.style, payload.accent
+            payload.path, payload.html, payload.text, payload.style, payload.accent,
+            payload.layout, payload.palette, payload.lang
         )
     except InvalidPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
