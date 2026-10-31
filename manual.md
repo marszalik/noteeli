@@ -90,6 +90,12 @@ described in their own sections below.
   only the note on the page — choose "Save as PDF"; on iPad/iPhone use the
   share icon → *Save to Files*) and **Read aloud** (the browser reads the note
   in the interface language; choose it again to stop).
+- **Noteeli PDF…** (in the same menu) makes a nicely styled PDF of the note
+  on the server and saves it next to the note as `name-noteeli.pdf`, then
+  offers to download it. Choose **Light** or **Mixed** (light page with dark
+  headings and code blocks); the default follows your profile's theme. It needs
+  Chromium or Google Chrome on the server (set `NOTEELI_PDF_BROWSER` if it is
+  not found automatically).
 - **Download** fetches a single file as-is; downloading a folder gives you a
   ZIP of the whole subtree. In the installed (home-screen) app on a phone
   the file opens in a separate sheet with the system share/save controls —

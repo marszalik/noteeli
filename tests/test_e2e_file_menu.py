@@ -78,3 +78,38 @@ def test_file_menu_download_pdf_and_read_aloud(tmp_path):
                 assert info.value.suggested_filename == "note.md"
             finally:
                 browser.close()
+
+
+def test_noteeli_pdf_dialog_saves_pdf_next_to_the_note(tmp_path):
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+
+    with _running_server(tmp_path) as (base_url, content):
+        (content / "note.md").write_text("# Tytul\n\nTekst.\n", encoding="utf-8")
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch(headless=True)
+            except Exception as exc:
+                pytest.skip(f"Playwright Chromium unavailable: {exc}")
+            try:
+                page = browser.new_context(**IPHONE).new_page()
+                page.add_init_script("localStorage.setItem('last-opened-file','note.md')")
+                page.goto(base_url, wait_until="networkidle")
+                expect(page.locator("#current-file-label")).to_have_text("note.md", timeout=15_000)
+
+                page.locator("#file-menu-toggle").tap()
+                page.locator("#file-noteeli-pdf").tap()
+                dialog = page.locator(".modal-card", has_text="Noteeli PDF")
+                expect(dialog).to_be_visible()
+                # Dark/light is decided by the profile's theme; both styles offered.
+                expect(dialog.locator('input[name="npdf-style"]')).to_have_count(2)
+                create = dialog.locator("footer button.button-primary")
+                if create.is_disabled():
+                    pytest.skip("no Chromium/Chrome for the server-side PDF")
+                create.tap()
+                expect(dialog.locator(".npdf-result")).to_contain_text(
+                    "note-noteeli.pdf", timeout=60_000
+                )
+                assert (content / "note-noteeli.pdf").read_bytes().startswith(b"%PDF")
+            finally:
+                browser.close()

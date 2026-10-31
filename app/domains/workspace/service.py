@@ -16,6 +16,7 @@ from app.domains.workspace.schemas import (
     UploadedItemError,
 )
 from app.domains.workspace.office_pdf import OfficeConversionError, OfficePdfConverter
+from app.domains.workspace.styled_pdf import StyledPdfError, StyledPdfRenderer
 from app.domains.workspace.storage import StorageBackend, StorageEntry, build_backend, invalidate_sftp_cache
 
 
@@ -67,6 +68,7 @@ class WorkspaceService:
         self.preferences_repository = preferences_repository or PreferencesRepository(self.settings)
         self.preferences_service = PreferencesService(self.settings, self.preferences_repository)
         self.office_pdf = OfficePdfConverter(self.settings)
+        self.styled_pdf = StyledPdfRenderer(self.settings)
 
     def _get_backend(self) -> StorageBackend:
         prefs = self.preferences_service.get_preferences()
@@ -505,6 +507,24 @@ class WorkspaceService:
             raise UnsupportedFileTypeError("Only Markdown, JSON, and small text files can be saved.")
         backend.write_text(rel, content)
         return self.read_document(relative_path)
+
+    def create_styled_pdf(
+        self, relative_path: str, html: str | None, text: str | None, style: str,
+        accent: str | None = None,
+    ) -> str:
+        """Render the open document as a Noteeli-styled PDF and store it
+        next to the source as `<name>-noteeli.pdf` (own name, so a PDF
+        someone placed there by hand is never overwritten). Returns the
+        new file's relative path. Raises StyledPdfError."""
+        self._block_if_demo()
+        backend = self._get_backend()
+        rel = self._resolve_path(relative_path, backend)
+        parent, _, name = rel.rpartition("/")
+        stem = name.rsplit(".", 1)[0] if "." in name else name
+        pdf = self.styled_pdf.render(stem, html, text, style, accent)
+        target = f"{parent}/{stem}-noteeli.pdf" if parent else f"{stem}-noteeli.pdf"
+        backend.write_bytes(target, pdf)
+        return target
 
     def get_document_path(self, relative_path: str) -> str:
         return self._get_file_path(relative_path, self._get_backend())

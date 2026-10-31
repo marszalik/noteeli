@@ -3,6 +3,7 @@ import logging
 import mimetypes
 from pathlib import Path
 
+from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
@@ -35,6 +36,7 @@ from app.domains.workspace.schemas import (
     UploadItemsResponse,
 )
 from app.domains.workspace.office_pdf import OfficeConversionError
+from app.domains.workspace.styled_pdf import StyledPdfError
 from app.domains.workspace.service import (
     DemoReadOnlyError,
     DocumentNotFoundError,
@@ -248,6 +250,38 @@ async def workspace_office_converter_install_api(request: Request):
     if settings.demo_mode:
         raise HTTPException(status_code=403, detail="Read-only demo.")
     return workspace_service.office_pdf.start_portable_install()
+
+
+class StyledPdfRequest(BaseModel):
+    path: str
+    html: str | None = None
+    text: str | None = None
+    style: str = "mixed"
+    accent: str | None = None
+
+
+@router.get("/api/pdf/styled", name="workspace_styled_pdf_status_api")
+async def workspace_styled_pdf_status_api(request: Request):
+    auth_service.require_api_access(request)
+    return workspace_service.styled_pdf.status()
+
+
+@router.post("/api/pdf/styled", name="workspace_styled_pdf_api")
+async def workspace_styled_pdf_api(request: Request, payload: StyledPdfRequest):
+    """Render the posted document HTML in Noteeli's look and save the PDF
+    beside the source file."""
+    auth_service.require_api_access(request)
+    try:
+        saved = workspace_service.create_styled_pdf(
+            payload.path, payload.html, payload.text, payload.style, payload.accent
+        )
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except StyledPdfError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"path": saved}
 
 
 @router.get("/api/file/raw", name="workspace_file_raw_api")

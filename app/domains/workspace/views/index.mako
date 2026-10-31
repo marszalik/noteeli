@@ -248,6 +248,10 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
                 <span data-i18n="file_save_pdf">Zapisz jako PDF</span>
               </button>
+              <button id="file-noteeli-pdf" class="user-menu-item" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2.5 4.5 1.5 3 1.5-3 .9 5h-1.1l-.4-2.4-.9 1.9-.9-1.9-.4 2.4H9.6l.9-5z"/></svg>
+                <span data-i18n="file_noteeli_pdf">Noteeli PDF…</span>
+              </button>
               <button id="file-read-aloud" class="user-menu-item" type="button" role="menuitem">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 <span id="file-read-aloud-label" data-i18n="file_read_aloud">Czytaj na głos</span>

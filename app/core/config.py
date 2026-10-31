@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     # the usual install locations), a path = use that binary, "off" = never
     # convert and fall back to the plain text-card preview.
     office_converter: str = ""
+    # Chromium/Chrome binary used for "Noteeli PDF" ("" = auto-detect, "off" = disable).
+    pdf_browser: str = ""
 
     # ── Locked workspace ────────────────────────────────────────────────
     # When True, the storage source and root are pinned: users can't change

@@ -5761,3 +5761,8 @@ body .profile-switcher .profiles-dropdown {
   #print-root th, #print-root td { border: 1px solid #999; padding: 4px 8px; }
   #print-root h1, #print-root h2, #print-root h3 { break-after: avoid; }
 }
+
+.npdf-styles { display: grid; gap: .5rem; margin-top: .6rem; }
+.npdf-style { display: flex; gap: .6rem; align-items: flex-start; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.npdf-style:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.npdf-result { margin-top: .8rem; word-break: break-all; }
