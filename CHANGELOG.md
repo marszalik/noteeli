@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-10-31
+
 ### Changed
 
 - **Profiles are the unit of everything.** A profile now is the whole setup
