@@ -2366,6 +2366,8 @@ if (shell) {
       st_upload_prepared: "Przygotowano upload do",
       st_preparing_zip: "Przygotowuję archiwum ZIP...",
       st_start_download: "Rozpoczynam pobieranie pliku.",
+      dl_ready_title: "Plik gotowy", dl_ready_hint: "Stuknij, aby zapisać plik w Plikach lub wysłać go do innej aplikacji.",
+      dl_save_share: "Zapisz / udostępnij", dl_open: "Otwórz",
       st_path_copied: "Ścieżka skopiowana.",
       st_path_copy_fail: "Nie udało się skopiować ścieżki.",
       st_loading_dirs: "Wczytuję katalogi...",
@@ -2576,6 +2578,8 @@ if (shell) {
       st_upload_prepared: "Upload prepared to",
       st_preparing_zip: "Preparing ZIP archive...",
       st_start_download: "Starting file download.",
+      dl_ready_title: "File ready", dl_ready_hint: "Tap to save the file to Files or send it to another app.",
+      dl_save_share: "Save / share", dl_open: "Open",
       st_path_copied: "Path copied.",
       st_path_copy_fail: "Failed to copy path.",
       st_loading_dirs: "Loading directories...",
@@ -2786,6 +2790,8 @@ if (shell) {
       st_upload_prepared: "Subida preparada a",
       st_preparing_zip: "Preparando archivo ZIP...",
       st_start_download: "Iniciando descarga del archivo.",
+      dl_ready_title: "Archivo listo", dl_ready_hint: "Toca para guardar el archivo en Archivos o enviarlo a otra app.",
+      dl_save_share: "Guardar / compartir", dl_open: "Abrir",
       st_path_copied: "Ruta copiada.",
       st_path_copy_fail: "No se pudo copiar la ruta.",
       st_loading_dirs: "Cargando directorios...",
@@ -2996,6 +3002,8 @@ if (shell) {
       st_upload_prepared: "Upload vorbereitet nach",
       st_preparing_zip: "ZIP-Archiv wird vorbereitet...",
       st_start_download: "Dateidownload wird gestartet.",
+      dl_ready_title: "Datei bereit", dl_ready_hint: "Tippen, um die Datei in „Dateien“ zu sichern oder an eine andere App zu senden.",
+      dl_save_share: "Sichern / teilen", dl_open: "Öffnen",
       st_path_copied: "Pfad kopiert.",
       st_path_copy_fail: "Pfad konnte nicht kopiert werden.",
       st_loading_dirs: "Verzeichnisse werden geladen...",
@@ -3206,6 +3214,8 @@ if (shell) {
       st_upload_prepared: "Загрузка подготовлена в",
       st_preparing_zip: "Подготовка ZIP-архива...",
       st_start_download: "Начало загрузки файла.",
+      dl_ready_title: "Файл готов", dl_ready_hint: "Нажмите, чтобы сохранить файл в «Файлы» или отправить в другое приложение.",
+      dl_save_share: "Сохранить / поделиться", dl_open: "Открыть",
       st_path_copied: "Путь скопирован.",
       st_path_copy_fail: "Не удалось скопировать путь.",
       st_loading_dirs: "Загрузка каталогов...",
@@ -4752,7 +4762,100 @@ if (shell) {
    * just downloads. In a normal tab a hidden `<a download>` click keeps
    * the current page and the status message intact.
    */
+  function filenameFromResponse(response, url) {
+    const header = response.headers.get("content-disposition") || "";
+    const star = header.match(/filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/);
+    if (star) {
+      try { return decodeURIComponent(star[1].trim()); } catch { /* fall through */ }
+    }
+    const plain = header.match(/filename\s*=\s*"?([^";]+)"?/);
+    if (plain) return plain[1].trim();
+    const pathParam = new URL(url, window.location.href).searchParams.get("path") || "";
+    return pathParam.split("/").pop() || "download";
+  }
+
+  async function downloadViaShareSheet(url) {
+    let file;
+    try {
+      const response = await fetch(url, { credentials: "same-origin" });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const blob = await response.blob();
+      file = new File([blob], filenameFromResponse(response, url), {
+        type: blob.type || "application/octet-stream",
+      });
+    } catch (error) {
+      setStatus(error.message, true);
+      return;
+    }
+    const canShare = Boolean(navigator.canShare && navigator.canShare({ files: [file] }));
+    if (canShare) {
+      try {
+        // Works only while the tap's user activation is still alive (small
+        // files); otherwise iOS throws NotAllowedError and we ask for a tap.
+        await navigator.share({ files: [file] });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return; // user dismissed the sheet
+      }
+    }
+    showDownloadReadyDialog(file, canShare);
+  }
+
+  function showDownloadReadyDialog(file, canShare) {
+    const blobUrl = URL.createObjectURL(file);
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    backdrop.innerHTML = `
+      <section class="modal-card" role="dialog" aria-modal="true">
+        <header class="modal-header"><div>
+          <div class="label"></div><h3></h3>
+        </div></header>
+        <div class="modal-content"><p class="muted small-note"></p></div>
+        <footer class="modal-actions"></footer>
+      </section>`;
+    backdrop.querySelector(".label").textContent = t("dl_ready_title");
+    backdrop.querySelector("h3").textContent = file.name;
+    backdrop.querySelector("p").textContent = t("dl_ready_hint");
+    const actions = backdrop.querySelector(".modal-actions");
+    const close = () => {
+      backdrop.remove();
+      URL.revokeObjectURL(blobUrl);
+    };
+    const addButton = (label, kind, handler) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `button button-${kind}`;
+      button.textContent = label;
+      button.addEventListener("click", handler);
+      actions.appendChild(button);
+    };
+    addButton(t("cancel"), "secondary", close);
+    addButton(t("dl_open"), "secondary", () => window.open(blobUrl, "_blank"));
+    if (canShare) {
+      addButton(t("dl_save_share"), "primary", async () => {
+        try {
+          await navigator.share({ files: [file] });
+          close();
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          setStatus(error.message, true);
+        }
+      });
+    }
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) close();
+    });
+    document.body.appendChild(backdrop);
+  }
+
   function triggerDownload(url) {
+    // iOS home-screen app: an attachment response opened via window.open
+    // renders as a blank sheet (it can't display it and never offers to
+    // save it). Fetch the bytes ourselves and hand them to the share sheet.
+    if (window.navigator.standalone === true) {
+      downloadViaShareSheet(url);
+      return;
+    }
     if (isStandaloneDisplay()) {
       window.open(url, "_blank", "noopener");
       return;

@@ -283,6 +283,7 @@ Tests live under `tests/`. Run with `pdm run test` or `pytest tests/`.
 | Mobile: drawer sits below the topbar (hamburger/Save stay tappable), first visit defaults to overlay | ✅ `test_mobile_drawer_survives_folder_tap_and_closes_on_file_tap` (e2e) | `--topbar-h` via ResizeObserver |
 | Mobile: expanding a folder keeps the drawer open (composedPath, not contains) | ✅ same e2e | backdrop-close handler in `initSidebar` |
 | Mobile: picking a file closes the overlay drawer | ✅ same e2e | end of `loadFile` |
+| Download in iOS home-screen app → fetch + `navigator.share` (File), "file ready" dialog fallback | ✅ `test_download_in_ios_standalone_hands_file_to_share_sheet`, `test_download_in_ios_standalone_without_file_share_shows_ready_dialog` (e2e, stubbed share — real iOS share sheet 🌐 untested) | `downloadViaShareSheet`, `showDownloadReadyDialog`; other standalone modes keep `window.open` |
 | Refresh tree button | 🌐 | `refreshButton` |
 | Reload open file from disk (topbar) — confirms if there are unsaved edits | 🌐 | `refreshFileButton` → `loadFile(selectedPath)` |
 | Account menu (user icon) — email/local label + Settings + Logout dropdown | 🌐 | `userMenuToggle`, `#user-menu-dropdown` |

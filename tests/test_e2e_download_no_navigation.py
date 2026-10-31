@@ -1,5 +1,12 @@
 """E2E (headless Chromium): "Download" must never navigate the app window.
 
+Update (1.15.1): in the iOS home-screen app ``window.open`` on an
+attachment response produced a BLANK sheet that never offered to save.
+Standalone iOS (``navigator.standalone``) now fetches the bytes and hands
+a File to the share sheet (``navigator.share``); if the tap's user
+activation has lapsed, or sharing files is unsupported, a "file ready"
+dialog with explicit buttons appears instead.
+
 Regression test for a phone-breaking bug. The tree context menu's
 "Download" entry used `window.location.href = /api/download?...`. In a
 browser tab that is harmless (an attachment response never replaces the
@@ -38,6 +45,17 @@ STANDALONE_INIT = """
   window.matchMedia = (q) => q.includes('display-mode: standalone')
     ? { matches: true, media: q, addEventListener() {}, removeEventListener() {} }
     : realMatchMedia(q);
+"""
+# iOS standalone: record share-sheet calls instead of opening the real one.
+SHARE_STUB = """
+  window.__shared = [];
+  navigator.canShare = () => true;
+  navigator.share = async (data) => {
+    window.__shared.push((data.files || []).map((f) => ({ name: f.name, size: f.size })));
+  };
+"""
+NO_SHARE_STUB = """
+  navigator.canShare = () => false;
 """
 RECORD_WINDOW_OPEN = """
   window.__openedWindows = [];
@@ -103,7 +121,28 @@ def test_download_in_browser_tab_keeps_page_and_fires_download(tmp_path):
                 browser.close()
 
 
-def test_download_in_standalone_pwa_opens_new_window_not_current(tmp_path):
+def _standalone_context(browser, init_script):
+    context = browser.new_context(
+        viewport={"width": 393, "height": 852},
+        device_scale_factor=3,
+        is_mobile=True,
+        has_touch=True,
+    )
+    context.add_init_script(STANDALONE_INIT + RECORD_WINDOW_OPEN + init_script)
+    return context
+
+
+def _start_mobile_download(page, filename):
+    page.wait_for_function(
+        "() => document.querySelector('.app-shell').classList.contains('sidebar-collapsed')",
+        timeout=15_000,
+    )
+    page.locator("#sidebar-toggle").tap()
+    _open_download_entry(page, filename)
+    _download_button(page).click()
+
+
+def test_download_in_ios_standalone_hands_file_to_share_sheet(tmp_path):
     if not _cdn_reachable():
         pytest.skip("editor CDN unreachable — cannot load the real UI")
 
@@ -112,33 +151,38 @@ def test_download_in_standalone_pwa_opens_new_window_not_current(tmp_path):
         with sync_playwright() as p:
             browser = _launch(p)
             try:
-                context = browser.new_context(
-                    viewport={"width": 393, "height": 852},
-                    device_scale_factor=3,
-                    is_mobile=True,
-                    has_touch=True,
-                )
-                context.add_init_script(STANDALONE_INIT + RECORD_WINDOW_OPEN)
-                page = context.new_page()
+                page = _standalone_context(browser, SHARE_STUB).new_page()
                 page.goto(base_url, wait_until="networkidle")
                 url_before = page.url
 
-                # Mobile: the drawer starts collapsed — open it first.
-                page.wait_for_function(
-                    "() => document.querySelector('.app-shell').classList.contains('sidebar-collapsed')",
-                    timeout=15_000,
-                )
-                page.locator("#sidebar-toggle").tap()
+                _start_mobile_download(page, "notatka.md")
+                page.wait_for_function("() => window.__shared.length === 1", timeout=10_000)
 
-                _open_download_entry(page, "notatka.md")
-                _download_button(page).click()
-
-                opened = page.evaluate("() => window.__openedWindows")
-                assert len(opened) == 1, opened
-                assert opened[0]["target"] == "_blank"
-                assert "/api/download?path=notatka.md" in opened[0]["url"]
-                # The app itself stays where it was — no full-screen file view
-                # replacing the PWA with no way back.
+                shared = page.evaluate("() => window.__shared")
+                assert shared[0][0]["name"] == "notatka.md"
+                assert shared[0][0]["size"] > 0
+                # No blank window: nothing is opened, the app stays put.
+                assert page.evaluate("() => window.__openedWindows") == []
                 assert page.url == url_before
+            finally:
+                browser.close()
+
+
+def test_download_in_ios_standalone_without_file_share_shows_ready_dialog(tmp_path):
+    if not _cdn_reachable():
+        pytest.skip("editor CDN unreachable — cannot load the real UI")
+
+    with _running_server(tmp_path) as (base_url, content):
+        _seed(content)
+        with sync_playwright() as p:
+            browser = _launch(p)
+            try:
+                page = _standalone_context(browser, NO_SHARE_STUB).new_page()
+                page.goto(base_url, wait_until="networkidle")
+
+                _start_mobile_download(page, "notatka.md")
+                dialog = page.locator(".modal-backdrop .modal-card h3", has_text="notatka.md")
+                dialog.wait_for(state="visible", timeout=10_000)
+                assert page.evaluate("() => window.__openedWindows") == []
             finally:
                 browser.close()

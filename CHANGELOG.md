@@ -11,6 +11,16 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Downloads in the iPhone / iPad home-screen app.** Tapping Download in
+  the installed app (Add to Home Screen) opened a blank white window and
+  nothing was saved — iOS cannot show an attachment response in the
+  in-app sheet. Noteeli now fetches the file itself and opens the iOS share
+  sheet (Save to Files, AirDrop, …); if iOS wants a fresh tap first (bigger
+  files), a "file ready" dialog with a Save / share button appears.
+  Browser tabs and Android are unchanged.
+
 ## [1.15.0] - 2026-10-31
 
 ### Changed
