@@ -11,6 +11,12 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.18.1] - 2026-10-31
+
+### Security
+- **Public demo no longer exposes the host's directories.** The directory picker (`GET /api/directories`) was not confined in demo mode, so anyone could list folders anywhere on the server's disk (names only — file contents were never reachable). It is now clamped to the demo's content root, like a locked workspace.
+- **Demo refuses the SFTP connection test** (`POST /api/sftp/test`): it made the server connect to a caller-chosen host and stored the password on success.
+
 ## [1.18.0] - 2026-10-31
 
 ### Added

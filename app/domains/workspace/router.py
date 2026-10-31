@@ -509,6 +509,10 @@ async def workspace_sftp_test_api(request: Request):
     """Validate SFTP credentials by attempting a connection + remote path
     listing. Returns {ok: True} on success or {ok: False, error: "..."}."""
     auth_service.require_api_access(request)
+    if settings.demo_mode:
+        # The test connects to a caller-chosen host and stores the password
+        # on success — never on a public demo.
+        raise HTTPException(status_code=403, detail="Read-only demo.")
     body = await request.json()
 
     try:

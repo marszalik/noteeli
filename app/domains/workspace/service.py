@@ -726,7 +726,9 @@ class WorkspaceService:
         return self.get_preferences()
 
     def browse_directories(self, directory_path: str | None = None) -> DirectoryBrowserResponse:
-        result = self._get_backend().browse_dirs(directory_path, confine=self.settings.lock_workspace)
+        result = self._get_backend().browse_dirs(
+            directory_path, confine=self.settings.lock_workspace or self.settings.demo_mode
+        )
         return DirectoryBrowserResponse(
             current_path=result.current_path,
             parent_path=result.parent_path,
