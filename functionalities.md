@@ -559,3 +559,4 @@ automated coverage. Each one is a candidate for the next batch of tests.
 - When you write a test that covers an existing row, swap the status from ❌ / 🌐 to ✅ and reference the test name.
 - When you rip a feature out, delete the row (don't leave dead entries).
 - If the table starts to drift from reality, the fix is "audit the codebase and rewrite", not "patch one row".
+| Topbar file menu (⋮): Download / Save as PDF (print-only `#print-root`) / Read aloud (`speechSynthesis`, sentence chunks, stops on file change) — works on phone width | ✅ `tests/test_e2e_file_menu.py` (e2e, stubbed speech + print — real voices and iOS print-to-PDF 🌐 untested) | `openFileMenu`, `printCurrentDocument`, `startReadAloud` in app.js |

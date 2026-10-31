@@ -11,6 +11,9 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **File menu (⋮) in the topbar**, also on phones: **Download** the open document, **Save as PDF** (prints just the rendered note via the browser's print dialog — on iPad/iPhone use *Print → share → Save to Files*) and **Read aloud** (the browser's built-in speech synthesis, in the interface language; tap again to stop). No more opening the sidebar just to export what you are reading.
+
 ## [1.16.0] - 2026-10-31
 
 ### Changed

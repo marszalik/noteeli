@@ -15,6 +15,9 @@ if (shell) {
   const refreshFileButton = document.getElementById("refresh-file");
   const userMenuToggle = document.getElementById("user-menu-toggle");
   const userMenuDropdown = document.getElementById("user-menu-dropdown");
+  const fileMenu = document.getElementById("file-menu");
+  const fileMenuToggle = document.getElementById("file-menu-toggle");
+  const fileMenuDropdown = document.getElementById("file-menu-dropdown");
   const gitMenu = document.getElementById("git-menu");
   const gitMenuToggle = document.getElementById("git-menu-toggle");
   const gitMenuDropdown = document.getElementById("git-menu-dropdown");
@@ -144,6 +147,8 @@ if (shell) {
   let preferenceProfiles = [];
   let profileFormGdriveCredentials = "";
   let selectedPath = null;
+  let readAloudActive = false;
+  let readAloudToken = 0;
   let selectedEditable = false;
   let selectedFileType = "markdown"; // "markdown" | "json"
   let selectedTreePath = "";
@@ -2313,6 +2318,7 @@ if (shell) {
       ctx_scope: "Skup się na folderze", ctx_upload: "Wgraj tutaj",
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
+      file_menu_title: "Akcje pliku", file_save_pdf: "Zapisz jako PDF", file_read_aloud: "Czytaj na głos", file_read_stop: "Zatrzymaj czytanie", file_pdf_empty: "Brak tekstu do wydrukowania.", file_read_unsupported: "Ta przeglądarka nie umie czytać na głos.", file_read_empty: "Brak tekstu do przeczytania.",
       ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
       ctx_duplicate: "Duplikuj",
       ctx_git_commit: "Commit (ten element)", ctx_git_commit_push: "Commit i push (ten element)",
@@ -2530,6 +2536,7 @@ if (shell) {
       ctx_scope: "Focus on this folder", ctx_upload: "Upload here",
       ctx_new_file: "New file", ctx_new_dir: "New folder",
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
+      file_menu_title: "File actions", file_save_pdf: "Save as PDF", file_read_aloud: "Read aloud", file_read_stop: "Stop reading", file_pdf_empty: "Nothing to print.", file_read_unsupported: "This browser cannot read aloud.", file_read_empty: "Nothing to read.",
       ctx_copy_path: "Copy path", ctx_rename: "Rename",
       ctx_duplicate: "Duplicate",
       ctx_git_commit: "Commit (this item)", ctx_git_commit_push: "Commit & push (this item)",
@@ -2747,6 +2754,7 @@ if (shell) {
       ctx_scope: "Enfocar esta carpeta", ctx_upload: "Subir aquí",
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
+      file_menu_title: "Acciones del archivo", file_save_pdf: "Guardar como PDF", file_read_aloud: "Leer en voz alta", file_read_stop: "Detener lectura", file_pdf_empty: "No hay texto para imprimir.", file_read_unsupported: "Este navegador no puede leer en voz alta.", file_read_empty: "No hay texto para leer.",
       ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
       ctx_duplicate: "Duplicar",
       ctx_git_commit: "Confirmar (este elemento)", ctx_git_commit_push: "Confirmar y enviar (este elemento)",
@@ -2964,6 +2972,7 @@ if (shell) {
       ctx_scope: "Auf diesen Ordner fokussieren", ctx_upload: "Hier hochladen",
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
+      file_menu_title: "Dateiaktionen", file_save_pdf: "Als PDF speichern", file_read_aloud: "Vorlesen", file_read_stop: "Vorlesen stoppen", file_pdf_empty: "Kein Text zum Drucken.", file_read_unsupported: "Dieser Browser kann nicht vorlesen.", file_read_empty: "Kein Text zum Vorlesen.",
       ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
       ctx_duplicate: "Duplizieren",
       ctx_git_commit: "Commit (dieses Element)", ctx_git_commit_push: "Commit & Push (dieses Element)",
@@ -3181,6 +3190,7 @@ if (shell) {
       ctx_scope: "Сфокусироваться на папке", ctx_upload: "Загрузить сюда",
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
+      file_menu_title: "Действия с файлом", file_save_pdf: "Сохранить как PDF", file_read_aloud: "Прочитать вслух", file_read_stop: "Остановить чтение", file_pdf_empty: "Нет текста для печати.", file_read_unsupported: "Этот браузер не умеет читать вслух.", file_read_empty: "Нет текста для чтения.",
       ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
       ctx_duplicate: "Дублировать",
       ctx_git_commit: "Коммит (этот элемент)", ctx_git_commit_push: "Коммит и push (этот элемент)",
@@ -3587,6 +3597,9 @@ if (shell) {
   function updateHeader(name, path) {
     currentFileLabel.textContent = name || t("no_file");
     currentFilePath.textContent = path || t("no_file_path");
+    stopReadAloud();
+    if (fileMenu) fileMenu.classList.toggle("hidden", !selectedPath);
+    closeFileMenu();
   }
 
   function applyHiddenFilesToggleState() {
@@ -7111,6 +7124,178 @@ if (shell) {
     else closeUserMenu();
   });
 
+
+  // ── File menu: download / save as PDF / read aloud ──────────────
+  // Lives in the topbar (also on phones) so the document you are looking
+  // at can be exported without opening the sidebar tree.
+  function closeFileMenu() {
+    fileMenuDropdown?.classList.add("hidden");
+    fileMenuDropdown?.setAttribute("aria-hidden", "true");
+    fileMenuToggle?.setAttribute("aria-expanded", "false");
+  }
+  function isTextDocumentOpen() {
+    return Boolean(selectedPath) && previewStage.classList.contains("hidden");
+  }
+  function openFileMenu() {
+    const textual = isTextDocumentOpen();
+    document.getElementById("file-pdf").classList.toggle("hidden", !textual);
+    const readBtn = document.getElementById("file-read-aloud");
+    readBtn.classList.toggle("hidden", !textual || !("speechSynthesis" in window));
+    document.getElementById("file-read-aloud-label").textContent =
+      readAloudActive ? t("file_read_stop") : t("file_read_aloud");
+    fileMenuDropdown?.classList.remove("hidden");
+    fileMenuDropdown?.setAttribute("aria-hidden", "false");
+    fileMenuToggle?.setAttribute("aria-expanded", "true");
+  }
+  fileMenuToggle?.addEventListener("click", () => {
+    if (fileMenuDropdown?.classList.contains("hidden")) openFileMenu();
+    else closeFileMenu();
+  });
+
+  // Rendered document as { html } (markdown in the WYSIWYG view) or
+  // { text } (everything else: code, JSON, markdown source, kanban).
+  function currentDocumentForExport() {
+    const wysiwyg = selectedFileType === "markdown"
+      && !kanbanViewActive
+      && currentEditorMode !== "code"
+      && currentEditorMode !== "text";
+    if (wysiwyg) return { html: editor.getHTML() };
+    return { text: getCurrentEditorContent() };
+  }
+
+  function printCurrentDocument() {
+    const doc = currentDocumentForExport();
+    let root = document.getElementById("print-root");
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "print-root";
+      document.body.appendChild(root);
+    }
+    root.textContent = "";
+    if (doc.html) {
+      root.classList.remove("print-plain");
+      root.innerHTML = doc.html;
+    } else {
+      root.classList.add("print-plain");
+      const pre = document.createElement("pre");
+      pre.textContent = doc.text || "";
+      root.appendChild(pre);
+    }
+    if (!root.textContent.trim() && !root.querySelector("img")) {
+      setStatus(t("file_pdf_empty"), true);
+      return;
+    }
+    // The browser proposes the document title as the PDF file name.
+    const previousTitle = document.title;
+    document.title = (currentFileLabel.textContent || previousTitle).replace(/\.[^.]+$/, "");
+    const restore = () => {
+      document.title = previousTitle;
+      root.textContent = "";
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
+  }
+
+  const READ_LANGS = { pl: "pl-PL", en: "en-US", es: "es-ES", de: "de-DE", ru: "ru-RU" };
+
+  function plainTextForSpeech() {
+    const doc = currentDocumentForExport();
+    if (doc.text !== undefined) return doc.text;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = doc.html;
+    tmp.querySelectorAll("p,li,h1,h2,h3,h4,h5,h6,pre,blockquote,tr,div").forEach((el) => {
+      el.insertAdjacentText("afterend", "\n");
+    });
+    return tmp.textContent;
+  }
+
+  // Short chunks: Chrome silently cuts off long utterances after ~15 s.
+  function splitForSpeech(text) {
+    const chunks = [];
+    for (const para of text.split(/\n+/)) {
+      const trimmed = para.trim();
+      if (!trimmed) continue;
+      let buf = "";
+      for (const sentence of trimmed.split(/(?<=[.!?…])\s+/)) {
+        if (buf && buf.length + sentence.length > 220) {
+          chunks.push(buf);
+          buf = "";
+        }
+        buf = buf ? `${buf} ${sentence}` : sentence;
+        while (buf.length > 260) {
+          const cut = buf.lastIndexOf(" ", 240);
+          const at = cut > 0 ? cut : 240;
+          chunks.push(buf.slice(0, at));
+          buf = buf.slice(at).trim();
+        }
+      }
+      if (buf) chunks.push(buf);
+    }
+    return chunks;
+  }
+
+  function stopReadAloud() {
+    readAloudToken += 1;
+    if (!readAloudActive) return;
+    readAloudActive = false;
+    try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+  }
+
+  function startReadAloud() {
+    if (!("speechSynthesis" in window)) {
+      setStatus(t("file_read_unsupported"), true);
+      return;
+    }
+    const chunks = splitForSpeech(plainTextForSpeech());
+    if (!chunks.length) {
+      setStatus(t("file_read_empty"), true);
+      return;
+    }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const token = ++readAloudToken;
+    const lang = READ_LANGS[preferences?.language || shell?.dataset?.language || "pl"] || "pl-PL";
+    const voice = synth.getVoices().find((v) => v.lang && v.lang.replace("_", "-").startsWith(lang.slice(0, 2)));
+    readAloudActive = true;
+    let index = 0;
+    const next = () => {
+      if (token !== readAloudToken) return;
+      if (index >= chunks.length) {
+        readAloudActive = false;
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(chunks[index++]);
+      utterance.lang = voice?.lang || lang;
+      if (voice) utterance.voice = voice;
+      utterance.onend = next;
+      utterance.onerror = (event) => {
+        if (token !== readAloudToken) return;
+        if (event.error === "canceled" || event.error === "interrupted") return;
+        readAloudActive = false;
+      };
+      synth.speak(utterance);
+    };
+    next();
+  }
+
+  document.getElementById("file-download")?.addEventListener("click", () => {
+    closeFileMenu();
+    if (!selectedPath) return;
+    triggerDownload(`${config.downloadUrl}?path=${encodeURIComponent(selectedPath)}`);
+    setStatus(t("st_start_download"));
+  });
+  document.getElementById("file-pdf")?.addEventListener("click", () => {
+    closeFileMenu();
+    printCurrentDocument();
+  });
+  document.getElementById("file-read-aloud")?.addEventListener("click", () => {
+    closeFileMenu();
+    if (readAloudActive) stopReadAloud();
+    else startReadAloud();
+  });
+  window.addEventListener("pagehide", stopReadAloud);
+
   // ── Git menu wiring ─────────────────────────────────────────────
   gitMenuToggle?.addEventListener("click", () => {
     if (gitMenuDropdown?.classList.contains("hidden")) openGitMenu();
@@ -7202,6 +7387,14 @@ if (shell) {
       closeUserMenu();
     }
     if (
+      fileMenuDropdown &&
+      !fileMenuDropdown.classList.contains("hidden") &&
+      !fileMenuDropdown.contains(event.target) &&
+      !fileMenuToggle?.contains(event.target)
+    ) {
+      closeFileMenu();
+    }
+    if (
       gitMenuDropdown &&
       !gitMenuDropdown.classList.contains("hidden") &&
       !gitMenuDropdown.contains(event.target) &&
@@ -7252,6 +7445,10 @@ if (shell) {
     }
     if (event.key === "Escape" && userMenuDropdown && !userMenuDropdown.classList.contains("hidden")) {
       closeUserMenu();
+      return;
+    }
+    if (event.key === "Escape" && fileMenuDropdown && !fileMenuDropdown.classList.contains("hidden")) {
+      closeFileMenu();
       return;
     }
     if (event.key === "Escape" && gitMenuDropdown && !gitMenuDropdown.classList.contains("hidden")) {

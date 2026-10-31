@@ -85,6 +85,11 @@ described in their own sections below.
 - **Delete** asks you to click twice (the button arms itself first), so a
   stray click never destroys a folder.
 - **Duplicate** creates `name_1.md`, `name_2.md`, … next to the original.
+- **File menu (⋮)** in the top bar (visible on phones too) works on the note
+  you are viewing: **Download**, **Save as PDF** (opens the print dialog with
+  only the note on the page — choose "Save as PDF"; on iPad/iPhone use the
+  share icon → *Save to Files*) and **Read aloud** (the browser reads the note
+  in the interface language; choose it again to stop).
 - **Download** fetches a single file as-is; downloading a folder gives you a
   ZIP of the whole subtree. In the installed (home-screen) app on a phone
   the file opens in a separate sheet with the system share/save controls —

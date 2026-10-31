@@ -235,6 +235,26 @@
             <div id="editor-mode-menu" class="editor-mode-menu hidden" role="menu" aria-hidden="true"></div>
           </div>
 
+          <div class="user-menu file-menu hidden" id="file-menu">
+            <button id="file-menu-toggle" class="icon-button" type="button" aria-label="File actions" aria-haspopup="true" aria-expanded="false" aria-controls="file-menu-dropdown" title="File actions" data-i18n-title="file_menu_title" data-i18n-aria-label="file_menu_title">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+            </button>
+            <div id="file-menu-dropdown" class="user-menu-dropdown hidden" role="menu" aria-hidden="true">
+              <button id="file-download" class="user-menu-item" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <span data-i18n="ctx_download">Pobierz</span>
+              </button>
+              <button id="file-pdf" class="user-menu-item" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
+                <span data-i18n="file_save_pdf">Zapisz jako PDF</span>
+              </button>
+              <button id="file-read-aloud" class="user-menu-item" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                <span id="file-read-aloud-label" data-i18n="file_read_aloud">Czytaj na głos</span>
+              </button>
+            </div>
+          </div>
+
           <div class="user-menu">
             <button id="user-menu-toggle" class="icon-button" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown" title="Account">
               <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
