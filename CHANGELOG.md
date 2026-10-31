@@ -11,6 +11,8 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-10-31
+
 ### Fixed
 
 - **Downloads in the iPhone / iPad home-screen app.** Tapping Download in
