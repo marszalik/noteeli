@@ -3,7 +3,7 @@ import logging
 import mimetypes
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app import __version__ as app_version
@@ -30,6 +30,7 @@ from app.domains.workspace.schemas import (
     RenameItemRequest,
     SaveFileRequest,
     TreeNode,
+    TreeSearchResult,
     UploadItemsResponse,
 )
 from app.domains.workspace.office_pdf import OfficeConversionError
@@ -92,6 +93,7 @@ async def workspace_page(request: Request):
     frontend_config = json.dumps(
         {
             "treeUrl": str(request.url_for("workspace_tree_api")),
+            "treeSearchUrl": str(request.url_for("workspace_tree_search_api")),
             "fileUrl": str(request.url_for("workspace_file_api")),
             "saveUrl": str(request.url_for("workspace_save_api")),
             "preferencesUrl": str(request.url_for("workspace_preferences_api")),
@@ -154,9 +156,32 @@ async def workspace_page(request: Request):
 
 
 @router.get("/api/tree", response_model=TreeNode, name="workspace_tree_api")
-async def workspace_tree_api(request: Request):
+async def workspace_tree_api(
+    request: Request,
+    path: str = "",
+    depth: int | None = Query(default=None, ge=0, le=64),
+    expand: list[str] = Query(default_factory=list, max_length=2000),
+):
+    """Without params: the full recursive tree. The UI sends ``depth=1``
+    (+ ``expand`` = folders it has open) so big workspaces load one level
+    at a time; ``path`` roots the response at a subdirectory."""
     auth_service.require_api_access(request)
-    return workspace_service.build_tree(_user_key(request))
+    try:
+        return workspace_service.build_tree(
+            _user_key(request), path=path, depth=depth, expand=set(expand)
+        )
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/tree/search", response_model=TreeSearchResult, name="workspace_tree_search_api")
+async def workspace_tree_search_api(request: Request, q: str = "", path: str = ""):
+    auth_service.require_api_access(request)
+    try:
+        results, truncated = workspace_service.search_tree(q, path=path)
+    except InvalidPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return TreeSearchResult(results=results, truncated=truncated)
 
 
 @router.get("/api/file", response_model=FileDocument, name="workspace_file_api")

@@ -11,6 +11,20 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The file tree loads lazily.** Opening or refreshing Noteeli used to
+  make the server read *every* directory to full depth — painful on
+  workspaces with big code and text trees. Now only the top level is read
+  up front; a folder's contents are fetched the first time you open it,
+  and a refresh re-reads just the folders you have open (in one request).
+  `GET /api/tree` accepts `depth`, `path` and `expand`; without them it
+  still returns the full tree (used by the public viewer).
+- **Tree search is server-side.** Since the browser no longer holds the
+  whole tree, the search box asks the server (`GET /api/tree/search`) and
+  finds files in folders you never opened. Matches are capped at 300; a
+  matched folder opens lazily.
+
 ## [1.14.0] - 2026-10-07
 
 ### Added

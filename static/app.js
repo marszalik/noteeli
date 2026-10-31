@@ -161,6 +161,11 @@ if (shell) {
   let contextMenuState = null;
   let showHiddenFiles = false;
   let treeSearchQuery = "";
+  // Server-side search result, shaped as a tree (see buildSearchTree).
+  let treeSearchResult = null;
+  let treeSearchPending = false;
+  let treeSearchTimer = null;
+  let treeSearchSeq = 0;
   let scopedRootPath = "";
   let uploadTargetPath = "";
   let pendingUploadFiles = [];
@@ -4559,12 +4564,7 @@ if (shell) {
           async () => {
             selectedTreePath = node.path;
             selectedTreeKind = "directory";
-            if (isExpanded) {
-              expandedDirectories.delete(node.path);
-            } else {
-              expandedDirectories.add(node.path);
-            }
-            renderTree(treeData);
+            toggleDirectory(node);
           },
         ),
       );
@@ -5022,7 +5022,12 @@ if (shell) {
   function setScopedRoot(path) {
     scopedRootPath = path || "";
     applyTreeScopeState();
+    const scopedNode = scopedRootPath ? findDirectoryNode(treeData, scopedRootPath) : null;
+    if (scopedNode && isUnloadedDirectory(scopedNode)) {
+      loadDirectoryChildren(scopedRootPath); // re-renders when it lands
+    }
     renderTree(treeData);
+    if (treeSearchQuery.trim()) runTreeSearch(); // search is scoped too
   }
 
   // ── Local tree patching ──────────────────────────────────────────
@@ -5067,6 +5072,8 @@ if (shell) {
   // case-insensitive by name; in manual mode new items land at the end
   // (the server appends unordered items after the ordered ones).
   function insertTreeChild(parentNode, node) {
+    // Folder not read yet: the item will arrive with its first load.
+    if (isUnloadedDirectory(parentNode)) return;
     const children = (parentNode.children || []).filter((c) => c.path !== node.path);
     if (preferences?.sort_mode === "manual") {
       children.push(node);
@@ -5416,17 +5423,16 @@ if (shell) {
       toggle.className = "tree-toggle";
       // While searching, force every surviving folder open so matches deep
       // in the tree are visible without manual expansion.
+      // (Search-result folders that weren't fully read stay closed until
+      // opened — only ancestors of matches are forced open.)
       const isExpanded =
-        Boolean(treeSearchQuery.trim()) || expandedDirectories.has(node.path);
+        (Boolean(treeSearchQuery.trim()) && !isUnloadedDirectory(node)) ||
+        expandedDirectories.has(node.path);
+      if (isExpanded && isUnloadedDirectory(node)) {
+        loadDirectoryChildren(node.path);
+      }
       toggle.appendChild(makeSvgIcon(isExpanded ? TREE_ICONS.chevronDown : TREE_ICONS.chevronRight));
-      toggle.addEventListener("click", () => {
-        if (expandedDirectories.has(node.path)) {
-          expandedDirectories.delete(node.path);
-        } else {
-          expandedDirectories.add(node.path);
-        }
-        renderTree(treeData);
-      });
+      toggle.addEventListener("click", () => toggleDirectory(node));
       row.appendChild(toggle);
 
       const label = document.createElement("button");
@@ -5443,12 +5449,7 @@ if (shell) {
       label.addEventListener("click", () => {
         selectedTreePath = node.path;
         selectedTreeKind = "directory";
-        if (expandedDirectories.has(node.path)) {
-          expandedDirectories.delete(node.path);
-        } else {
-          expandedDirectories.add(node.path);
-        }
-        renderTree(treeData);
+        toggleDirectory(node);
       });
       // A directory is "dirty" if it contains changed files, or if git
       // reported the directory itself (a wholly-untracked folder, which
@@ -5471,6 +5472,15 @@ if (shell) {
         const childList = document.createElement("ul");
         childList.className = "tree-list";
         node.children.forEach((child) => childList.appendChild(renderNode(child)));
+        listItem.appendChild(childList);
+      } else if (isExpanded && loadingDirectories.has(node.path)) {
+        const childList = document.createElement("ul");
+        childList.className = "tree-list";
+        const loading = document.createElement("li");
+        loading.className = "tree-item tree-loading";
+        loading.textContent = "…";
+        loading.setAttribute("aria-busy", "true");
+        childList.appendChild(loading);
         listItem.appendChild(childList);
       }
 
@@ -5528,10 +5538,17 @@ if (shell) {
 
     const searchQuery = treeSearchQuery.trim().toLowerCase();
     if (searchQuery) {
-      const matchedChildren = (visibleNode.children || [])
-        .map((child) => filterTreeBySearch(child, searchQuery))
-        .filter(Boolean);
-      visibleNode = { ...visibleNode, children: matchedChildren };
+      if (config.treeSearchUrl) {
+        // Server-side search: the browser only holds the opened folders,
+        // so matching deep files needs the server (see runTreeSearch).
+        const found = treeSearchResult ? filterVisibleTree(treeSearchResult) : null;
+        visibleNode = { ...visibleNode, children: found ? found.children : [] };
+      } else {
+        const matchedChildren = (visibleNode.children || [])
+          .map((child) => filterTreeBySearch(child, searchQuery))
+          .filter(Boolean);
+        visibleNode = { ...visibleNode, children: matchedChildren };
+      }
     }
 
     if (scopedRootPath && visibleNode.path) {
@@ -5559,6 +5576,7 @@ if (shell) {
     }
 
     if (searchQuery && !(visibleNode.children || []).length) {
+      if (treeSearchPending) return; // result still on its way
       const empty = document.createElement("div");
       empty.className = "tree-search-empty";
       empty.textContent = t("tree_search_no_results");
@@ -6131,10 +6149,111 @@ if (shell) {
     gitMenuToggle?.setAttribute("aria-expanded", "false");
   }
 
+  // ── Lazy tree loading ────────────────────────────────────────────
+  // The server only reads one directory level (depth=1) plus the folders
+  // the user already has open (expand=…); everything else arrives as
+  // `children_loaded: false` and is fetched when it is first opened. This
+  // keeps refreshes cheap on huge workspaces (monorepos, node_modules-like
+  // trees) instead of crawling every directory to full depth.
+  const MAX_EXPAND_PARAMS = 100; // keep the URL short; the rest auto-load
+  const loadingDirectories = new Set();
+
+  function buildTreeUrl() {
+    const url = new URL(config.treeUrl, window.location.href);
+    const open = new Set(expandedDirectories);
+    open.delete("");
+    // A scoped sub-root (and its ancestors) must be present in the tree.
+    let acc = "";
+    for (const part of scopedRootPath ? scopedRootPath.split("/") : []) {
+      acc = acc ? `${acc}/${part}` : part;
+      open.add(acc);
+    }
+    url.searchParams.set("depth", "1");
+    [...open]
+      .sort((a, b) => a.length - b.length)
+      .slice(0, MAX_EXPAND_PARAMS)
+      .forEach((path) => url.searchParams.append("expand", path));
+    return url.toString();
+  }
+
+  function isUnloadedDirectory(node) {
+    return node.kind === "directory" && node.children_loaded === false;
+  }
+
+  function fetchDirectoryNode(path) {
+    const url = new URL(config.treeUrl, window.location.href);
+    url.searchParams.set("path", path);
+    url.searchParams.set("depth", "1");
+    return requestJson(url.toString(), { method: "GET" });
+  }
+
+  // First openable file in tree order, reading unloaded folders on the
+  // way (bounded — a workspace of nothing but empty folders must not turn
+  // the initial load into a crawl).
+  async function findFirstEditableLazy(node, budget = { fetches: 8 }) {
+    if (node.kind === "file") return node.editable ? node.path : null;
+    if (isUnloadedDirectory(node)) {
+      if (budget.fetches <= 0) return null;
+      budget.fetches -= 1;
+      try {
+        const fresh = await fetchDirectoryNode(node.path);
+        node.children = fresh.children || [];
+        node.children_loaded = true;
+      } catch {
+        return null;
+      }
+    }
+    for (const child of node.children || []) {
+      const found = await findFirstEditableLazy(child, budget);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Fetch one directory's children and graft them onto every in-memory
+  // copy of that node (the real tree and, while searching, the result tree).
+  async function loadDirectoryChildren(path) {
+    if (loadingDirectories.has(path)) return;
+    loadingDirectories.add(path);
+    try {
+      const fresh = await fetchDirectoryNode(path);
+      for (const root of [treeData, treeSearchResult]) {
+        const target = root && findTreeNode(root, path);
+        if (target && target.kind === "directory") {
+          target.children = fresh.children || [];
+          target.children_loaded = true;
+        }
+      }
+    } catch (error) {
+      // Stop auto-retrying on every render: collapse and report.
+      expandedDirectories.delete(path);
+      setStatus(error.message, true);
+    } finally {
+      loadingDirectories.delete(path);
+      renderTree(treeData);
+    }
+  }
+
+  function toggleDirectory(node) {
+    if (expandedDirectories.has(node.path)) {
+      expandedDirectories.delete(node.path);
+    } else {
+      expandedDirectories.add(node.path);
+    }
+    // renderNode() kicks off the fetch for an expanded, unloaded folder.
+    renderTree(treeData);
+  }
+
   async function loadTree({ autoSelect = false } = {}) {
     closeTreeContextMenu();
     setStatus(t("st_refreshing_tree"));
-    treeData = await requestJson(config.treeUrl, { method: "GET" });
+    // Restoring the last-opened file: open its folders up front so the
+    // single lazy request below already contains it.
+    if (autoSelect && !selectedPath) {
+      const lastFile = localStorage.getItem("last-opened-file");
+      if (lastFile) openParentDirectories(lastFile);
+    }
+    treeData = await requestJson(buildTreeUrl(), { method: "GET" });
     // Pull the latest publish list in parallel — slow-running, OK to
     // happen after the first paint.
     refreshPublishedItems();
@@ -6151,7 +6270,8 @@ if (shell) {
     if (autoSelect && !selectedPath) {
       const lastFile = localStorage.getItem("last-opened-file");
       const restorable = lastFile && findFileNode(treeData, lastFile);
-      const pathToOpen = restorable ? lastFile : findFirstEditable(treeData);
+      // (folders along lastFile were expanded above, so it is in treeData)
+      const pathToOpen = restorable ? lastFile : await findFirstEditableLazy(treeData);
       if (pathToOpen) {
         await loadFile(pathToOpen);
       }
@@ -6681,6 +6801,10 @@ if (shell) {
       if (treeSearchQuery) {
         treeSearchQuery = "";
         treeSearchInput.value = "";
+        clearTimeout(treeSearchTimer);
+        treeSearchSeq += 1; // drop any in-flight result
+        treeSearchResult = null;
+        treeSearchPending = false;
         renderTree(treeData);
       }
     }
@@ -6690,9 +6814,92 @@ if (shell) {
     setTreeSearchOpen(treeSearchRow.classList.contains("hidden"));
   });
 
+  // Turn the server's flat match list into a tree: matched entries plus
+  // the (synthetic) ancestor folders needed to show where they live.
+  function buildSearchTree(results, basePath) {
+    const root = { name: "", path: basePath, kind: "directory", children: [], children_loaded: true };
+    const byPath = new Map([[basePath, root]]);
+    const ensureDir = (path) => {
+      let node = byPath.get(path);
+      if (node) return node;
+      node = {
+        name: path.split("/").pop(),
+        path,
+        kind: "directory",
+        children: [],
+        children_loaded: true,
+      };
+      byPath.set(path, node);
+      const parent = ensureDir(getParentPath(path));
+      parent.children_loaded = true; // it now lists (matching) children
+      parent.children.push(node);
+      return node;
+    };
+    for (const hit of results) {
+      const existing = byPath.get(hit.path);
+      if (existing) {
+        // Seen first as someone's ancestor: keep the matches under it.
+        existing.editable = hit.editable;
+        continue;
+      }
+      const node = { ...hit, children: [] };
+      byPath.set(hit.path, node);
+      const parent = ensureDir(getParentPath(hit.path));
+      parent.children_loaded = true;
+      parent.children.push(node);
+      // A matched folder with no matched descendants stays lazy.
+      if (hit.kind === "directory") node.children_loaded = false;
+    }
+    const sortNode = (n) => {
+      n.children.sort(
+        (a, b) =>
+          (a.kind === "directory" ? 0 : 1) - (b.kind === "directory" ? 0 : 1) ||
+          a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+      );
+      n.children.forEach((c) => c.kind === "directory" && sortNode(c));
+    };
+    sortNode(root);
+    return root;
+  }
+
+  async function runTreeSearch() {
+    const query = treeSearchQuery.trim();
+    if (!query || !config.treeSearchUrl) return;
+    const seq = (treeSearchSeq += 1);
+    treeSearchPending = true;
+    try {
+      const url = new URL(config.treeSearchUrl, window.location.href);
+      url.searchParams.set("q", query);
+      if (scopedRootPath) url.searchParams.set("path", scopedRootPath);
+      const data = await requestJson(url.toString(), { method: "GET" });
+      if (seq !== treeSearchSeq) return; // a newer query superseded this one
+      treeSearchResult = buildSearchTree(data.results || [], scopedRootPath);
+    } catch (error) {
+      if (seq !== treeSearchSeq) return;
+      treeSearchResult = null;
+      setStatus(error.message, true);
+    }
+    treeSearchPending = false;
+    renderTree(treeData);
+  }
+
   treeSearchInput?.addEventListener("input", () => {
     treeSearchQuery = treeSearchInput.value;
+    clearTimeout(treeSearchTimer);
+    if (!treeSearchQuery.trim()) {
+      treeSearchSeq += 1;
+      treeSearchResult = null;
+      treeSearchPending = false;
+      renderTree(treeData);
+      return;
+    }
+    if (!config.treeSearchUrl) {
+      renderTree(treeData); // public viewer: client-side filter, full tree
+      return;
+    }
+    treeSearchPending = true;
     renderTree(treeData);
+    treeSearchTimer = setTimeout(runTreeSearch, 250);
   });
 
   treeSearchInput?.addEventListener("keydown", (event) => {

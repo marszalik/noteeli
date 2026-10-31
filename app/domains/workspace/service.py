@@ -323,11 +323,30 @@ class WorkspaceService:
         invalidate_sftp_cache()
         return self.preferences_service.apply_profile(profile_id, user_key)
 
-    def build_tree(self, user_key: str | None = None) -> TreeNode:
+    def build_tree(
+        self,
+        user_key: str | None = None,
+        path: str = "",
+        depth: int | None = None,
+        expand: set[str] | None = None,
+    ) -> TreeNode:
+        """Build the directory tree.
+
+        ``depth=None`` walks everything (public viewer, publish scoping).
+        The workspace UI passes ``depth=1`` — only the requested
+        directory's direct children are read — plus ``expand``: paths of
+        directories the user already has open, which are read too so a
+        refresh keeps them open without a request per folder. Directories
+        that were not read come back with ``children_loaded=False``.
+        ``path`` roots the response at a subdirectory (lazy expand).
+        """
         prefs = self.get_preferences(user_key)
         backend = self._get_backend()  # routes through hosted-mode security check
         display = backend.root_display
         root_name = display.rstrip("/").rsplit("/", 1)[-1] or display
+        start = self._resolve_dir_path(path, backend)
+        if start:
+            root_name = start.rsplit("/", 1)[-1]
         # Manual order lives in SQLite keyed by parent dir. Fetch the whole
         # table once here instead of one connect+query per directory during
         # the recursive walk — on big trees that's thousands of connections.
@@ -337,13 +356,65 @@ class WorkspaceService:
             else None
         )
         return self._build_directory_node(
-            "",
+            start,
             root_name,
             prefs.sort_mode,
             backend,
             self.runtime_skip_relpaths(),
             manual_orders=manual_orders,
+            depth=depth,
+            expand=expand or set(),
         )
+
+    def search_tree(
+        self,
+        query: str,
+        path: str = "",
+        limit: int = 300,
+        max_scanned: int = 100_000,
+    ) -> tuple[list[TreeNode], bool]:
+        """Case-insensitive name search under ``path`` for the lazy tree.
+
+        The UI no longer holds the whole tree, so filtering by name has to
+        happen server-side. Breadth-first (shallow matches first), honours
+        the same hidden/ignored rules as the tree, and stops at ``limit``
+        matches or ``max_scanned`` entries (second value = truncated).
+        """
+        needle = query.strip().lower()
+        if not needle:
+            return [], False
+        backend = self._get_backend()
+        start = self._resolve_dir_path(path, backend)
+        skip = self.runtime_skip_relpaths()
+        ignore_names = self.settings.tree_ignore_name_set
+        results: list[TreeNode] = []
+        queue = [start]
+        scanned = 0
+        while queue:
+            current = queue.pop(0)
+            for entry in sorted(backend.list_children(current), key=lambda e: e.name.lower()):
+                if entry.is_dir and (entry.name == ".git" or entry.name in ignore_names):
+                    continue
+                if entry.relative_path in skip:
+                    continue
+                scanned += 1
+                if scanned > max_scanned:
+                    return results, True
+                is_real_dir = entry.is_dir and not entry.is_symlink
+                if needle in entry.name.lower():
+                    if len(results) >= limit:
+                        return results, True
+                    results.append(TreeNode(
+                        name=entry.name,
+                        path=entry.relative_path,
+                        kind="directory" if is_real_dir else "file",
+                        editable=False if is_real_dir else self.is_openable_from_tree(entry.relative_path),
+                        symlink=entry.is_symlink,
+                        children_loaded=not is_real_dir,
+                    ))
+                if is_real_dir:
+                    queue.append(entry.relative_path)
+        return results, False
 
     def runtime_skip_relpaths(self) -> set[str]:
         """POSIX paths (relative to the content root) that hold Noteeli's
@@ -1112,8 +1183,19 @@ class WorkspaceService:
         backend: StorageBackend,
         skip: set[str] | None = None,
         manual_orders: dict[str, dict[str, int]] | None = None,
+        depth: int | None = None,
+        expand: set[str] | None = None,
     ) -> TreeNode:
         skip = skip or set()
+        expand = expand or set()
+        # Lazy build: read this directory only while depth budget remains
+        # or the user already has it open.
+        if depth is not None and depth <= 0 and relative_path not in expand:
+            return TreeNode(
+                name=name, path=relative_path, kind="directory",
+                children=[], editable=False, children_loaded=False,
+            )
+        child_depth = None if depth is None else depth - 1
         ignore_names = self.settings.tree_ignore_name_set
         children: list[TreeNode] = []
         entries = backend.list_children(relative_path)
@@ -1135,7 +1217,8 @@ class WorkspaceService:
             if entry.is_dir and not entry.is_symlink:
                 children.append(
                     self._build_directory_node(
-                        entry.relative_path, entry.name, sort_mode, backend, skip, manual_orders
+                        entry.relative_path, entry.name, sort_mode, backend, skip, manual_orders,
+                        child_depth, expand,
                     )
                 )
             else:

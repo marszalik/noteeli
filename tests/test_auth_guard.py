@@ -234,3 +234,38 @@ def test_comments_api_requires_auth(client: TestClient):
     assert client.post("/api/comments", json={"path": "x.md", "text": "hi"}).status_code == 401
     assert client.patch("/api/comments/c_abcdef", json={"path": "x.md", "status": "resolved"}).status_code == 401
     assert client.delete("/api/comments/c_abcdef", params={"path": "x.md"}).status_code == 401
+
+
+def test_tree_api_lazy_params(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("NOTEELI_CONTENT_ROOT", str(tmp_path / "content"))
+    monkeypatch.setenv("NOTEELI_DATA_DIR", str(tmp_path / ".noteeli"))
+    monkeypatch.setenv("NOTEELI_SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("NOTEELI_GOOGLE_CLIENT_ID", "")
+    monkeypatch.setenv("NOTEELI_GOOGLE_CLIENT_SECRET", "")
+    get_settings.cache_clear()
+    from app.domains.workspace import router as workspace_router
+    from app.domains.workspace.service import WorkspaceService
+
+    monkeypatch.setattr(
+        workspace_router, "workspace_service", WorkspaceService(get_settings())
+    )
+    local_client = TestClient(create_app(), base_url="http://127.0.0.1:8000")
+    root = tmp_path / "content"
+    (root / "d" / "e").mkdir(parents=True)
+    (root / "d" / "x.md").write_text("x", encoding="utf-8")
+
+    top = local_client.get("/api/tree", params={"depth": 1}).json()
+    d = next(c for c in top["children"] if c["name"] == "d")
+    assert d["children_loaded"] is False
+
+    sub = local_client.get("/api/tree", params={"path": "d", "depth": 1}).json()
+    assert sub["path"] == "d"
+    assert {c["name"] for c in sub["children"]} == {"e", "x.md"}
+
+    opened = local_client.get(
+        "/api/tree", params={"depth": 1, "expand": ["d"]}
+    ).json()
+    d = next(c for c in opened["children"] if c["name"] == "d")
+    assert d["children_loaded"] is True
+
+    assert local_client.get("/api/tree", params={"path": "../x", "depth": 1}).status_code == 400

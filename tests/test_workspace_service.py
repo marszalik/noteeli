@@ -956,3 +956,97 @@ def test_duplicate_item_handles_name_without_extension(tmp_path: Path):
     created = service.duplicate_item("LICENSE")
     assert created.name == "LICENSE_1"
     assert (notes / "LICENSE_1").read_text(encoding="utf-8") == "MIT\n"
+
+
+def _lazy_fixture(tmp_path: Path) -> WorkspaceService:
+    notes = tmp_path / "vault"
+    (notes / "a" / "b" / "c").mkdir(parents=True)
+    (notes / "z").mkdir()
+    (notes / "root.md").write_text("r", encoding="utf-8")
+    (notes / "a" / "a.md").write_text("a", encoding="utf-8")
+    (notes / "a" / "b" / "b.md").write_text("b", encoding="utf-8")
+    (notes / "a" / "b" / "c" / "c.md").write_text("c", encoding="utf-8")
+    return build_service(notes)
+
+
+def test_build_tree_depth_one_does_not_descend(tmp_path: Path):
+    tree = _lazy_fixture(tmp_path).build_tree(depth=1)
+
+    by_name = {c.name: c for c in tree.children}
+    assert tree.children_loaded is True
+    assert by_name["a"].children_loaded is False
+    assert by_name["a"].children == []
+    assert by_name["z"].children_loaded is False
+    assert by_name["root.md"].kind == "file"
+
+
+def test_build_tree_default_is_full_depth_and_loaded(tmp_path: Path):
+    tree = _lazy_fixture(tmp_path).build_tree()
+
+    a = next(c for c in tree.children if c.name == "a")
+    assert a.children_loaded is True
+    b = next(c for c in a.children if c.name == "b")
+    assert [c.name for c in b.children] == ["c", "b.md"]
+
+
+def test_build_tree_expand_reads_open_directories_only(tmp_path: Path):
+    tree = _lazy_fixture(tmp_path).build_tree(depth=1, expand={"a", "a/b"})
+
+    a = next(c for c in tree.children if c.name == "a")
+    assert a.children_loaded is True
+    b = next(c for c in a.children if c.name == "b")
+    assert b.children_loaded is True
+    c = next(c for c in b.children if c.name == "c")
+    assert c.children_loaded is False  # open parent, but c itself not open
+    z = next(c for c in tree.children if c.name == "z")
+    assert z.children_loaded is False
+
+
+def test_build_tree_path_roots_response_at_subdirectory(tmp_path: Path):
+    service = _lazy_fixture(tmp_path)
+    node = service.build_tree(path="a/b", depth=1)
+
+    assert node.path == "a/b"
+    assert node.name == "b"
+    assert [c.path for c in node.children] == ["a/b/c", "a/b/b.md"]
+    assert node.children[0].children_loaded is False
+
+
+def test_build_tree_path_rejects_traversal_and_files(tmp_path: Path):
+    service = _lazy_fixture(tmp_path)
+    with pytest.raises(InvalidPathError):
+        service.build_tree(path="../etc", depth=1)
+    with pytest.raises(InvalidPathError):
+        service.build_tree(path="root.md", depth=1)
+
+
+def test_search_tree_finds_deep_matches_without_building_the_tree(tmp_path: Path):
+    service = _lazy_fixture(tmp_path)
+    results, truncated = service.search_tree("c")
+
+    paths = [r.path for r in results]
+    assert "a/b/c" in paths and "a/b/c/c.md" in paths
+    assert truncated is False
+    folder = next(r for r in results if r.path == "a/b/c")
+    assert folder.kind == "directory" and folder.children_loaded is False
+
+
+def test_search_tree_skips_ignored_dirs_and_respects_limit(tmp_path: Path):
+    notes = tmp_path / "vault"
+    (notes / "node_modules" / "pkg").mkdir(parents=True)
+    (notes / "node_modules" / "pkg" / "needle.md").write_text("x", encoding="utf-8")
+    for i in range(5):
+        (notes / f"needle{i}.md").write_text("x", encoding="utf-8")
+    service = build_service(notes)
+
+    results, truncated = service.search_tree("needle", limit=3)
+    assert len(results) == 3 and truncated is True
+    results, _ = service.search_tree("needle")
+    assert all("node_modules" not in r.path for r in results)
+
+
+def test_search_tree_scoped_to_path_and_blank_query(tmp_path: Path):
+    service = _lazy_fixture(tmp_path)
+    assert service.search_tree("  ") == ([], False)
+    results, _ = service.search_tree("md", path="a/b")
+    assert {r.path for r in results} == {"a/b/b.md", "a/b/c/c.md"}

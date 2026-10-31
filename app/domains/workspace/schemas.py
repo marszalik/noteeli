@@ -10,6 +10,16 @@ class TreeNode(BaseModel):
     children: list["TreeNode"] = Field(default_factory=list)
     editable: bool = False
     symlink: bool = False
+    # False only for directories a lazy /api/tree response did not descend
+    # into (``children`` is then empty because it was *not read*, not because
+    # the folder is empty). Full-depth builds (public viewer) leave it True.
+    children_loaded: bool = True
+
+
+class TreeSearchResult(BaseModel):
+    # Flat list of matching entries (directories come back unloaded).
+    results: list[TreeNode] = Field(default_factory=list)
+    truncated: bool = False
 
 
 class FileDocument(BaseModel):
