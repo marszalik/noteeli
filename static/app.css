@@ -612,6 +612,7 @@ body[data-theme="noteeli"] .alert-error {
 .app-shell.is-public .tree-row-menu,
 .app-shell.is-public #editor,
 .app-shell.is-public #json-editor,
+.app-shell.is-public #drawio-editor,
 .app-shell.is-public #code-editor,
 /* Editor chrome that makes no sense on a read-only page: the status
    line ("File ready for editing…") and the dotfiles toggle. */
@@ -5768,3 +5769,7 @@ body .profile-switcher .profiles-dropdown {
 .npdf-result { margin-top: .8rem; word-break: break-all; }
 .npdf-layout-row { display: grid; gap: .3rem; margin-top: .8rem; }
 .npdf-layout { padding: .45rem .6rem; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-strong); color: var(--text); font: inherit; }
+
+/* ── draw.io editor (embedded) ───────────────────────────────── */
+.drawio-panel { height: 100%; width: 100%; overflow: hidden; }
+.drawio-panel iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--panel-strong); }

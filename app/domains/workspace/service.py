@@ -57,6 +57,7 @@ class WorkspaceService:
     XLSX_EXTENSIONS = {".xlsx", ".xlsm"}
     PPTX_EXTENSIONS = {".pptx"}
     JSON_EXTENSIONS = {".json"}
+    DRAWIO_EXTENSIONS = {".drawio", ".dio"}
     MAX_TEXT_FILE_BYTES = 1024 * 1024
 
     def __init__(
@@ -835,6 +836,7 @@ class WorkspaceService:
         return (
             suffix in self.settings.allowed_markdown_extensions
             or suffix in self.JSON_EXTENSIONS
+            or suffix in self.DRAWIO_EXTENSIONS
         )
 
     def is_openable_from_tree(self, path: str) -> bool:
@@ -843,6 +845,8 @@ class WorkspaceService:
     def get_editor_file_type(self, path: str) -> str:
         if self.is_json(path):
             return "json"
+        if Path(path).suffix.lower() in self.DRAWIO_EXTENSIONS:
+            return "drawio"
         if Path(path).suffix.lower() in self.settings.allowed_markdown_extensions:
             return "markdown"
         return "text"
@@ -1309,7 +1313,9 @@ class WorkspaceService:
             raise InvalidPathError("A name is required.")
         if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
             raise InvalidPathError("The item name contains unsupported path separators.")
-        known_extensions = set(self.settings.allowed_markdown_extensions) | self.JSON_EXTENSIONS
+        known_extensions = (
+            set(self.settings.allowed_markdown_extensions) | self.JSON_EXTENSIONS | self.DRAWIO_EXTENSIONS
+        )
         if kind == "file" and not any(
             candidate.lower().endswith(ext) for ext in known_extensions
         ):

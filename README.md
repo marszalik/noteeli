@@ -161,6 +161,8 @@ Main variables:
 - `NOTEELI_DATA_DIR` - directory for SQLite and app data
 - `NOTEELI_TREE_IGNORE_NAMES` - comma-separated directory names excluded from the notes tree (defaults to `node_modules`, `__pycache__`, `.venv` and other dependency/cache dirs)
 - `NOTEELI_OFFICE_CONVERTER` - LibreOffice binary used to preview `.pptx` as real slides (empty = auto-detect: system `soffice`, then the portable copy the app can download into `NOTEELI_DATA_DIR/libreoffice`; `off` = text-card preview only). The installer installs LibreOffice from the system package manager; `NOTEELI_SKIP_LIBREOFFICE=1` skips that step
+- `NOTEELI_PDF_BROWSER` - Chromium/Chrome binary used for "Noteeli PDF" (empty = auto-detect; `off` disables)
+- `NOTEELI_DRAWIO_URL` - draw.io editor embedded for `.drawio` files (default `https://embed.diagrams.net`; point it at a self-hosted draw.io to keep diagrams off the public service)
 - `NOTEELI_SESSION_SECRET` - session secret
 - `NOTEELI_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `NOTEELI_GOOGLE_CLIENT_SECRET` - Google OAuth client secret

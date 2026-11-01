@@ -85,6 +85,12 @@ described in their own sections below.
 - **Delete** asks you to click twice (the button arms itself first), so a
   stray click never destroys a folder.
 - **Duplicate** creates `name_1.md`, `name_2.md`, … next to the original.
+- **draw.io diagrams:** files ending in `.drawio` or `.dio` open in the draw.io
+  editor right inside Noteeli (create one by naming a new file e.g.
+  `schemat.drawio`). Edit as usual in draw.io and press **Save**. The ⋮ menu
+  has **Open in diagrams.net** to continue in the web app, and **Download**.
+  The editor loads from diagrams.net, so it needs an internet connection; an
+  administrator can point `NOTEELI_DRAWIO_URL` at a self-hosted draw.io.
 - **File menu (⋮)** in the top bar (visible on phones too) works on the note
   you are viewing: **Download**, **Save as PDF** (opens the print dialog with
   only the note on the page — choose "Save as PDF"; on iPad/iPhone use the

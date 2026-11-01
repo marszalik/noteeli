@@ -252,6 +252,10 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2.5 4.5 1.5 3 1.5-3 .9 5h-1.1l-.4-2.4-.9 1.9-.9-1.9-.4 2.4H9.6l.9-5z"/></svg>
                 <span data-i18n="file_noteeli_pdf">Noteeli PDF…</span>
               </button>
+              <button id="file-open-drawio" class="user-menu-item hidden" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                <span data-i18n="file_open_drawio">Otwórz w diagrams.net</span>
+              </button>
               <button id="file-read-aloud" class="user-menu-item" type="button" role="menuitem">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 <span id="file-read-aloud-label" data-i18n="file_read_aloud">Czytaj na głos</span>
@@ -300,6 +304,7 @@
       <section class="editor-stage">
         <div id="editor"></div>
         <div id="json-editor" class="json-editor-panel hidden"></div>
+        <div id="drawio-editor" class="drawio-panel hidden"></div>
         <div id="code-editor" class="code-editor-panel hidden"></div>
         <div id="kanban-board" class="kanban-board hidden"></div>
         <div id="public-content" class="public-content hidden"></div>

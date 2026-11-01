@@ -11,6 +11,9 @@ and version numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **draw.io diagrams.** `.drawio` and `.dio` files open in the real draw.io editor (embedded, with all shape libraries), follow the interface language and the dark/light theme, and save through Noteeli's **Save** (or draw.io's own Save button, or autosave when enabled). Create one by naming a new file `something.drawio`. The file menu (⋮) offers **Open in diagrams.net** (hands the diagram to the web app) and **Download**. The editor is loaded from `embed.diagrams.net`; set `NOTEELI_DRAWIO_URL` to point at a self-hosted draw.io instead.
+
 ## [1.18.1] - 2026-10-31
 
 ### Security

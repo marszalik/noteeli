@@ -97,6 +97,7 @@ async def workspace_page(request: Request):
         {
             "treeUrl": str(request.url_for("workspace_tree_api")),
             "treeSearchUrl": str(request.url_for("workspace_tree_search_api")),
+            "drawioUrl": settings.drawio_url.rstrip("/"),
             "fileUrl": str(request.url_for("workspace_file_api")),
             "saveUrl": str(request.url_for("workspace_save_api")),
             "preferencesUrl": str(request.url_for("workspace_preferences_api")),

@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     office_converter: str = ""
     # Chromium/Chrome binary used for "Noteeli PDF" ("" = auto-detect, "off" = disable).
     pdf_browser: str = ""
+    # draw.io editor embedded for .drawio files. Point at a self-hosted
+    # draw.io (jgraph/drawio) to keep diagrams off the public service.
+    drawio_url: str = "https://embed.diagrams.net"
 
     # ── Locked workspace ────────────────────────────────────────────────
     # When True, the storage source and root are pinned: users can't change

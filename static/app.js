@@ -109,6 +109,7 @@ if (shell) {
   const publicContentContainer = document.getElementById("public-content");
   const publicNavContainer = document.getElementById("public-nav");
   const jsonEditorContainer = document.getElementById("json-editor");
+  const drawioContainer = document.getElementById("drawio-editor");
   const codeEditorContainer = document.getElementById("code-editor");
   const previewStage = document.getElementById("preview-stage");
   const officePreview = document.getElementById("office-preview");
@@ -148,6 +149,10 @@ if (shell) {
   let profileFormGdriveCredentials = "";
   let selectedPath = null;
   let readAloudActive = false;
+  let drawioXml = "";
+  let drawioFrame = null;
+  let drawioReadyTimer = null;
+  let drawioLoadedAt = 0;
   let readAloudToken = 0;
   let selectedEditable = false;
   let selectedFileType = "markdown"; // "markdown" | "json"
@@ -848,6 +853,7 @@ if (shell) {
   }
 
   function hideJsonEditorMode() {
+    hideDrawioMode();
     jsonEditorContainer.classList.add("hidden");
     if (editorModeToggle) editorModeToggle.classList.remove("hidden");
   }
@@ -2319,6 +2325,7 @@ if (shell) {
       ctx_new_file: "Nowy plik", ctx_new_dir: "Nowy folder",
       ctx_download: "Pobierz", ctx_download_zip: "Pobierz jako ZIP",
       file_menu_title: "Akcje pliku", file_save_pdf: "Zapisz jako PDF", file_read_aloud: "Czytaj na głos", file_read_stop: "Zatrzymaj czytanie", file_pdf_empty: "Brak tekstu do wydrukowania.", file_read_unsupported: "Ta przeglądarka nie umie czytać na głos.", file_read_empty: "Brak tekstu do przeczytania.",
+      file_open_drawio: "Otwórz w diagrams.net", drawio_unreachable: "Nie mogę połączyć się z edytorem draw.io. Sprawdź internet albo adres NOTEELI_DRAWIO_URL.",
       npdf_layout: "Układ tekstu",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "Ładny PDF w stylu Noteeli, zapisany obok pliku źródłowego.", npdf_style_light: "Jasny", npdf_style_light_hint: "Czysta, jasna strona w kolorach motywu.", npdf_style_mixed: "Mieszany", npdf_style_mixed_hint: "Jasna strona z ciemnym tytułem, kodem i tabelami z motywu.", npdf_create: "Utwórz PDF", npdf_working: "Tworzę PDF…", npdf_saved: "Zapisano jako", npdf_unavailable: "Na serwerze brakuje Chromium/Chrome do tworzenia PDF-ów. Zainstaluj go albo wskaż w NOTEELI_PDF_BROWSER.", npdf_failed: "Nie udało się utworzyć PDF-a.", npdf_download: "Pobierz", npdf_close: "Zamknij",
       ctx_copy_path: "Kopiuj ścieżkę", ctx_rename: "Zmień nazwę",
@@ -2539,6 +2546,7 @@ if (shell) {
       ctx_new_file: "New file", ctx_new_dir: "New folder",
       ctx_download: "Download", ctx_download_zip: "Download as ZIP",
       file_menu_title: "File actions", file_save_pdf: "Save as PDF", file_read_aloud: "Read aloud", file_read_stop: "Stop reading", file_pdf_empty: "Nothing to print.", file_read_unsupported: "This browser cannot read aloud.", file_read_empty: "Nothing to read.",
+      file_open_drawio: "Open in diagrams.net", drawio_unreachable: "Cannot reach the draw.io editor. Check your connection or NOTEELI_DRAWIO_URL.",
       npdf_layout: "Text layout",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "A nicely styled PDF, saved next to the source file.", npdf_style_light: "Light", npdf_style_light_hint: "Clean light page in the theme's colours.", npdf_style_mixed: "Mixed", npdf_style_mixed_hint: "Light page with the theme's dark title, code and tables.", npdf_create: "Create PDF", npdf_working: "Creating PDF…", npdf_saved: "Saved as", npdf_unavailable: "The server has no Chromium/Chrome for making PDFs. Install one or point NOTEELI_PDF_BROWSER at it.", npdf_failed: "Could not create the PDF.", npdf_download: "Download", npdf_close: "Close",
       ctx_copy_path: "Copy path", ctx_rename: "Rename",
@@ -2759,6 +2767,7 @@ if (shell) {
       ctx_new_file: "Nuevo archivo", ctx_new_dir: "Nueva carpeta",
       ctx_download: "Descargar", ctx_download_zip: "Descargar como ZIP",
       file_menu_title: "Acciones del archivo", file_save_pdf: "Guardar como PDF", file_read_aloud: "Leer en voz alta", file_read_stop: "Detener lectura", file_pdf_empty: "No hay texto para imprimir.", file_read_unsupported: "Este navegador no puede leer en voz alta.", file_read_empty: "No hay texto para leer.",
+      file_open_drawio: "Abrir en diagrams.net", drawio_unreachable: "No se puede conectar con el editor de draw.io. Revisa tu conexión o NOTEELI_DRAWIO_URL.",
       npdf_layout: "Diseño del texto",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "Un PDF con el estilo de Noteeli, guardado junto al archivo de origen.", npdf_style_light: "Claro", npdf_style_light_hint: "Página blanca, ideal para imprimir.", npdf_style_mixed: "Mixto", npdf_style_mixed_hint: "Página clara con encabezados y bloques de código oscuros.", npdf_create: "Crear PDF", npdf_working: "Creando PDF…", npdf_saved: "Guardado como", npdf_unavailable: "El servidor no tiene Chromium/Chrome para crear PDF. Instálalo o indícalo en NOTEELI_PDF_BROWSER.", npdf_failed: "No se pudo crear el PDF.", npdf_download: "Descargar", npdf_close: "Cerrar",
       ctx_copy_path: "Copiar ruta", ctx_rename: "Renombrar",
@@ -2979,6 +2988,7 @@ if (shell) {
       ctx_new_file: "Neue Datei", ctx_new_dir: "Neuer Ordner",
       ctx_download: "Herunterladen", ctx_download_zip: "Als ZIP herunterladen",
       file_menu_title: "Dateiaktionen", file_save_pdf: "Als PDF speichern", file_read_aloud: "Vorlesen", file_read_stop: "Vorlesen stoppen", file_pdf_empty: "Kein Text zum Drucken.", file_read_unsupported: "Dieser Browser kann nicht vorlesen.", file_read_empty: "Kein Text zum Vorlesen.",
+      file_open_drawio: "In diagrams.net öffnen", drawio_unreachable: "Der draw.io-Editor ist nicht erreichbar. Prüfe die Verbindung oder NOTEELI_DRAWIO_URL.",
       npdf_layout: "Textlayout",
       file_noteeli_pdf: "Noteeli-PDF…", npdf_title: "Noteeli-PDF", npdf_hint: "Ein PDF im Noteeli-Stil, neben der Quelldatei gespeichert.", npdf_style_light: "Hell", npdf_style_light_hint: "Weiße Seite, gut zum Drucken.", npdf_style_mixed: "Gemischt", npdf_style_mixed_hint: "Helle Seite mit dunklen Überschriften und Codeblöcken.", npdf_create: "PDF erstellen", npdf_working: "PDF wird erstellt…", npdf_saved: "Gespeichert als", npdf_unavailable: "Auf dem Server fehlt Chromium/Chrome zum Erstellen von PDFs. Installieren oder in NOTEELI_PDF_BROWSER angeben.", npdf_failed: "Das PDF konnte nicht erstellt werden.", npdf_download: "Herunterladen", npdf_close: "Schließen",
       ctx_copy_path: "Pfad kopieren", ctx_rename: "Umbenennen",
@@ -3199,6 +3209,7 @@ if (shell) {
       ctx_new_file: "Новый файл", ctx_new_dir: "Новая папка",
       ctx_download: "Скачать", ctx_download_zip: "Скачать как ZIP",
       file_menu_title: "Действия с файлом", file_save_pdf: "Сохранить как PDF", file_read_aloud: "Прочитать вслух", file_read_stop: "Остановить чтение", file_pdf_empty: "Нет текста для печати.", file_read_unsupported: "Этот браузер не умеет читать вслух.", file_read_empty: "Нет текста для чтения.",
+      file_open_drawio: "Открыть в diagrams.net", drawio_unreachable: "Не удаётся подключиться к редактору draw.io. Проверьте соединение или NOTEELI_DRAWIO_URL.",
       npdf_layout: "Макет текста",
       file_noteeli_pdf: "Noteeli PDF…", npdf_title: "Noteeli PDF", npdf_hint: "PDF в стиле Noteeli, сохранённый рядом с исходным файлом.", npdf_style_light: "Светлый", npdf_style_light_hint: "Белая страница, удобно для печати.", npdf_style_mixed: "Смешанный", npdf_style_mixed_hint: "Светлая страница с тёмными заголовками и блоками кода.", npdf_create: "Создать PDF", npdf_working: "Создаю PDF…", npdf_saved: "Сохранено как", npdf_unavailable: "На сервере нет Chromium/Chrome для создания PDF. Установите его или укажите в NOTEELI_PDF_BROWSER.", npdf_failed: "Не удалось создать PDF.", npdf_download: "Скачать", npdf_close: "Закрыть",
       ctx_copy_path: "Копировать путь", ctx_rename: "Переименовать",
@@ -3792,6 +3803,7 @@ if (shell) {
   });
 
   function hidePreview() {
+    hideDrawioMode();
     hideOfficeFallbackBanner();
     previewStage.classList.add("hidden");
     imagePreview.classList.add("hidden");
@@ -6446,7 +6458,11 @@ if (shell) {
       updateFileHistoryButton();
       localStorage.setItem("last-opened-file", file.path);
 
-      if (file.editable && selectedFileType === "json") {
+      if (file.editable && selectedFileType === "drawio") {
+        showDrawioMode(file.content || "");
+        toggleOverlay({ empty: false, unsupported: false });
+        setStatus(t("st_file_ready"));
+      } else if (file.editable && selectedFileType === "json") {
         showJsonEditorMode();
         try {
           jsonEditor.setMode("form");
@@ -6566,6 +6582,9 @@ if (shell) {
     }
     if (selectedFileType === "code") {
       return codeEditor.getValue();
+    }
+    if (selectedFileType === "drawio") {
+      return drawioXml;
     }
     return commentSpansToMarkers(cleanEmbeddedUrls(editor.getMarkdown()));
   }
@@ -7144,7 +7163,8 @@ if (shell) {
     fileMenuToggle?.setAttribute("aria-expanded", "false");
   }
   function isTextDocumentOpen() {
-    return Boolean(selectedPath) && previewStage.classList.contains("hidden");
+    return Boolean(selectedPath) && previewStage.classList.contains("hidden")
+      && selectedFileType !== "drawio";
   }
   function openFileMenu() {
     const textual = isTextDocumentOpen();
@@ -7154,6 +7174,7 @@ if (shell) {
     readBtn.classList.toggle("hidden", !textual || !("speechSynthesis" in window));
     document.getElementById("file-read-aloud-label").textContent =
       readAloudActive ? t("file_read_stop") : t("file_read_aloud");
+    document.getElementById("file-open-drawio").classList.toggle("hidden", selectedFileType !== "drawio");
     fileMenuDropdown?.classList.remove("hidden");
     fileMenuDropdown?.setAttribute("aria-hidden", "false");
     fileMenuToggle?.setAttribute("aria-expanded", "true");
@@ -7306,6 +7327,95 @@ if (shell) {
     else startReadAloud();
   });
   window.addEventListener("pagehide", stopReadAloud);
+
+
+  // ── draw.io diagrams (.drawio / .dio) ───────────────────────────
+  // The editor is draw.io itself, embedded in an iframe and driven over
+  // postMessage (the JSON "embed" protocol). The diagram XML never goes
+  // through Noteeli's editor: draw.io reports each change, we keep the
+  // latest XML and save it through the normal Save / autosave path.
+
+  function drawioPost(message) {
+    drawioFrame?.contentWindow?.postMessage(JSON.stringify(message), config.drawioUrl);
+  }
+
+  function showDrawioMode(xml) {
+    hideKanbanMode();
+    hideJsonEditorMode();
+    hideCodeEditorMode();
+    hidePreview();
+    hideUploadStage();
+    editorContainer.classList.add("hidden");
+    if (editorModeToggle) editorModeToggle.classList.add("hidden");
+    drawioXml = xml;
+    const bgHex = cssColorToHex(getComputedStyle(document.body).getPropertyValue("--bg").trim() || "#ffffff");
+    const dark = bgHex ? luminanceOf(bgHex) < 0.4 : false;
+    const lang = preferences?.language || shell?.dataset?.language || "pl";
+    const params = new URLSearchParams({
+      embed: "1", proto: "json", spin: "1", libraries: "1",
+      saveAndExit: "0", noExitBtn: "1", lang, dark: dark ? "1" : "0",
+    });
+    drawioFrame = document.createElement("iframe");
+    drawioFrame.title = "draw.io";
+    drawioFrame.allow = "clipboard-read; clipboard-write";
+    drawioFrame.src = `${config.drawioUrl}/?${params}`;
+    drawioContainer.textContent = "";
+    drawioContainer.appendChild(drawioFrame);
+    drawioContainer.classList.remove("hidden");
+    clearTimeout(drawioReadyTimer);
+    drawioReadyTimer = setTimeout(() => setStatus(t("drawio_unreachable"), true), 20000);
+  }
+
+  function hideDrawioMode() {
+    clearTimeout(drawioReadyTimer);
+    drawioContainer?.classList.add("hidden");
+    if (drawioFrame) {
+      drawioFrame.src = "about:blank";
+      drawioFrame.remove();
+      drawioFrame = null;
+    }
+  }
+
+  window.addEventListener("message", (event) => {
+    if (!drawioFrame || event.source !== drawioFrame.contentWindow) return;
+    if (event.origin !== new URL(config.drawioUrl).origin) return;
+    let message;
+    try { message = JSON.parse(event.data); } catch { return; }
+    if (message.event === "init") {
+      clearTimeout(drawioReadyTimer);
+      drawioPost({ action: "load", autosave: 1, xml: drawioXml });
+    } else if (message.event === "load") {
+      drawioLoadedAt = Date.now();
+    } else if ((message.event === "autosave" || message.event === "save") && typeof message.xml === "string") {
+      const fresh = Date.now() - drawioLoadedAt < 800; // draw.io's own post-load echo
+      drawioXml = message.xml;
+      if (!fresh || message.event === "save") markEditorDirty();
+      if (message.event === "save") saveFile();
+    }
+  });
+
+  async function openDrawioInApp() {
+    // diagrams.net opens a diagram from the URL fragment: #R + deflated XML.
+    const popup = window.open("about:blank", "_blank");
+    try {
+      const bytes = new TextEncoder().encode(encodeURIComponent(drawioXml));
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+      const packed = new Uint8Array(await new Response(stream).arrayBuffer());
+      let binary = "";
+      for (const byte of packed) binary += String.fromCharCode(byte);
+      const url = `https://app.diagrams.net/#R${encodeURIComponent(btoa(binary))}`;
+      if (url.length > 1_500_000) throw new Error("too large");
+      if (popup) popup.location.href = url;
+      else window.open(url, "_blank");
+    } catch {
+      popup?.close();
+      triggerDownload(`${config.downloadUrl}?path=${encodeURIComponent(selectedPath)}`);
+    }
+  }
+  document.getElementById("file-open-drawio")?.addEventListener("click", () => {
+    closeFileMenu();
+    openDrawioInApp();
+  });
 
   // ── Noteeli PDF: server-rendered, styled, saved next to the note ──
   function cssColorToHex(value) {
